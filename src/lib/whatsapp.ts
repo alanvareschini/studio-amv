@@ -14,18 +14,20 @@ export interface BriefingData {
 }
 
 export function buildWhatsappMessage(data: BriefingData): string {
-  const partes = [
-    `Olá, meu nome é ${data.nome || "[nome]"}.`,
-    `Meu WhatsApp é ${data.whatsapp || "[WhatsApp]"}.`,
-    data.empresa ? `Minha empresa é ${data.empresa}.` : "",
-    `Tenho um negócio no segmento ${data.segmento || "[segmento]"}.`,
-    `Quero um site com objetivo de ${data.objetivo || "[objetivo]"}.`,
-    data.pacote ? `Tenho interesse no pacote ${data.pacote}.` : "Ainda não escolhi o pacote.",
-    data.manutencao ? "Também quero incluir a manutenção mensal (R$ 149/mês)." : "",
-    data.instagram ? `Meu Instagram é ${data.instagram}.` : "",
-    data.mensagem ? `Observações: ${data.mensagem}.` : "",
-  ];
-  return partes.filter(Boolean).join(" ");
+  // Cada informação em sua própria linha, com rótulo (a quebra de linha no
+  // WhatsApp vira %0A depois do encodeURIComponent).
+  const linhas = [
+    `*Nome:* ${data.nome || "-"}`,
+    `*WhatsApp:* ${data.whatsapp || "-"}`,
+    data.empresa ? `*Empresa:* ${data.empresa}` : "",
+    `*Segmento:* ${data.segmento || "-"}`,
+    `*Objetivo:* ${data.objetivo || "-"}`,
+    `*Pacote:* ${data.pacote || "Ainda não escolhido"}`,
+    `*Manutenção mensal:* ${data.manutencao ? "Sim (R$ 149/mês)" : "Não"}`,
+    data.instagram ? `*Instagram:* ${data.instagram}` : "",
+    data.mensagem ? `*Observações:* ${data.mensagem}` : "",
+  ].filter(Boolean);
+  return `*Novo orçamento — AMV Web Studio*\n\n${linhas.join("\n")}`;
 }
 
 export function whatsappLink(message: string): string {
