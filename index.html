@@ -145,28 +145,38 @@
         }
         var eS = CB(0.7, 0, 0.3, 1), eO = CB(0.25, 0.1, 0.25, 1), cl = function (v) { return Math.max(0, Math.min(1, v)); };
 
-        // silhueta do A (2 pernas + travessão) no espaço 1280x720
-        (function () {
-          var cx = 640, apexY = 250, footY = 470, fh = 104, sw = 36, cbY = 402, cbH = 32;
-          var ap = [cx, apexY], lf = [cx - fh, footY], rf = [cx + fh, footY];
+        // gera a silhueta do A (2 pernas + travessão) com espessura sw variável
+        var G = { cx: 640, apexY: 250, footY: 470, fh: 104, cbY: 402 };
+        function setA(sw) {
+          var ap = [G.cx, G.apexY], lf = [G.cx - G.fh, G.footY], rf = [G.cx + G.fh, G.footY], cbH = Math.max(32, sw * 0.9);
           function q(p, r, w) { var dx = r[0] - p[0], dy = r[1] - p[1], L = Math.hypot(dx, dy), nx = -dy / L * w / 2, ny = dx / L * w / 2; return [[p[0] + nx, p[1] + ny], [r[0] + nx, r[1] + ny], [r[0] - nx, r[1] - ny], [p[0] - nx, p[1] - ny]]; }
           function d(P) { return "M" + P.map(function (p) { return p[0].toFixed(1) + " " + p[1].toFixed(1); }).join("L") + "Z"; }
-          var t = (cbY - apexY) / (footY - apexY), lx = ap[0] + (lf[0] - ap[0]) * t, rx = ap[0] + (rf[0] - ap[0]) * t;
-          var cb = [[lx, cbY - cbH / 2], [rx, cbY - cbH / 2], [rx, cbY + cbH / 2], [lx, cbY + cbH / 2]];
+          var t = (G.cbY - G.apexY) / (G.footY - G.apexY), lx = ap[0] + (lf[0] - ap[0]) * t, rx = ap[0] + (rf[0] - ap[0]) * t;
+          var cb = [[lx, G.cbY - cbH / 2], [rx, G.cbY - cbH / 2], [rx, G.cbY + cbH / 2], [lx, G.cbY + cbH / 2]];
           plA.setAttribute("d", d(q(ap, lf, sw)) + " " + d(q(ap, rf, sw)) + " " + d(cb));
-        })();
+        }
+        setA(36);
 
-        var DUR = 1500, FORM = 1500, REVEAL = 2350, END = 3350;
+        var DUR = 1500, FORM = 1500, REVEAL = 2350, END = 3450;
         var start = performance.now();
         (function loop(now) {
           var T = now - start;
           var v = T < DUR ? Math.round((1 - Math.pow(1 - T / DUR, 2)) * 100) : 100;
           count.textContent = v; if (fill) fill.style.width = v + "%";
-          var holeS = 0, coverOp = 1;
-          if (T >= FORM) { holeS = 0.14 + 0.86 * eS(cl((T - FORM) / 650)); if (bar) bar.style.opacity = 1 - cl((T - FORM) / 300); }
-          if (T >= REVEAL) { holeS = 1 + 0.6 * eS(cl((T - REVEAL) / 800)); coverOp = 1 - eO(cl((T - REVEAL - 100) / 750)); count.style.opacity = 1 - eO(cl((T - REVEAL) / 300)); }
+          var holeS = 0;
+          if (T >= FORM && T < REVEAL) {
+            // a janela do A floresce a partir da barra (traços finos)
+            holeS = 0.14 + 0.86 * eS(cl((T - FORM) / 650));
+            if (bar) bar.style.opacity = 1 - cl((T - FORM) / 300);
+          } else if (T >= REVEAL) {
+            // REVELAÇÃO: os TRAÇOS do A engrossam e crescem até o site preencher
+            if (bar) bar.style.opacity = 0;
+            var p = eS(cl((T - REVEAL) / 950));
+            setA(36 + 900 * p);
+            holeS = 1 + 3.2 * p;
+            count.style.opacity = 1 - eO(cl((T - REVEAL) / 300));
+          }
           hole.setAttribute("transform", "translate(640 402) scale(" + holeS + ") translate(-640 -402)");
-          if (cover) cover.style.opacity = coverOp;
           if (T < END) { requestAnimationFrame(loop); } else if (pre.parentNode) { pre.remove(); }
         })(start);
       })();
