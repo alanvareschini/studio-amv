@@ -59,9 +59,68 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Tela de abertura (preloader): CSS inline para aparecer instantâneo,
+         antes do bundle carregar. É escondida pelo main.ts quando o site fica pronto. -->
+    <style>
+      #preloader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #070a12;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+      }
+      :root[data-theme="light"] #preloader {
+        background: #eef1f8;
+      }
+      #preloader.is-hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      #preloader .pl-ring {
+        width: 62px;
+        height: 62px;
+        border-radius: 50%;
+        background: conic-gradient(from 0deg, #a855f7, #22d3ee, #00ff88, #a855f7);
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 0);
+        mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 0);
+        animation: pl-spin 0.9s linear infinite;
+      }
+      #preloader .pl-word {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        background: linear-gradient(90deg, #a855f7, #22d3ee, #00ff88);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      @keyframes pl-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #preloader .pl-ring {
+          animation-duration: 2s;
+        }
+      }
+    </style>
   </head>
   <body>
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <div id="preloader" role="status" aria-label="Carregando">
+      <div class="pl-ring" aria-hidden="true"></div>
+      <div class="pl-word">AMV Web Studio</div>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

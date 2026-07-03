@@ -123,4 +123,22 @@ if (app) {
   } else {
     window.addEventListener("load", () => whenIdle(loadHeavy), { once: true });
   }
+
+  // -------------------------------------------------------------------------
+  // Esconde a tela de abertura quando o site está pronto (mínimo de ~700ms
+  // para não "piscar", e no máximo espera o load da página).
+  const hidePreloader = (): void => {
+    const pl = document.getElementById("preloader");
+    if (!pl) return;
+    pl.classList.add("is-hidden");
+    window.setTimeout(() => pl.remove(), 600);
+  };
+  const start = performance.now();
+  const finishLoad = () =>
+    window.setTimeout(hidePreloader, Math.max(0, 700 - (performance.now() - start)));
+  if (document.readyState === "complete") {
+    finishLoad();
+  } else {
+    window.addEventListener("load", finishLoad, { once: true });
+  }
 }

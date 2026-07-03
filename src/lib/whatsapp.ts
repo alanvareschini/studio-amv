@@ -8,6 +8,7 @@ export interface BriefingData {
   segmento: string;
   objetivo: string;
   pacote: string;
+  manutencao?: string;
   instagram?: string;
   mensagem?: string;
 }
@@ -19,7 +20,8 @@ export function buildWhatsappMessage(data: BriefingData): string {
     data.empresa ? `Minha empresa é ${data.empresa}.` : "",
     `Tenho um negócio no segmento ${data.segmento || "[segmento]"}.`,
     `Quero um site com objetivo de ${data.objetivo || "[objetivo]"}.`,
-    `Tenho interesse no pacote ${data.pacote || "[pacote]"}.`,
+    data.pacote ? `Tenho interesse no pacote ${data.pacote}.` : "Ainda não escolhi o pacote.",
+    data.manutencao ? "Também quero incluir a manutenção mensal (R$ 149/mês)." : "",
     data.instagram ? `Meu Instagram é ${data.instagram}.` : "",
     data.mensagem ? `Observações: ${data.mensagem}.` : "",
   ];

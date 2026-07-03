@@ -3,7 +3,9 @@ import { packages } from "../data/packages";
 import { buildWhatsappMessage, whatsappLink, type BriefingData } from "../lib/whatsapp";
 
 export function Contact(): string {
+  // O dropdown lista só os PLANOS de site; a Manutenção é um adicional separado.
   const options = packages
+    .filter((p) => p.id !== "manutencao")
     .map((p) => `<option value="${p.name}">${p.name}</option>`)
     .join("");
 
@@ -56,6 +58,13 @@ export function Contact(): string {
           <div class="field">
             <label for="f-instagram">Instagram</label>
             <input id="f-instagram" name="instagram" type="text" maxlength="31" placeholder="@seuperfil" />
+          </div>
+
+          <div class="field field--check">
+            <label class="check" for="f-manutencao">
+              <input type="checkbox" id="f-manutencao" name="manutencao" value="sim" />
+              <span>Também quero <strong>manutenção mensal</strong> (R$ 149/mês): atualizações, backups e suporte por WhatsApp.</span>
+            </label>
           </div>
 
           <div class="field">
@@ -206,18 +215,21 @@ export function initContact(): void {
 
     const submit = document.getElementById("briefingSubmit") as HTMLButtonElement | null;
     const message = buildWhatsappMessage(data);
-
-    // abre o WhatsApp já (mantém o "gesto" do clique → sem bloqueio de popup)
-    window.open(whatsappLink(message), "_blank", "noopener");
+    const url = whatsappLink(message);
 
     if (submit) {
+      // Deixa a animação aparecer: "Enviando…" → "✓ Abrindo" → só então abre o WhatsApp.
       submit.disabled = true;
       submit.dataset.state = "sending";
-      window.setTimeout(() => (submit.dataset.state = "done"), 700);
+      window.setTimeout(() => (submit.dataset.state = "done"), 900);
       window.setTimeout(() => {
+        const win = window.open(url, "_blank", "noopener");
+        if (!win) window.location.href = url; // fallback se o popup for bloqueado
         submit.dataset.state = "idle";
         submit.disabled = false;
-      }, 3200);
+      }, 1500);
+    } else {
+      window.open(url, "_blank", "noopener");
     }
   });
 }

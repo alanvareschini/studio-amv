@@ -2261,6 +2261,37 @@ ol {
   opacity: 0.8;
   margin-top: -0.4rem;
 }
+/* adicional (manutenção): checkbox destacado */
+.field--check .check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(34, 211, 238, 0.05);
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+}
+.field--check .check:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+}
+.field--check input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  flex: none;
+  accent-color: #22d3ee;
+  cursor: pointer;
+}
+.field--check .check span {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.field--check .check strong {
+  color: var(--text);
+}
 
 /* ---------------------------------------- botão flutuante de WhatsApp */
 .wa-fab {
