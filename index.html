@@ -81,6 +81,11 @@
       /* Abertura estilo Lusion adaptada ao "A":
          barra de carregamento enche → contador chega a 100 → a barra vira o
          "A" → o A cresce e revela o site. Tema-aware. */
+      @property --pl-hole {
+        syntax: "<percentage>";
+        inherits: false;
+        initial-value: 0%;
+      }
       #preloader {
         position: fixed;
         inset: 0;
@@ -89,7 +94,11 @@
         align-items: center;
         justify-content: center;
         background: #070a12;
-        transition: opacity 0.6s ease;
+        --pl-hole: 0%;
+        /* abertura circular que cresce a partir do centro (onde está o A) */
+        -webkit-mask: radial-gradient(circle farthest-corner at 50% 50%, transparent var(--pl-hole), #000 calc(var(--pl-hole) + 0.4%));
+        mask: radial-gradient(circle farthest-corner at 50% 50%, transparent var(--pl-hole), #000 calc(var(--pl-hole) + 0.4%));
+        transition: --pl-hole 1s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.5s ease 0.45s;
       }
       :root[data-theme="light"] #preloader { background: #eef1f8; }
 
@@ -102,8 +111,8 @@
       /* palco central: barra e A sobrepostos */
       #preloader .pl-stage {
         position: relative;
-        width: 120px;
-        height: 132px;
+        width: 168px;
+        height: 184px;
         display: grid;
         place-items: center;
         transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
@@ -112,34 +121,34 @@
       /* FASE 1 — barra de carregamento (branca enchendo sobre cinza) */
       #preloader .pl-load {
         position: absolute;
-        width: 96px;
-        height: 16px;
+        width: min(320px, 70vw);
+        height: 18px;
         border-radius: 3px;
-        background: rgba(138, 147, 168, 0.24);
+        background: rgba(138, 147, 168, 0.22);
         overflow: hidden;
         transition: opacity 0.2s ease;
       }
       #preloader .pl-load i { display: block; height: 100%; width: 0%; }
 
-      /* FASE 2 — o "A" (escondido até a barra encher) */
+      /* FASE 2 — o "A" (escondido até a barra encher) — traços grossos e sólidos */
       #preloader .pl-a {
         position: absolute;
-        width: 120px;
-        height: 132px;
+        width: 168px;
+        height: 184px;
         opacity: 0;
       }
-      #preloader .pl-bar { position: absolute; border-radius: 6px; }
+      #preloader .pl-bar { position: absolute; border-radius: 4px; }
       #preloader .pl-leg {
         bottom: 0;
-        width: 12px;
-        height: 140px;
+        width: 18px;
+        height: 196px;
         transform-origin: bottom center;
       }
       /* começam quase deitadas (como a barra) e curtas */
-      #preloader .pl-leg--l { left: 4px; transform: rotate(74deg) scaleY(0.18); }
-      #preloader .pl-leg--r { left: 104px; transform: rotate(-74deg) scaleY(0.18); }
+      #preloader .pl-leg--l { left: 6px; transform: rotate(74deg) scaleY(0.18); }
+      #preloader .pl-leg--r { left: 144px; transform: rotate(-74deg) scaleY(0.18); }
       #preloader .pl-cross {
-        left: 34px; top: 84px; width: 52px; height: 12px;
+        left: 47px; top: 116px; width: 74px; height: 18px;
         transform-origin: center; transform: scaleX(0);
       }
 
@@ -168,9 +177,14 @@
       }
       :root[data-theme="light"] #preloader .pl-count { color: #0b1020; }
 
-      /* REVELAÇÃO — o A cresce e o fundo some, revelando o site */
-      #preloader.is-hidden { opacity: 0; pointer-events: none; }
-      #preloader.is-hidden .pl-stage { transform: scale(11); }
+      /* REVELAÇÃO — a abertura cresce a partir do A e revela o site;
+         o A dá um "burst" (cresce um pouco) e some junto. */
+      #preloader.is-hidden { --pl-hole: 100%; opacity: 0; pointer-events: none; }
+      #preloader.is-hidden .pl-stage {
+        transform: scale(2.6);
+        opacity: 0;
+        transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.55s ease;
+      }
       #preloader.is-hidden .pl-count { opacity: 0; }
 
       @media (prefers-reduced-motion: reduce) {
@@ -215,8 +229,8 @@
             requestAnimationFrame(tick);
           } else {
             pre.classList.add("is-forming"); // a barra vira o A
-            setTimeout(function () { pre.classList.add("is-hidden"); }, 820); // A cresce + revela
-            setTimeout(function () { if (pre.parentNode) pre.remove(); }, 1800);
+            setTimeout(function () { pre.classList.add("is-hidden"); }, 950); // abertura revela o site
+            setTimeout(function () { if (pre.parentNode) pre.remove(); }, 2150);
           }
         })(start);
       })();
