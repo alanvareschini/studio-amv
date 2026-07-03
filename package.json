@@ -1,0 +1,21 @@
+{
+  "name": "alan-web-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Landing page premium para venda de criação de sites para negócios locais — Alan Web Studio",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "gsap": "^3.13.0",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.169.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}
