@@ -1,3 +1,4 @@
+
 // Revelações controladas pelo scroll (GSAP ScrollTrigger):
 // 1) Hero: começa só com o nome; conforme rola, as infos vão surgindo.
 // 2) Cards de plano: aparecem um por um conforme o scroll.

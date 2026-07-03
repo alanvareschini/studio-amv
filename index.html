@@ -78,174 +78,146 @@
     <!-- Tela de abertura (preloader): CSS inline para aparecer instantâneo,
          antes do bundle carregar. É escondida pelo main.ts quando o site fica pronto. -->
     <style>
-      /* Abertura estilo Lusion: duas listras que se transformam num "A",
-         depois a cortina desliza revelando o site. Tema-aware. */
+      /* Abertura estilo Lusion adaptada ao "A":
+         barra de carregamento enche → contador chega a 100 → a barra vira o
+         "A" → o A cresce e revela o site. Tema-aware. */
       #preloader {
         position: fixed;
         inset: 0;
         z-index: 9999;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 40px;
         background: #070a12;
-        transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1);
-        will-change: transform;
+        transition: opacity 0.6s ease;
       }
-      :root[data-theme="light"] #preloader {
-        background: #eef1f8;
-      }
-      /* revelação: a cortina sobe */
-      #preloader.is-hidden {
-        transform: translateY(-100%);
-      }
+      :root[data-theme="light"] #preloader { background: #eef1f8; }
 
-      #preloader .pl-a {
+      /* cor dos traços (tema-aware) */
+      #preloader .pl-bar,
+      #preloader .pl-load i { background: #f5f7ff; }
+      :root[data-theme="light"] #preloader .pl-bar,
+      :root[data-theme="light"] #preloader .pl-load i { background: #0b1020; }
+
+      /* palco central: barra e A sobrepostos */
+      #preloader .pl-stage {
         position: relative;
         width: 120px;
         height: 132px;
+        display: grid;
+        place-items: center;
+        transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
       }
-      #preloader .pl-bar {
+
+      /* FASE 1 — barra de carregamento (branca enchendo sobre cinza) */
+      #preloader .pl-load {
         position: absolute;
-        background: #f5f7ff;
-        border-radius: 6px;
+        width: 96px;
+        height: 16px;
+        border-radius: 3px;
+        background: rgba(138, 147, 168, 0.24);
+        overflow: hidden;
+        transition: opacity 0.2s ease;
       }
-      :root[data-theme="light"] #preloader .pl-bar {
-        background: #0b1020;
+      #preloader .pl-load i { display: block; height: 100%; width: 0%; }
+
+      /* FASE 2 — o "A" (escondido até a barra encher) */
+      #preloader .pl-a {
+        position: absolute;
+        width: 120px;
+        height: 132px;
+        opacity: 0;
       }
-      /* as duas "pernas" do A (começam como listras verticais afastadas) */
+      #preloader .pl-bar { position: absolute; border-radius: 6px; }
       #preloader .pl-leg {
         bottom: 0;
-        width: 11px;
+        width: 12px;
         height: 140px;
         transform-origin: bottom center;
       }
-      #preloader .pl-leg--l {
-        left: 4.5px;
-        animation: pl-leg-l 1.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
-      }
-      #preloader .pl-leg--r {
-        left: 104.5px;
-        animation: pl-leg-r 1.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
-      }
-      /* a barra do meio do A, que aparece depois que as pernas se juntam */
+      /* começam quase deitadas (como a barra) e curtas */
+      #preloader .pl-leg--l { left: 4px; transform: rotate(74deg) scaleY(0.18); }
+      #preloader .pl-leg--r { left: 104px; transform: rotate(-74deg) scaleY(0.18); }
       #preloader .pl-cross {
-        left: 34px;
-        top: 84px;
-        width: 52px;
-        height: 11px;
-        transform-origin: center;
-        transform: scaleX(0);
-        opacity: 0;
-        animation: pl-cross 1.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+        left: 34px; top: 84px; width: 52px; height: 12px;
+        transform-origin: center; transform: scaleX(0);
       }
-      @keyframes pl-leg-l {
-        0%, 22% { transform: rotate(0deg); }
-        68%, 100% { transform: rotate(21deg); }
-      }
-      @keyframes pl-leg-r {
-        0%, 22% { transform: rotate(0deg); }
-        68%, 100% { transform: rotate(-21deg); }
-      }
-      @keyframes pl-cross {
-        0%, 58% { transform: scaleX(0); opacity: 0; }
-        84%, 100% { transform: scaleX(1); opacity: 1; }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        #preloader .pl-leg--l { transform: rotate(21deg); animation: none; }
-        #preloader .pl-leg--r { transform: rotate(-21deg); animation: none; }
-        #preloader .pl-cross { transform: scaleX(1); opacity: 1; animation: none; }
-      }
-      /* meta: marca + contador de porcentagem (assinatura Lusion) */
-      #preloader .pl-meta {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        opacity: 0;
-        animation: pl-meta-in 0.8s ease 0.35s forwards;
-      }
-      #preloader .pl-tag {
-        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-        font-weight: 700;
-        font-size: 0.7rem;
-        letter-spacing: 0.42em;
-        text-indent: 0.42em;
-        text-transform: uppercase;
-        color: #8a93a8;
-      }
+
+      /* barra enche → vira o A (classe via JS) */
+      #preloader.is-forming .pl-load { opacity: 0; }
+      #preloader.is-forming .pl-a { opacity: 1; }
+      #preloader.is-forming .pl-leg--l { animation: pl-legL 0.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+      #preloader.is-forming .pl-leg--r { animation: pl-legR 0.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+      #preloader.is-forming .pl-cross { animation: pl-crossIn 0.5s 0.22s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+      @keyframes pl-legL { to { transform: rotate(21deg) scaleY(1); } }
+      @keyframes pl-legR { to { transform: rotate(-21deg) scaleY(1); } }
+      @keyframes pl-crossIn { to { transform: scaleX(1); } }
+
+      /* contador gigante no canto inferior esquerdo (assinatura Lusion) */
       #preloader .pl-count {
+        position: absolute;
+        left: 6vw;
+        bottom: 6vh;
         font-family: "Plus Jakarta Sans", system-ui, sans-serif;
         font-weight: 800;
-        font-size: 2.1rem;
-        line-height: 1;
-        letter-spacing: 0.02em;
+        font-size: clamp(3.5rem, 11vw, 8rem);
+        line-height: 0.8;
         color: #f5f7ff;
         font-variant-numeric: tabular-nums;
+        transition: opacity 0.3s ease;
       }
       :root[data-theme="light"] #preloader .pl-count { color: #0b1020; }
-      #preloader .pl-count sup {
-        font-size: 0.9rem;
-        font-weight: 600;
-        vertical-align: super;
-        color: #8a93a8;
-        margin-left: 2px;
-      }
-      /* barra de progresso fina sob o contador */
-      #preloader .pl-track {
-        width: 180px;
-        height: 2px;
-        border-radius: 2px;
-        background: rgba(138, 147, 168, 0.25);
-        overflow: hidden;
-      }
-      #preloader .pl-track i {
-        display: block;
-        height: 100%;
-        width: 0%;
-        background: linear-gradient(90deg, #a855f7, #22d3ee, #00ff88);
-      }
-      @keyframes pl-meta-in {
-        to { opacity: 1; }
-      }
-      /* ao revelar, o A e o contador somem suavemente antes/junto da cortina */
-      #preloader.is-hidden .pl-a,
-      #preloader.is-hidden .pl-meta {
-        opacity: 0;
-        transition: opacity 0.4s ease;
+
+      /* REVELAÇÃO — o A cresce e o fundo some, revelando o site */
+      #preloader.is-hidden { opacity: 0; pointer-events: none; }
+      #preloader.is-hidden .pl-stage { transform: scale(11); }
+      #preloader.is-hidden .pl-count { opacity: 0; }
+
+      @media (prefers-reduced-motion: reduce) {
+        #preloader .pl-load { display: none; }
+        #preloader .pl-a { opacity: 1; }
+        #preloader .pl-leg--l { transform: rotate(21deg) scaleY(1); }
+        #preloader .pl-leg--r { transform: rotate(-21deg) scaleY(1); }
+        #preloader .pl-cross { transform: scaleX(1); }
+        #preloader.is-hidden .pl-stage { transform: none; }
       }
     </style>
   </head>
   <body>
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <div id="preloader" role="status" aria-label="Carregando">
-      <div class="pl-a" aria-hidden="true">
-        <span class="pl-bar pl-leg pl-leg--l"></span>
-        <span class="pl-bar pl-leg pl-leg--r"></span>
-        <span class="pl-bar pl-cross"></span>
+      <div class="pl-stage" aria-hidden="true">
+        <div class="pl-load"><i id="pl-fill"></i></div>
+        <div class="pl-a">
+          <span class="pl-bar pl-leg pl-leg--l"></span>
+          <span class="pl-bar pl-leg pl-leg--r"></span>
+          <span class="pl-bar pl-cross"></span>
+        </div>
       </div>
-      <div class="pl-meta">
-        <span class="pl-tag">AMV Web Studio</span>
-        <span class="pl-count"><i id="pl-count">0</i><sup>%</sup></span>
-        <span class="pl-track"><i id="pl-track"></i></span>
-      </div>
+      <div class="pl-count"><i id="pl-count">0</i></div>
     </div>
     <script>
-      // Contador 0→100% da abertura (roda já, antes do bundle carregar)
+      // Sequência da abertura (roda já, antes do bundle):
+      // barra enche + contador 0→100 → vira o "A" → cresce e revela o site.
       (function () {
+        var pre = document.getElementById("preloader");
         var num = document.getElementById("pl-count");
-        var bar = document.getElementById("pl-track");
-        if (!num) return;
+        var fill = document.getElementById("pl-fill");
+        if (!pre || !num) return;
         var start = performance.now();
-        var dur = 1550;
+        var dur = 1500;
         (function tick(now) {
           var p = Math.min(1, (now - start) / dur);
-          var eased = 1 - Math.pow(1 - p, 2); // ease-out
-          var v = Math.round(eased * 100);
+          var v = Math.round((1 - Math.pow(1 - p, 2)) * 100); // ease-out
           num.textContent = v;
-          if (bar) bar.style.width = v + "%";
-          if (p < 1) requestAnimationFrame(tick);
+          if (fill) fill.style.width = v + "%";
+          if (p < 1) {
+            requestAnimationFrame(tick);
+          } else {
+            pre.classList.add("is-forming"); // a barra vira o A
+            setTimeout(function () { pre.classList.add("is-hidden"); }, 820); // A cresce + revela
+            setTimeout(function () { if (pre.parentNode) pre.remove(); }, 1800);
+          }
         })(start);
       })();
     </script>

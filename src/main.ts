@@ -127,19 +127,14 @@ if (app) {
   // -------------------------------------------------------------------------
   // Esconde a tela de abertura quando o site está pronto (mínimo de ~700ms
   // para não "piscar", e no máximo espera o load da página).
-  const hidePreloader = (): void => {
+  // A sequência da abertura é controlada pelo script inline do index.html.
+  // Aqui só uma rede de segurança: se por algum motivo o preloader continuar
+  // na tela, força a remoção depois de alguns segundos.
+  window.setTimeout(() => {
     const pl = document.getElementById("preloader");
-    if (!pl) return;
-    pl.classList.add("is-hidden");
-    window.setTimeout(() => pl.remove(), 950); // acompanha a transição da cortina
-  };
-  const start = performance.now();
-  // Espera o "A" se formar (~1,5s) + um respiro antes da cortina subir.
-  const finishLoad = () =>
-    window.setTimeout(hidePreloader, Math.max(0, 1900 - (performance.now() - start)));
-  if (document.readyState === "complete") {
-    finishLoad();
-  } else {
-    window.addEventListener("load", finishLoad, { once: true });
-  }
+    if (pl) {
+      pl.classList.add("is-hidden");
+      window.setTimeout(() => pl.remove(), 950);
+    }
+  }, 6000);
 }
