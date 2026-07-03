@@ -278,3 +278,4 @@ export function initGlyphWave(selector: string): void {
     }
   });
 }
+

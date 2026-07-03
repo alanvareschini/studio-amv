@@ -131,11 +131,12 @@ if (app) {
     const pl = document.getElementById("preloader");
     if (!pl) return;
     pl.classList.add("is-hidden");
-    window.setTimeout(() => pl.remove(), 600);
+    window.setTimeout(() => pl.remove(), 950); // acompanha a transição da cortina
   };
   const start = performance.now();
+  // Espera o "A" se formar (~1,5s) + um respiro antes da cortina subir.
   const finishLoad = () =>
-    window.setTimeout(hidePreloader, Math.max(0, 700 - (performance.now() - start)));
+    window.setTimeout(hidePreloader, Math.max(0, 1900 - (performance.now() - start)));
   if (document.readyState === "complete") {
     finishLoad();
   } else {

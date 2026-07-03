@@ -78,63 +78,93 @@
     <!-- Tela de abertura (preloader): CSS inline para aparecer instantâneo,
          antes do bundle carregar. É escondida pelo main.ts quando o site fica pronto. -->
     <style>
+      /* Abertura estilo Lusion: duas listras que se transformam num "A",
+         depois a cortina desliza revelando o site. Tema-aware. */
       #preloader {
         position: fixed;
         inset: 0;
         z-index: 9999;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 20px;
         background: #070a12;
-        transition: opacity 0.5s ease, visibility 0.5s ease;
+        transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+        will-change: transform;
       }
       :root[data-theme="light"] #preloader {
         background: #eef1f8;
       }
+      /* revelação: a cortina sobe */
       #preloader.is-hidden {
+        transform: translateY(-100%);
+      }
+
+      #preloader .pl-a {
+        position: relative;
+        width: 120px;
+        height: 132px;
+      }
+      #preloader .pl-bar {
+        position: absolute;
+        background: #f5f7ff;
+        border-radius: 6px;
+      }
+      :root[data-theme="light"] #preloader .pl-bar {
+        background: #0b1020;
+      }
+      /* as duas "pernas" do A (começam como listras verticais afastadas) */
+      #preloader .pl-leg {
+        bottom: 0;
+        width: 11px;
+        height: 140px;
+        transform-origin: bottom center;
+      }
+      #preloader .pl-leg--l {
+        left: 4.5px;
+        animation: pl-leg-l 1.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+      }
+      #preloader .pl-leg--r {
+        left: 104.5px;
+        animation: pl-leg-r 1.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+      }
+      /* a barra do meio do A, que aparece depois que as pernas se juntam */
+      #preloader .pl-cross {
+        left: 34px;
+        top: 84px;
+        width: 52px;
+        height: 11px;
+        transform-origin: center;
+        transform: scaleX(0);
         opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
+        animation: pl-cross 1.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
       }
-      #preloader .pl-ring {
-        width: 62px;
-        height: 62px;
-        border-radius: 50%;
-        background: conic-gradient(from 0deg, #a855f7, #22d3ee, #00ff88, #a855f7);
-        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 0);
-        mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 0);
-        animation: pl-spin 0.9s linear infinite;
+      @keyframes pl-leg-l {
+        0%, 22% { transform: rotate(0deg); }
+        68%, 100% { transform: rotate(21deg); }
       }
-      #preloader .pl-word {
-        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-        font-weight: 800;
-        letter-spacing: 0.14em;
-        font-size: 0.82rem;
-        text-transform: uppercase;
-        background: linear-gradient(90deg, #a855f7, #22d3ee, #00ff88);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
+      @keyframes pl-leg-r {
+        0%, 22% { transform: rotate(0deg); }
+        68%, 100% { transform: rotate(-21deg); }
       }
-      @keyframes pl-spin {
-        to {
-          transform: rotate(360deg);
-        }
+      @keyframes pl-cross {
+        0%, 58% { transform: scaleX(0); opacity: 0; }
+        84%, 100% { transform: scaleX(1); opacity: 1; }
       }
       @media (prefers-reduced-motion: reduce) {
-        #preloader .pl-ring {
-          animation-duration: 2s;
-        }
+        #preloader .pl-leg--l { transform: rotate(21deg); animation: none; }
+        #preloader .pl-leg--r { transform: rotate(-21deg); animation: none; }
+        #preloader .pl-cross { transform: scaleX(1); opacity: 1; animation: none; }
       }
     </style>
   </head>
   <body>
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <div id="preloader" role="status" aria-label="Carregando">
-      <div class="pl-ring" aria-hidden="true"></div>
-      <div class="pl-word">AMV Web Studio</div>
+      <div class="pl-a" aria-hidden="true">
+        <span class="pl-bar pl-leg pl-leg--l"></span>
+        <span class="pl-bar pl-leg pl-leg--r"></span>
+        <span class="pl-bar pl-cross"></span>
+      </div>
     </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
