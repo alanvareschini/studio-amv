@@ -85,10 +85,12 @@
         inset: 0;
         z-index: 9999;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 40px;
         background: #070a12;
-        transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+        transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1);
         will-change: transform;
       }
       :root[data-theme="light"] #preloader {
@@ -155,6 +157,64 @@
         #preloader .pl-leg--r { transform: rotate(-21deg); animation: none; }
         #preloader .pl-cross { transform: scaleX(1); opacity: 1; animation: none; }
       }
+      /* meta: marca + contador de porcentagem (assinatura Lusion) */
+      #preloader .pl-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        opacity: 0;
+        animation: pl-meta-in 0.8s ease 0.35s forwards;
+      }
+      #preloader .pl-tag {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 0.7rem;
+        letter-spacing: 0.42em;
+        text-indent: 0.42em;
+        text-transform: uppercase;
+        color: #8a93a8;
+      }
+      #preloader .pl-count {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-weight: 800;
+        font-size: 2.1rem;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        color: #f5f7ff;
+        font-variant-numeric: tabular-nums;
+      }
+      :root[data-theme="light"] #preloader .pl-count { color: #0b1020; }
+      #preloader .pl-count sup {
+        font-size: 0.9rem;
+        font-weight: 600;
+        vertical-align: super;
+        color: #8a93a8;
+        margin-left: 2px;
+      }
+      /* barra de progresso fina sob o contador */
+      #preloader .pl-track {
+        width: 180px;
+        height: 2px;
+        border-radius: 2px;
+        background: rgba(138, 147, 168, 0.25);
+        overflow: hidden;
+      }
+      #preloader .pl-track i {
+        display: block;
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #a855f7, #22d3ee, #00ff88);
+      }
+      @keyframes pl-meta-in {
+        to { opacity: 1; }
+      }
+      /* ao revelar, o A e o contador somem suavemente antes/junto da cortina */
+      #preloader.is-hidden .pl-a,
+      #preloader.is-hidden .pl-meta {
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
     </style>
   </head>
   <body>
@@ -165,7 +225,30 @@
         <span class="pl-bar pl-leg pl-leg--r"></span>
         <span class="pl-bar pl-cross"></span>
       </div>
+      <div class="pl-meta">
+        <span class="pl-tag">AMV Web Studio</span>
+        <span class="pl-count"><i id="pl-count">0</i><sup>%</sup></span>
+        <span class="pl-track"><i id="pl-track"></i></span>
+      </div>
     </div>
+    <script>
+      // Contador 0→100% da abertura (roda já, antes do bundle carregar)
+      (function () {
+        var num = document.getElementById("pl-count");
+        var bar = document.getElementById("pl-track");
+        if (!num) return;
+        var start = performance.now();
+        var dur = 1550;
+        (function tick(now) {
+          var p = Math.min(1, (now - start) / dur);
+          var eased = 1 - Math.pow(1 - p, 2); // ease-out
+          var v = Math.round(eased * 100);
+          num.textContent = v;
+          if (bar) bar.style.width = v + "%";
+          if (p < 1) requestAnimationFrame(tick);
+        })(start);
+      })();
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
