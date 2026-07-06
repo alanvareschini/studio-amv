@@ -1,8 +1,7 @@
-﻿A acompanha o zoom da pagina (Ctrl +/-) em vez de ficar gigante
+﻿Efeitos automaticos em tablets (touch): borda animada, holo e brilho
 
-Ao dar zoom-out o conteudo encolhe mas o A (canvas fixo) nao, parecendo
-gigante. Agora o A escala junto conforme o zoom (via devicePixelRatio
-relativo ao carregamento), com limites. Reage so ao zoom, nao ao tamanho
-do monitor, entao nao altera telas maiores/menores.
+Em aparelhos de toque nao ha cursor, entao tilt/holo/borda ficavam off e
+a tela parecia morta. Liga versoes automaticas suaves via @media (hover:
+none) and (min-width:640px) - nao afeta desktop nem celular pequeno.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

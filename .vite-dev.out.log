@@ -1,0 +1,38 @@
+
+> alan-web-studio@0.1.0 dev
+> vite --host 127.0.0.1 --port 4175
+
+Re-optimizing dependencies because lockfile has changed
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m509[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4175[22m/[39m
+[2m13:57:44[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/main.ts[22m
+[2m13:59:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/style.css[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/1f71f69168e94c3e_of_the_oak.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/319e2bcc7b2fbb62_jyEZsItmO71aKPzFC9CsrPcCFupjjz.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/119ab1838bf410ce_ddd_2024.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/33d207e25e8a7c70_file.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/48b438b0ff82093d_spatial_fusion.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/48b759985b479eda_about.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/6278f91ccb19de5f_devin_ai.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/6b474cf1f24cd782_normal.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/72442ea87d896f7e_x9evc1NxZocjrM947.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/7289cd2d3df435c9_oryzo_ai.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/740276bef2268cab_c5xM.p69tPT1UTzEjqtWUVOkqga70O.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/74a2e2c3b47a6892_file.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/7767836dc43d19ea_choo_choo_world.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/899e21591a964076_Ix64OECXJR08gEA53jkIF5c0.Pu0jV.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/70445696e2c1336b_normal.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/a265c5e747898e0f_spaace.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/a69a5c04dd10ef74_normal.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/ad06f704f1fd20b9_normal.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/bc087a1995373f43_synthetic_human.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/c771a0ffa84fbce0_file.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/c98d36ceda69c97f_file.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/cb92e841b359ed90_soda_experience.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/ebc323d3d941fda5_porsche_dream_machine.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/ef1727fc1f9a82be_lEyzWTs06gl_CtwSdRHU82CaN7y.ss.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/fdd8f9e50ca326f5_projects.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/assets/fdeafb78d2127fe9_file.html[22m
+[2m13:59:38[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2m.lusion-reference/index.html[22m

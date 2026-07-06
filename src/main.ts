@@ -93,6 +93,12 @@ if (app) {
   safe("emojiMotion", initEmojiMotion);
   safe("flowLines", initFlowLines);
 
+  // A intro acompanha a montagem real do conteúdo, em vez de depender apenas
+  // de um cronômetro. Dois frames garantem que o primeiro layout já foi pintado.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => window.dispatchEvent(new Event("amv:ready")));
+  });
+
   // -------------------------------------------------------------------------
   // Efeitos PESADOS (Three.js): carregam em um chunk separado, DEPOIS da
   // primeira pintura, pra não travar o carregamento inicial do site.
@@ -137,6 +143,7 @@ if (app) {
   window.setTimeout(() => {
     const pl = document.getElementById("preloader");
     if (pl) {
+      document.body.classList.remove("is-preloading");
       pl.classList.add("is-hidden");
       window.setTimeout(() => pl.remove(), 950);
     }

@@ -75,110 +75,257 @@
       rel="stylesheet"
     />
 
-    <!-- Tela de abertura (preloader): CSS inline para aparecer instantâneo,
-         antes do bundle carregar. É escondida pelo main.ts quando o site fica pronto. -->
+    <!-- CSS crítico da abertura: aparece antes do bundle principal. -->
     <style>
-      /* Abertura estilo Lusion adaptada ao "A":
-         a barra carrega (contador 0→100) → a barra vira uma JANELA em forma
-         de A que mostra o site por dentro (entorno vazio) → a janela cresce e
-         o entorno some, revelando o site. Tema-aware. */
-      #preloader { position: fixed; inset: 0; z-index: 9999; }
-      #preloader svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-      #preloader .pl-cover { fill: #070a12; }
-      :root[data-theme="light"] #preloader .pl-cover { fill: #eef1f8; }
-      /* barra de carregamento (é o que se transforma na janela do A) */
-      #preloader .pl-bar {
-        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-        width: 104px; height: 30px; border-radius: 4px;
-        background: rgba(138, 147, 168, 0.22); overflow: hidden;
+      body.is-preloading { overflow: hidden; }
+      #preloader {
+        --pl-bg: #070a12;
+        --pl-ink: #f8fafc;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        overflow: hidden;
+        background: var(--pl-bg);
+        color: var(--pl-ink);
+        cursor: wait;
+        contain: strict;
       }
-      #preloader .pl-bar i { display: block; height: 100%; width: 0%; background: #f5f7ff; }
-      :root[data-theme="light"] #preloader .pl-bar i { background: #0b1020; }
-      /* contador gigante no canto inferior esquerdo (assinatura Lusion) */
-      #preloader .pl-count {
-        position: absolute; left: 6vw; bottom: 6vh;
-        font-family: "Plus Jakarta Sans", system-ui, sans-serif; font-weight: 800;
-        font-size: clamp(3.5rem, 11vw, 8rem); line-height: 0.8;
-        color: #f5f7ff; font-variant-numeric: tabular-nums;
+      :root[data-theme="light"] #preloader {
+        --pl-bg: #eef1f8;
+        --pl-ink: #0b1020;
       }
-      :root[data-theme="light"] #preloader .pl-count { color: #0b1020; }
+      #preloader.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 220ms ease-out;
+      }
+      #preloader canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      #preloader-percent-digits {
+        position: absolute;
+        left: max(1rem, 3vw);
+        bottom: 0;
+        display: flex;
+        height: 0.75em;
+        overflow: hidden;
+        font: 800 clamp(5rem, 10vw, 10rem) / 0.75 "Plus Jakarta Sans", sans-serif;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.09em;
+        user-select: none;
+      }
+      .preloader-percent-digit {
+        display: flex;
+        width: 0.68em;
+        flex: 0 0 0.68em;
+        flex-direction: column;
+        will-change: transform;
+      }
+      .preloader-percent-digit-num {
+        height: 0.75em;
+        flex: 0 0 0.75em;
+        text-align: center;
+      }
+      .pl-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      @media (max-width: 600px) {
+        #preloader-percent-digits {
+          left: 0.75rem;
+          font-size: clamp(4.75rem, 24vw, 7rem);
+        }
+      }
     </style>
   </head>
-  <body>
+  <body class="is-preloading">
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <div id="preloader" role="status" aria-label="Carregando">
-      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <defs>
-          <mask id="plMask" maskUnits="userSpaceOnUse">
-            <rect x="-3000" y="-3000" width="7280" height="6720" fill="#fff" />
-            <g id="plHole"><path id="plA" fill="#000" /></g>
-          </mask>
-        </defs>
-        <rect class="pl-cover" x="-3000" y="-3000" width="7280" height="6720" mask="url(#plMask)" />
-      </svg>
-      <div class="pl-bar" id="plBar"><i id="plFill"></i></div>
-      <div class="pl-count" id="plCount">0</div>
+      <canvas id="preloader-canvas" aria-hidden="true"></canvas>
+      <div id="preloader-percent-digits" aria-hidden="true">
+        <div class="preloader-percent-digit"><div class="preloader-percent-digit-num">0</div><div class="preloader-percent-digit-num">1</div></div>
+        <div class="preloader-percent-digit"><div class="preloader-percent-digit-num">0</div><div class="preloader-percent-digit-num">1</div></div>
+        <div class="preloader-percent-digit"><div class="preloader-percent-digit-num">0</div><div class="preloader-percent-digit-num">1</div></div>
+      </div>
+      <span class="pl-sr" id="preloader-status">Carregando, 0%</span>
     </div>
     <script>
-      // Abertura: contador 0→100 + barra → a barra vira uma JANELA em forma de A
-      // (site aparece só dentro do A) → a janela cresce e o entorno some.
       (function () {
         var pre = document.getElementById("preloader");
-        var count = document.getElementById("plCount");
-        var fill = document.getElementById("plFill");
-        var bar = document.getElementById("plBar");
-        var hole = document.getElementById("plHole");
-        var cover = document.querySelector("#preloader .pl-cover");
-        var plA = document.getElementById("plA");
-        if (!pre || !hole || !plA) return;
+        var canvas = document.getElementById("preloader-canvas");
+        var status = document.getElementById("preloader-status");
+        var digits = Array.prototype.slice.call(document.querySelectorAll(".preloader-percent-digit"));
+        if (!pre || !canvas || !canvas.getContext) return;
 
-        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          document.body.classList.remove("is-preloading");
           pre.remove();
           return;
         }
 
-        function CB(x1, y1, x2, y2) {
-          function A(a, b) { return 1 - 3 * b + 3 * a; } function B(a, b) { return 3 * b - 6 * a; } function C(a) { return 3 * a; }
-          function ca(t, a, b) { return ((A(a, b) * t + B(a, b)) * t + C(a)) * t; }
-          function sl(t, a, b) { return 3 * A(a, b) * t * t + 2 * B(a, b) * t + C(a); }
-          return function (x) { if (x <= 0) return 0; if (x >= 1) return 1; var t = x; for (var i = 0; i < 8; i++) { var e = ca(t, x1, x2) - x; if (Math.abs(e) < 1e-4) break; var d = sl(t, x1, x2); if (Math.abs(d) < 1e-6) break; t -= e / d; } return ca(t, y1, y2); };
-        }
-        var eS = CB(0.7, 0, 0.3, 1), eO = CB(0.25, 0.1, 0.25, 1), cl = function (v) { return Math.max(0, Math.min(1, v)); };
-
-        // gera a silhueta do A (2 pernas + travessão) com espessura sw variável
-        var G = { cx: 640, apexY: 250, footY: 470, fh: 104, cbY: 402 };
-        function setA(sw) {
-          var ap = [G.cx, G.apexY], lf = [G.cx - G.fh, G.footY], rf = [G.cx + G.fh, G.footY], cbH = Math.max(32, sw * 0.9);
-          function q(p, r, w) { var dx = r[0] - p[0], dy = r[1] - p[1], L = Math.hypot(dx, dy), nx = -dy / L * w / 2, ny = dx / L * w / 2; return [[p[0] + nx, p[1] + ny], [r[0] + nx, r[1] + ny], [r[0] - nx, r[1] - ny], [p[0] - nx, p[1] - ny]]; }
-          function d(P) { return "M" + P.map(function (p) { return p[0].toFixed(1) + " " + p[1].toFixed(1); }).join("L") + "Z"; }
-          var t = (G.cbY - G.apexY) / (G.footY - G.apexY), lx = ap[0] + (lf[0] - ap[0]) * t, rx = ap[0] + (rf[0] - ap[0]) * t;
-          var cb = [[lx, G.cbY - cbH / 2], [rx, G.cbY - cbH / 2], [rx, G.cbY + cbH / 2], [lx, G.cbY + cbH / 2]];
-          plA.setAttribute("d", d(q(ap, lf, sw)) + " " + d(q(ap, rf, sw)) + " " + d(cb));
-        }
-        setA(36);
-
-        var DUR = 1500, FORM = 1500, REVEAL = 2350, END = 3450;
+        var ctx = canvas.getContext("2d");
+        var dpr = 1;
+        var width = 0;
+        var height = 0;
+        var pixel = 24;
+        var progress = 0;
+        var target = 0;
+        var appReady = false;
+        var phaseStart = -1;
         var start = performance.now();
-        (function loop(now) {
-          var T = now - start;
-          var v = T < DUR ? Math.round((1 - Math.pow(1 - T / DUR, 2)) * 100) : 100;
-          count.textContent = v; if (fill) fill.style.width = v + "%";
-          var holeS = 0;
-          if (T >= FORM && T < REVEAL) {
-            // a janela do A floresce a partir da barra (traços finos)
-            holeS = 0.14 + 0.86 * eS(cl((T - FORM) / 650));
-            if (bar) bar.style.opacity = 1 - cl((T - FORM) / 300);
-          } else if (T >= REVEAL) {
-            // REVELAÇÃO: os TRAÇOS do A engrossam e crescem até o site preencher
-            if (bar) bar.style.opacity = 0;
-            var p = eS(cl((T - REVEAL) / 950));
-            setA(36 + 900 * p);
-            holeS = 1 + 3.2 * p;
-            count.style.opacity = 1 - eO(cl((T - REVEAL) / 300));
+        var previous = start;
+        var digitValues = [0, 0, 0];
+        var bg = getComputedStyle(pre).getPropertyValue("--pl-bg").trim() || "#070a12";
+        var ink = getComputedStyle(pre).getPropertyValue("--pl-ink").trim() || "#f8fafc";
+
+        function clamp(value) {
+          return Math.max(0, Math.min(1, value));
+        }
+        function expoInOut(value) {
+          if (value === 0 || value === 1) return value;
+          return value < 0.5
+            ? Math.pow(2, 20 * value - 10) / 2
+            : (2 - Math.pow(2, -20 * value + 10)) / 2;
+        }
+
+        function mix(from, to, ratio) {
+          return from + (to - from) * ratio;
+        }
+
+        function resize() {
+          width = window.innerWidth;
+          height = window.innerHeight;
+          dpr = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = Math.max(1, Math.round(width * dpr));
+          canvas.height = Math.max(1, Math.round(height * dpr));
+          canvas.style.width = width + "px";
+          canvas.style.height = height + "px";
+          pixel = Math.floor(Math.min(42, Math.max(14, width / 30)));
+        }
+
+        function setDigits(value, deltaSeconds, exitRatio) {
+          var percent = Math.floor(value * 100);
+          var targets = [Math.floor(percent / 100), Math.floor(percent / 10), percent];
+          for (var i = 0; i < digits.length; i++) {
+            digitValues[i] = mix(digitValues[i], targets[i], 1 - Math.exp(-7 * deltaSeconds));
+            if (targets[i] - digitValues[i] < 0.01) digitValues[i] = targets[i];
+            var current = ((digitValues[i] % 10) + 10) % 10;
+            var lower = Math.floor(current);
+            var upper = (lower + 1) % 10;
+            var fraction = current - lower;
+            var nums = digits[i].children;
+            nums[0].textContent = lower;
+            nums[1].textContent = upper;
+            var stagger = clamp(exitRatio * 1.25 - i * 0.1);
+            digits[i].style.transform =
+              "translateY(" + ((-fraction + expoInOut(stagger)) * 50) + "%) translateY(-0.05em)";
           }
-          hole.setAttribute("transform", "translate(640 402) scale(" + holeS + ") translate(-640 -402)");
-          if (T < END) { requestAnimationFrame(loop); } else if (pre.parentNode) { pre.remove(); }
-        })(start);
+          if (status && percent % 10 === 0) status.textContent = "Carregando, " + percent + "%";
+        }
+
+        function drawSegment(morph, startA, startB, endA, endB) {
+          ctx.beginPath();
+          ctx.moveTo(mix(startA[0], endA[0], morph), mix(startA[1], endA[1], morph));
+          ctx.lineTo(mix(startB[0], endB[0], morph), mix(startB[1], endB[1], morph));
+          ctx.stroke();
+        }
+
+        function draw(morphRatio, revealRatio) {
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, width, height);
+          ctx.fillStyle = bg;
+          ctx.fillRect(0, 0, width, height);
+
+          var morph = expoInOut(morphRatio);
+          var reveal = expoInOut(revealRatio);
+          var diagonal = Math.hypot(width, height);
+          var scale = 1 + reveal * diagonal / (pixel * 0.72);
+
+          ctx.save();
+          ctx.translate(width * 0.5, height * 0.5);
+          ctx.rotate(-reveal);
+          ctx.translate(reveal * diagonal * 0.08, -reveal * diagonal * 0.04);
+          ctx.scale(pixel * scale, pixel * scale);
+
+          if (morph < 1) {
+            ctx.fillStyle = document.documentElement.dataset.theme === "light"
+              ? "rgba(11,16,32,.14)"
+              : "rgba(148,163,184,.22)";
+            ctx.fillRect(-2.5, -0.5, 5, 1);
+            ctx.fillStyle = ink;
+            ctx.fillRect(-2.5, -0.5, 5 * progress, 1);
+          }
+
+          var gradient = ctx.createLinearGradient(-1.3, -1.3, 1.3, 1.3);
+          gradient.addColorStop(0, "#a855f7");
+          gradient.addColorStop(0.5, "#22d3ee");
+          gradient.addColorStop(1, "#00ff88");
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = mix(1, 0.42, morph);
+          ctx.lineCap = "square";
+          ctx.lineJoin = "miter";
+          ctx.globalAlpha = morph;
+          drawSegment(morph, [-2.5, 0], [0, 0], [-1.18, 1.22], [0, -1.28]);
+          drawSegment(morph, [0, 0], [2.5, 0], [0, -1.28], [1.18, 1.22]);
+          ctx.globalAlpha = morph * morph;
+          drawSegment(morph, [-0.02, 0], [0.02, 0], [-0.57, 0.28], [0.57, 0.28]);
+          ctx.restore();
+        }
+
+        function finish() {
+          document.body.classList.remove("is-preloading");
+          pre.remove();
+          window.dispatchEvent(new Event("amv:intro-complete"));
+        }
+
+        function markReady() {
+          appReady = true;
+        }
+
+        window.addEventListener("amv:ready", markReady, { once: true });
+        window.addEventListener("load", markReady, { once: true });
+        window.addEventListener("resize", resize, { passive: true });
+        window.setTimeout(markReady, 2200);
+        resize();
+
+        function loop(now) {
+          var elapsed = now - start;
+          var delta = Math.min(0.05, Math.max(0, (now - previous) / 1000));
+          previous = now;
+
+          target = Math.max(target, Math.min(0.92, 0.06 + elapsed / 1350 * 0.86));
+          if (appReady && elapsed > 550) target = 1;
+          progress = Math.min(target, progress + delta);
+
+          if (progress >= 0.9999 && phaseStart < 0) {
+            progress = 1;
+            phaseStart = now;
+          }
+
+          var phaseTime = phaseStart < 0 ? 0 : now - phaseStart;
+          var morph = clamp(phaseTime / 620);
+          var reveal = clamp((phaseTime - 760) / 920);
+          setDigits(progress, delta, reveal);
+          draw(morph, reveal);
+
+          if (reveal > 0.86) {
+            pre.style.opacity = String(1 - clamp((reveal - 0.86) / 0.14));
+          }
+
+          if (reveal >= 1) {
+            finish();
+            return;
+          }
+          requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
       })();
     </script>
     <div id="app"></div>

@@ -1973,6 +1973,38 @@ ol {
 .pkg:hover .pkg__holo {
   opacity: 0.4;
 }
+
+/* -------------------------------------------------------------------------
+   Aparelhos de TOQUE (tablets): não têm cursor, então os efeitos de hover
+   (tilt, holo, borda animada) ficavam desligados e a tela parecia "morta".
+   Aqui ligamos versões automáticas e suaves — só em toque + tela média,
+   sem afetar desktop (mouse) nem celular pequeno.
+   ------------------------------------------------------------------------- */
+@media (hover: none) and (min-width: 640px) {
+  .pkg::after {
+    opacity: 0.9;
+    animation: pkg-border-route 5s linear infinite, pkg-border-hue 7s ease-in-out infinite;
+  }
+  .pkg__holo {
+    opacity: 0.32;
+    animation: holo-drift 6s ease-in-out infinite;
+  }
+  .card::after {
+    opacity: 0.7;
+  }
+  .card,
+  .pkg {
+    animation: touch-glow 5s ease-in-out infinite;
+  }
+}
+@keyframes holo-drift {
+  0%, 100% { background-position: 0 0, 22% 28%; }
+  50% { background-position: 0 0, 78% 72%; }
+}
+@keyframes touch-glow {
+  0%, 100% { box-shadow: 0 8px 30px rgba(34, 211, 238, 0.08); }
+  50% { box-shadow: 0 12px 44px rgba(168, 85, 247, 0.18); }
+}
 /* conteúdo sempre acima do holo, pra o texto não ser "lavado" pelo color-dodge */
 .pkg__name,
 .pkg__price,
