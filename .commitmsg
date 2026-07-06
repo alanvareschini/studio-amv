@@ -1,3 +1,7 @@
-﻿Dashboard mostra o motivo do erro ao carregar dados
+﻿Postgres via createClient (aceita conexao direta do Neon)
+
+O Vercel forneceu string de conexao direta; createPool exigia pooled.
+Troca para createClient com reconexao automatica, revalidando a conexao
+a cada requisicao.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

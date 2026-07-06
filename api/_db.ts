@@ -1,10 +1,12 @@
 // Acesso ao Postgres (Vercel Postgres / Neon). Cria a tabela na primeira vez.
 // Rastreamento ANÔNIMO: nenhuma informação que identifique a pessoa é gravada
 // (sem IP, sem cookie de visitante). Só dados agregados de comportamento.
-import { createPool, type VercelPool } from "@vercel/postgres";
+//
+// Usa createClient (conexão direta) — funciona tanto com string "pooled" quanto
+// "direct". A conexão é reaproveitada entre invocações quentes e revalidada a
+// cada chamada (recria se tiver caído).
+import { createClient, type VercelClient } from "@vercel/postgres";
 
-// O Postgres do Vercel (Neon) pode injetar a string de conexão com nomes
-// diferentes dependendo da integração. Aceitamos qualquer um.
 function connectionString(): string {
   const s =
     process.env.POSTGRES_URL ||
@@ -21,42 +23,55 @@ function connectionString(): string {
   return s;
 }
 
-let pool: VercelPool | null = null;
-function db(): VercelPool {
-  if (!pool) pool = createPool({ connectionString: connectionString() });
-  return pool;
+let client: VercelClient | null = null;
+
+async function ensureConn(): Promise<VercelClient> {
+  if (client) {
+    try {
+      await client.sql`SELECT 1`; // conexão ainda viva?
+      return client;
+    } catch {
+      try {
+        await client.end();
+      } catch {
+        /* ignora */
+      }
+      client = null;
+    }
+  }
+  const c = createClient({ connectionString: connectionString() });
+  await c.connect();
+  client = c;
+  return c;
 }
 
-// `sql` como tagged template, ligado ao pool resolvido em runtime.
-export const sql: VercelPool["sql"] = (strings: TemplateStringsArray, ...values: never[]) =>
-  db().sql(strings, ...values);
+// `sql` como tagged template — usa o cliente já conectado por ensureSchema().
+export const sql: VercelClient["sql"] = ((strings: TemplateStringsArray, ...values: never[]) => {
+  if (!client) throw new Error("DB não inicializado — chame ensureSchema() antes.");
+  return client.sql(strings, ...values);
+}) as VercelClient["sql"];
 
-let ready: Promise<void> | null = null;
+let schemaReady = false;
 
-export function ensureSchema(): Promise<void> {
-  if (!ready) {
-    ready = (async () => {
-      await sql`
-        CREATE TABLE IF NOT EXISTS events (
-          id          BIGSERIAL PRIMARY KEY,
-          type        TEXT NOT NULL,            -- 'pageview' | 'click' | 'leave'
-          path        TEXT NOT NULL DEFAULT '/',
-          ref         TEXT,                     -- domínio de origem (sem query)
-          device      TEXT,                     -- 'mobile' | 'tablet' | 'desktop'
-          label       TEXT,                     -- rótulo do elemento clicado
-          duration_ms INTEGER,                  -- tempo engajado (evento 'leave')
-          scroll_pct  SMALLINT,                 -- profundidade de rolagem (0-100)
-          visit       TEXT,                     -- id efêmero por visita (não persistido no navegador)
-          day         DATE NOT NULL DEFAULT (now() AT TIME ZONE 'utc')::date,
-          created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-        );
-      `;
-      await sql`CREATE INDEX IF NOT EXISTS events_created_idx ON events (created_at);`;
-      await sql`CREATE INDEX IF NOT EXISTS events_type_idx ON events (type);`;
-    })().catch((e) => {
-      ready = null; // permite tentar de novo numa próxima requisição
-      throw e;
-    });
-  }
-  return ready;
+export async function ensureSchema(): Promise<void> {
+  await ensureConn(); // garante conexão viva a cada requisição
+  if (schemaReady) return;
+  await sql`
+    CREATE TABLE IF NOT EXISTS events (
+      id          BIGSERIAL PRIMARY KEY,
+      type        TEXT NOT NULL,            -- 'pageview' | 'click' | 'leave'
+      path        TEXT NOT NULL DEFAULT '/',
+      ref         TEXT,                     -- domínio de origem (sem query)
+      device      TEXT,                     -- 'mobile' | 'tablet' | 'desktop'
+      label       TEXT,                     -- rótulo do elemento clicado
+      duration_ms INTEGER,                  -- tempo engajado (evento 'leave')
+      scroll_pct  SMALLINT,                 -- profundidade de rolagem (0-100)
+      visit       TEXT,                     -- id efêmero por visita (não persistido no navegador)
+      day         DATE NOT NULL DEFAULT (now() AT TIME ZONE 'utc')::date,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS events_created_idx ON events (created_at);`;
+  await sql`CREATE INDEX IF NOT EXISTS events_type_idx ON events (type);`;
+  schemaReady = true;
 }
