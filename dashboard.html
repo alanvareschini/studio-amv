@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Painel · AMV Web Studio</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Tela de login (some após autenticar) -->
+    <div id="gate" class="gate">
+      <form id="loginForm" class="gate__card">
+        <div class="gate__brand">AMV<span>·</span>Painel</div>
+        <p class="gate__hint">Área restrita. Informe a senha para continuar.</p>
+        <input id="pwd" type="password" placeholder="Senha" autocomplete="current-password" required />
+        <button type="submit">Entrar</button>
+        <p id="loginErr" class="gate__err" hidden></p>
+      </form>
+    </div>
+
+    <!-- Dashboard (aparece após login) -->
+    <main id="app" class="dash" hidden>
+      <header class="dash__top">
+        <div class="dash__title">Comportamento dos visitantes</div>
+        <div class="dash__tools">
+          <select id="range" aria-label="Período">
+            <option value="7">Últimos 7 dias</option>
+            <option value="30" selected>Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+          <button id="logout" class="ghost">Sair</button>
+        </div>
+      </header>
+
+      <section class="cards" id="kpis"></section>
+
+      <section class="panel">
+        <h2>Visitas por dia</h2>
+        <div id="chart" class="chart"></div>
+      </section>
+
+      <div class="grid2">
+        <section class="panel">
+          <h2>Páginas mais vistas <small>(e tempo médio)</small></h2>
+          <div id="topPages" class="list"></div>
+        </section>
+        <section class="panel">
+          <h2>Onde as pessoas menos ficam</h2>
+          <div id="least" class="list"></div>
+        </section>
+        <section class="panel">
+          <h2>Cliques (o que mais chama atenção)</h2>
+          <div id="clicks" class="list"></div>
+        </section>
+        <section class="panel">
+          <h2>Dispositivos</h2>
+          <div id="devices" class="list"></div>
+        </section>
+        <section class="panel">
+          <h2>Origem do tráfego</h2>
+          <div id="refs" class="list"></div>
+        </section>
+      </div>
+
+      <footer class="dash__foot">
+        Dados anônimos e agregados · sem cookies · em conformidade com a LGPD
+      </footer>
+    </main>
+
+    <script type="module" src="/src/dashboard/main.ts"></script>
+  </body>
+</html>

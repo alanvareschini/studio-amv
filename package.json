@@ -10,11 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.10.0",
     "gsap": "^3.13.0",
     "three": "^0.169.0"
   },
   "devDependencies": {
     "@types/three": "^0.169.0",
+    "@vercel/node": "^5.1.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.2"
   }

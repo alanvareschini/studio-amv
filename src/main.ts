@@ -29,6 +29,7 @@ import { FlowLines, initFlowLines } from "./components/FlowLines";
 import { ModalShell, initModal } from "./components/Modal";
 import { Menu, initMenu } from "./components/Menu";
 import { WhatsAppFab } from "./components/WhatsAppFab";
+import { initAnalytics } from "./lib/analytics";
 
 const supportsRegisteredProperties =
   typeof CSS !== "undefined" && typeof CSS.registerProperty === "function";
@@ -70,6 +71,9 @@ if (app) {
       console.error(`[init] falhou: ${label}`, e);
     }
   };
+
+  // Analytics anônimo (invisível ao usuário) — nunca deve quebrar o site.
+  safe("analytics", initAnalytics);
 
   // Leves e essenciais rodam já (menu, tema, formulário, etc.).
   safe("menu", initMenu);
