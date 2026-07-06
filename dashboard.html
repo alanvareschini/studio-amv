@@ -43,14 +43,18 @@
 
       <nav class="tabs" id="tabs">
         <button class="tab is-active" data-tab="overview">Visão geral</button>
+        <button class="tab" data-tab="conv">Conversão</button>
         <button class="tab" data-tab="visitors">Visitantes</button>
+        <button class="tab" data-tab="geo">Local</button>
         <button class="tab" data-tab="devices">Dispositivos</button>
+        <button class="tab" data-tab="hours">Horários</button>
         <button class="tab" data-tab="pages">Páginas</button>
         <button class="tab" data-tab="clicks">Cliques</button>
       </nav>
 
       <!-- Visão geral -->
       <section class="tabpane is-active" data-pane="overview">
+        <div class="live" id="live"></div>
         <div class="cards" id="kpis"></div>
         <div class="panel">
           <h2>Visitantes por dia</h2>
@@ -62,6 +66,28 @@
         </div>
       </section>
 
+      <!-- Conversão -->
+      <section class="tabpane" data-pane="conv">
+        <div class="panel">
+          <h2>Funil de conversão</h2>
+          <div id="funnel" class="funnel"></div>
+        </div>
+      </section>
+
+      <!-- Local -->
+      <section class="tabpane" data-pane="geo">
+        <div class="grid2">
+          <div class="panel"><h2>Países</h2><div id="countries" class="list"></div></div>
+          <div class="panel"><h2>Cidades</h2><div id="cities" class="list"></div></div>
+        </div>
+      </section>
+
+      <!-- Horários -->
+      <section class="tabpane" data-pane="hours">
+        <div class="panel"><h2>Horário do dia <small>(fuso de Brasília)</small></h2><div id="peakHours" class="list"></div></div>
+        <div class="panel"><h2>Dia da semana</h2><div id="peakDays" class="list"></div></div>
+      </section>
+
       <!-- Visitantes -->
       <section class="tabpane" data-pane="visitors">
         <div class="panel">
@@ -69,7 +95,7 @@
           <div class="tablewrap">
             <table class="vtable">
               <thead>
-                <tr><th>Quando</th><th>Aparelho</th><th>Navegador</th><th>Sistema</th><th>Tempo</th><th>Rolagem</th></tr>
+                <tr><th>Quando</th><th>Local</th><th>Aparelho</th><th>Navegador</th><th>Sistema</th><th>Tempo</th><th>Rolagem</th></tr>
               </thead>
               <tbody id="visitsBody"></tbody>
             </table>

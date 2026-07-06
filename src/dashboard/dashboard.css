@@ -82,6 +82,28 @@ body {
 .tabpane.is-active { display: block; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
+/* ---- tempo real ---- */
+.live { display: flex; gap: 22px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 16px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+.live__item { display: flex; flex-direction: column; }
+.live__v { font-size: 1.5rem; font-weight: 800; line-height: 1; }
+.live__l { color: var(--dim); font-size: 0.78rem; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+.live__now .live__v { color: var(--green); }
+.live__now { position: relative; padding-left: 18px; }
+.live__now::before {
+  content: ""; position: absolute; left: 0; top: 6px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.5); animation: pulse 1.8s infinite;
+}
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,255,136,0.5); } 70% { box-shadow: 0 0 0 10px rgba(0,255,136,0); } 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0); } }
+
+/* ---- funil ---- */
+.funnel { display: flex; flex-direction: column; gap: 16px; }
+.fstep__top { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.95rem; }
+.fstep__top b { font-weight: 700; }
+.fstep__top small { color: var(--dim); font-weight: 500; }
+.fstep__bar { height: 26px; border-radius: 7px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.fstep__bar i { display: block; height: 100%; border-radius: 7px; transition: width 0.5s ease; min-width: 2px; }
+
 /* ---- cards / panels ---- */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 18px; }
 .card {

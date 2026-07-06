@@ -213,6 +213,9 @@ export function initContact(): void {
     }
     if (error) error.hidden = true;
 
+    // conversão: formulário enviado com sucesso (o analytics escuta este evento)
+    window.dispatchEvent(new CustomEvent("amv:conv", { detail: "form" }));
+
     const submit = document.getElementById("briefingSubmit") as HTMLButtonElement | null;
     const message = buildWhatsappMessage(data);
     const url = whatsappLink(message);

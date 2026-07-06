@@ -74,6 +74,18 @@ export function initAnalytics(): void {
   }
 
   const visit = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  // id ANÔNIMO e fixo do aparelho (só um código aleatório) → conta o mesmo
+  // computador uma vez e permite distinguir novos de recorrentes.
+  let vid = "";
+  try {
+    vid = localStorage.getItem("amv_vid") || "";
+    if (!vid) {
+      vid = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      localStorage.setItem("amv_vid", vid);
+    }
+  } catch {
+    vid = "anon";
+  }
   const device = deviceType();
   const ua = navigator.userAgent || "";
   const browser = browserName(ua);
@@ -81,7 +93,13 @@ export function initAnalytics(): void {
   const path = location.pathname || "/";
 
   // 1) pageview
-  send({ type: "pageview", path, ref: refDomain(), device, browser, os, visit });
+  send({ type: "pageview", path, ref: refDomain(), device, browser, os, visit, vid });
+
+  // conversões: evento disparado pelo site (ex.: formulário enviado)
+  window.addEventListener("amv:conv", (e) => {
+    const name = (e as CustomEvent).detail as string;
+    send({ type: "conv", path, label: name, device, visit, vid });
+  });
 
   // 2) tempo engajado: só conta enquanto a aba está visível
   let engaged = 0;
@@ -123,7 +141,13 @@ export function initAnalytics(): void {
         (el.textContent || "").trim().slice(0, 60) ||
         el.getAttribute("aria-label") ||
         el.tagName.toLowerCase();
-      send({ type: "click", path, label, device, visit });
+      send({ type: "click", path, label, device, visit, vid });
+
+      // conversão: clique em qualquer link/botão de WhatsApp
+      const href = (el.getAttribute("href") || "").toLowerCase();
+      if (href.includes("wa.me") || href.includes("whatsapp") || el.classList.contains("wa-fab")) {
+        send({ type: "conv", path, label: "whatsapp", device, visit, vid });
+      }
     },
     { passive: true }
   );
@@ -135,7 +159,7 @@ export function initAnalytics(): void {
     if (sent) return;
     sent = true;
     tickPause();
-    send({ type: "leave", path, device, browser, os, visit, duration: engaged, scroll: maxScroll });
+    send({ type: "leave", path, device, browser, os, visit, vid, duration: engaged, scroll: maxScroll });
   };
   window.addEventListener("pagehide", leave);
 }

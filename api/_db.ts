@@ -70,8 +70,12 @@ export async function ensureSchema(): Promise<void> {
   // colunas adicionais (tabelas já existentes recebem via ALTER)
   await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS browser TEXT;`;
   await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS os TEXT;`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS vid TEXT;`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS country TEXT;`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS city TEXT;`;
   await sql`CREATE INDEX IF NOT EXISTS events_created_idx ON events (created_at);`;
   await sql`CREATE INDEX IF NOT EXISTS events_type_idx ON events (type);`;
   await sql`CREATE INDEX IF NOT EXISTS events_visit_idx ON events (visit);`;
+  await sql`CREATE INDEX IF NOT EXISTS events_vid_idx ON events (vid);`;
   schemaReady = true;
 }

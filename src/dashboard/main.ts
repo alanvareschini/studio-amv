@@ -125,8 +125,14 @@ async function load(): Promise<void> {
     return;
   }
   const d = await r.json();
+  renderLive(d.realtime || {}, d.newReturning || {});
   renderKpis(d.summary || {});
+  renderFunnel(d.conv || {});
   renderChart(d.series || []);
+  $("countries").innerHTML = bars((d.countries || []).map((x: Rec) => ({ label: x.country, value: fmtInt(x.visitors), n: Number(x.visitors) })));
+  $("cities").innerHTML = bars((d.cities || []).map((x: Rec) => ({ label: x.city, value: fmtInt(x.visitors), n: Number(x.visitors) })));
+  renderPeakHours(d.peakHours || []);
+  renderPeakDays(d.peakDays || []);
   const devHtml = bars((d.devices || []).map((x: Rec) => ({ label: x.device, value: fmtInt(x.visitors), n: Number(x.visitors) })));
   $("devicesMini").innerHTML = devHtml;
   $("devices").innerHTML = devHtml;
@@ -140,6 +146,57 @@ async function load(): Promise<void> {
 }
 
 type Rec = Record<string, string>;
+
+function renderLive(rt: Rec, nr: Rec): void {
+  const items = [
+    { v: fmtInt(rt.online), l: "agora", cls: "live__now" },
+    { v: fmtInt(rt.today), l: "hoje" },
+    { v: fmtInt(nr.novos), l: "novos" },
+    { v: fmtInt(nr.recorrentes), l: "recorrentes" },
+  ];
+  $("live").innerHTML = items
+    .map(
+      (i) => `<div class="live__item ${i.cls || ""}"><span class="live__v">${i.v}</span><span class="live__l">${i.l}</span></div>`
+    )
+    .join("");
+}
+
+function renderFunnel(c: Rec): void {
+  const visitors = Number(c.visitors || 0);
+  const wa = Number(c.whatsapp || 0);
+  const forms = Number(c.forms || 0);
+  const pct = (n: number) => (visitors > 0 ? Math.round((n / visitors) * 100) : 0);
+  const steps = [
+    { label: "Visitantes", n: visitors, p: 100, color: "var(--cyan)" },
+    { label: "Clicaram no WhatsApp", n: wa, p: pct(wa), color: "var(--green)" },
+    { label: "Enviaram o formulário", n: forms, p: pct(forms), color: "var(--purple)" },
+  ];
+  $("funnel").innerHTML = steps
+    .map(
+      (s) => `<div class="fstep">
+        <div class="fstep__top"><span>${s.label}</span><b>${fmtInt(s.n)} <small>· ${s.p}%</small></b></div>
+        <div class="fstep__bar"><i style="width:${s.p}%;background:${s.color}"></i></div>
+      </div>`
+    )
+    .join("");
+}
+
+function renderPeakHours(rows: Array<{ hour: number; sessions: number }>): void {
+  const map = new Map(rows.map((r) => [Number(r.hour), Number(r.sessions)]));
+  const all = Array.from({ length: 24 }, (_, h) => ({
+    label: `${String(h).padStart(2, "0")}h`,
+    value: fmtInt(map.get(h) || 0),
+    n: map.get(h) || 0,
+  }));
+  $("peakHours").innerHTML = bars(all);
+}
+
+const DOW = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+function renderPeakDays(rows: Array<{ dow: number; sessions: number }>): void {
+  const map = new Map(rows.map((r) => [Number(r.dow), Number(r.sessions)]));
+  const all = DOW.map((name, i) => ({ label: name, value: fmtInt(map.get(i) || 0), n: map.get(i) || 0 }));
+  $("peakDays").innerHTML = bars(all);
+}
 
 function renderKpis(s: Rec): void {
   const cards = [
@@ -205,13 +262,18 @@ const deviceName = (d: string) =>
 function renderVisits(rows: Rec[]): void {
   const body = $("visitsBody");
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="6" class="empty">Ainda sem visitantes neste período.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="empty">Ainda sem visitantes neste período.</td></tr>`;
     return;
   }
+  const local = (v: Rec) => {
+    const parts = [v.city, v.country].filter((x) => x && x !== "—");
+    return parts.length ? esc(parts.join(", ")) : "—";
+  };
   body.innerHTML = rows
     .map(
       (v) => `<tr>
         <td>${esc(v.quando)}</td>
+        <td>${local(v)}</td>
         <td>${deviceIcon(v.device)} ${deviceName(v.device)}</td>
         <td>${esc(v.browser || "—")}</td>
         <td>${esc(v.os || "—")}</td>

@@ -3,7 +3,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { ensureSchema, sql } from "./_db.js";
 
-const TYPES = new Set(["pageview", "click", "leave"]);
+const TYPES = new Set(["pageview", "click", "leave", "conv"]);
 const DEVICES = new Set(["mobile", "tablet", "desktop"]);
 
 function clampStr(v: unknown, max: number): string | null {
@@ -41,11 +41,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const duration = clampInt(body.duration, 0, 1000 * 60 * 60); // até 1h
     const scroll = clampInt(body.scroll, 0, 100);
     const visit = clampStr(body.visit, 40);
+    const vid = clampStr(body.vid, 60);
+
+    // Localização aproximada vinda do Vercel (NÃO guardamos o IP — só país/cidade).
+    const h = req.headers;
+    const country = clampStr(h["x-vercel-ip-country"], 4);
+    let city: string | null = null;
+    const rawCity = h["x-vercel-ip-city"];
+    if (typeof rawCity === "string") {
+      try {
+        city = clampStr(decodeURIComponent(rawCity), 60);
+      } catch {
+        city = clampStr(rawCity, 60);
+      }
+    }
 
     await ensureSchema();
     await sql`
-      INSERT INTO events (type, path, ref, device, browser, os, label, duration_ms, scroll_pct, visit)
-      VALUES (${type}, ${path}, ${ref}, ${device}, ${browser}, ${os}, ${label}, ${duration}, ${scroll}, ${visit});
+      INSERT INTO events (type, path, ref, device, browser, os, label, duration_ms, scroll_pct, visit, vid, country, city)
+      VALUES (${type}, ${path}, ${ref}, ${device}, ${browser}, ${os}, ${label}, ${duration}, ${scroll}, ${visit}, ${vid}, ${country}, ${city});
     `;
     res.status(204).end();
   } catch (e) {

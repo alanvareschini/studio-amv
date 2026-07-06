@@ -1,11 +1,10 @@
-﻿Dashboard completo com abas + rastreio de aparelho/navegador/SO
+﻿Grande upgrade do dashboard: visitantes reais, geo, conversao, horarios
 
-- Rastreador captura navegador e sistema (por categoria, anonimo) e modo
-  ?notrack=1 para o dono excluir os proprios acessos
-- DB ganha colunas browser/os (ALTER IF NOT EXISTS)
-- stats foca em VISITANTES unicos; adiciona navegadores, sistemas e lista
-  de visitantes recentes (aparelho, navegador, SO, tempo, rolagem, quando)
-- Dashboard reconstruido com abas (Visao geral, Visitantes, Dispositivos,
-  Paginas, Cliques) e visual profissional
+- Visitante = id anonimo fixo por aparelho (vid): mesmo PC conta 1 vez;
+  novos vs recorrentes
+- Localizacao (pais/cidade) via headers do Vercel, sem guardar IP (LGPD)
+- Funil de conversao: WhatsApp e formulario, com taxas
+- Tempo real (agora/hoje) e horarios de pico (hora do dia e dia da semana)
+- Novas abas: Conversao, Local, Horarios; tabela de visitantes com Local
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
