@@ -1,7 +1,7 @@
-﻿Corrige crash das funcoes: imports ESM com extensao .js
+﻿Conexao Postgres aceita POSTGRES_URL ou DATABASE_URL (Neon)
 
-O projeto usa type=module; no runtime ESM os imports relativos exigem
-extensao explicita. Sem ela a funcao quebrava na inicializacao (500
-FUNCTION_INVOCATION_FAILED). Ajusta imports e tsconfig da API para NodeNext.
+O Vercel Postgres via Neon injeta a string com nomes diferentes. Cria o
+pool a partir de qualquer variavel disponivel e stats retorna o motivo
+do erro para diagnostico.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

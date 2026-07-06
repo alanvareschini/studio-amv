@@ -1,7 +1,35 @@
 // Acesso ao Postgres (Vercel Postgres / Neon). Cria a tabela na primeira vez.
 // Rastreamento ANÔNIMO: nenhuma informação que identifique a pessoa é gravada
 // (sem IP, sem cookie de visitante). Só dados agregados de comportamento.
-import { sql } from "@vercel/postgres";
+import { createPool, type VercelPool } from "@vercel/postgres";
+
+// O Postgres do Vercel (Neon) pode injetar a string de conexão com nomes
+// diferentes dependendo da integração. Aceitamos qualquer um.
+function connectionString(): string {
+  const s =
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.DATABASE_URL_UNPOOLED ||
+    "";
+  if (!s) {
+    throw new Error(
+      "Nenhuma string de conexão do Postgres encontrada (POSTGRES_URL / DATABASE_URL). Conecte o banco no Vercel e faça redeploy."
+    );
+  }
+  return s;
+}
+
+let pool: VercelPool | null = null;
+function db(): VercelPool {
+  if (!pool) pool = createPool({ connectionString: connectionString() });
+  return pool;
+}
+
+// `sql` como tagged template, ligado ao pool resolvido em runtime.
+export const sql: VercelPool["sql"] = (strings: TemplateStringsArray, ...values: never[]) =>
+  db().sql(strings, ...values);
 
 let ready: Promise<void> | null = null;
 
@@ -32,5 +60,3 @@ export function ensureSchema(): Promise<void> {
   }
   return ready;
 }
-
-export { sql };

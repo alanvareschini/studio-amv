@@ -94,6 +94,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (e) {
     console.error("[stats] erro", e);
-    res.status(500).json({ error: "server" });
+    res.status(500).json({ error: "server", detail: e instanceof Error ? e.message : String(e) });
   }
 }
