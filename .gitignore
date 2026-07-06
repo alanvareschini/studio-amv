@@ -5,3 +5,5 @@ dist
 .vscode/*
 !.vscode/extensions.json
 backup/
+
+.vite-dev.out.log
