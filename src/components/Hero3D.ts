@@ -34,6 +34,17 @@ class LetterScene {
   private lastW = window.innerWidth;
   private lastH = window.innerHeight;
   private resizeTimer = 0;
+  // referência de zoom capturada no carregamento (por aparelho).
+  private baseDPR = window.devicePixelRatio || 1;
+
+  // Faz o "A" acompanhar o zoom da página (Ctrl +/-): sem isso, o A fica
+  // gigante ao dar zoom-out porque o resto do conteúdo encolhe e ele não.
+  // Reage só ao zoom (variação do devicePixelRatio), não ao tamanho do monitor.
+  private applyZoomScale(): void {
+    const ratio = (window.devicePixelRatio || 1) / this.baseDPR;
+    const s = Math.max(0.55, Math.min(1.6, ratio));
+    this.group.scale.setScalar(s);
+  }
 
   // Fundo em degradê radial: um foco de luz suave atrás do "A" que escurece
   // para as bordas (vinheta natural) — dá profundidade sem parecer chapado.
@@ -219,6 +230,7 @@ class LetterScene {
 
     this.mesh = new THREE.Mesh(geo, mat);
     this.spinner.add(this.mesh);
+    this.applyZoomScale(); // respeita zoom já ativo no carregamento
 
     ScrollTrigger.create({
       trigger: "body",
@@ -267,6 +279,7 @@ class LetterScene {
       this.renderer.setSize(nw, nh);
       this.composer.setSize(nw, nh);
       this.updateResolution();
+      this.applyZoomScale(); // A acompanha o zoom da página
     }, 200);
   };
 

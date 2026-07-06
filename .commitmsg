@@ -1,9 +1,8 @@
-﻿Corrige travamento no zoom/redimensionamento (debounce)
+﻿A acompanha o zoom da pagina (Ctrl +/-) em vez de ficar gigante
 
-Zoom e a barra de endereco do celular disparam resize em rajada; refazer
-o A 3D, o fluido dos titulos (rasteriza texto) e os botoes WebGL a cada
-evento travava tudo. Agora: debounce ~200ms, ignora mudanca so de altura
-(barra do navegador) e listeners passivos. Nao muda o layout em nenhum
-tamanho de tela.
+Ao dar zoom-out o conteudo encolhe mas o A (canvas fixo) nao, parecendo
+gigante. Agora o A escala junto conforme o zoom (via devicePixelRatio
+relativo ao carregamento), com limites. Reage so ao zoom, nao ao tamanho
+do monitor, entao nao altera telas maiores/menores.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
