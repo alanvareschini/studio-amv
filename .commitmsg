@@ -1,3 +1,7 @@
-﻿stats: serializa o erro real (mensagem/code) em vez de [object Object]
+﻿Postgres: converte string direta para pooled (host -pooler) do Neon
+
+O driver serverless do Neon conecta via WebSocket e exige a string
+pooled; convertendo o host automaticamente resolve o 'Unexpected server
+response: 404'.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

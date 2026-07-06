@@ -2,59 +2,58 @@
 // Rastreamento ANÔNIMO: nenhuma informação que identifique a pessoa é gravada
 // (sem IP, sem cookie de visitante). Só dados agregados de comportamento.
 //
-// Usa createClient (conexão direta) — funciona tanto com string "pooled" quanto
-// "direct". A conexão é reaproveitada entre invocações quentes e revalidada a
-// cada chamada (recria se tiver caído).
-import { createClient, type VercelClient } from "@vercel/postgres";
+// O driver serverless do Neon conecta via WebSocket e EXIGE a string "pooled"
+// (host com "-pooler"). Se o Vercel injetou a string direta, convertemos.
+import { createPool, type VercelPool } from "@vercel/postgres";
+
+// Garante o host "pooled" do Neon (insere "-pooler" antes do primeiro ponto).
+function poolify(url: string): string {
+  try {
+    const u = new URL(url);
+    if (!u.hostname.includes("-pooler")) {
+      const dot = u.hostname.indexOf(".");
+      if (dot > 0) {
+        u.hostname = u.hostname.slice(0, dot) + "-pooler" + u.hostname.slice(dot);
+      }
+    }
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
 
 function connectionString(): string {
-  const s =
-    process.env.POSTGRES_URL ||
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    process.env.DATABASE_URL_UNPOOLED ||
-    "";
-  if (!s) {
+  // prioriza uma string que já seja "pooled"
+  const candidates = [
+    process.env.POSTGRES_URL,
+    process.env.DATABASE_URL,
+    process.env.POSTGRES_PRISMA_URL,
+    process.env.POSTGRES_URL_NON_POOLING,
+    process.env.DATABASE_URL_UNPOOLED,
+  ].filter((s): s is string => !!s);
+
+  if (candidates.length === 0) {
     throw new Error(
       "Nenhuma string de conexão do Postgres encontrada (POSTGRES_URL / DATABASE_URL). Conecte o banco no Vercel e faça redeploy."
     );
   }
-  return s;
+  const pooled = candidates.find((s) => s.includes("-pooler"));
+  return poolify(pooled || candidates[0]);
 }
 
-let client: VercelClient | null = null;
-
-async function ensureConn(): Promise<VercelClient> {
-  if (client) {
-    try {
-      await client.sql`SELECT 1`; // conexão ainda viva?
-      return client;
-    } catch {
-      try {
-        await client.end();
-      } catch {
-        /* ignora */
-      }
-      client = null;
-    }
-  }
-  const c = createClient({ connectionString: connectionString() });
-  await c.connect();
-  client = c;
-  return c;
+let pool: VercelPool | null = null;
+function db(): VercelPool {
+  if (!pool) pool = createPool({ connectionString: connectionString() });
+  return pool;
 }
 
-// `sql` como tagged template — usa o cliente já conectado por ensureSchema().
-export const sql: VercelClient["sql"] = ((strings: TemplateStringsArray, ...values: never[]) => {
-  if (!client) throw new Error("DB não inicializado — chame ensureSchema() antes.");
-  return client.sql(strings, ...values);
-}) as VercelClient["sql"];
+// `sql` como tagged template, ligado ao pool resolvido em runtime.
+export const sql: VercelPool["sql"] = ((strings: TemplateStringsArray, ...values: never[]) =>
+  db().sql(strings, ...values)) as VercelPool["sql"];
 
 let schemaReady = false;
 
 export async function ensureSchema(): Promise<void> {
-  await ensureConn(); // garante conexão viva a cada requisição
   if (schemaReady) return;
   await sql`
     CREATE TABLE IF NOT EXISTS events (
