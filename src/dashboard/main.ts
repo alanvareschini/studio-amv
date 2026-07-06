@@ -40,10 +40,16 @@ $("tabs").addEventListener("click", (e) => {
 });
 
 // ---- sessão ----
+let refreshTimer: number | undefined;
 async function showDashboard(): Promise<void> {
   gate.hidden = true;
   app.hidden = false;
   await load();
+  // atualização automática (tempo real) — só quando a aba está visível
+  if (refreshTimer) window.clearInterval(refreshTimer);
+  refreshTimer = window.setInterval(() => {
+    if (!app.hidden && document.visibilityState === "visible") load();
+  }, 30000);
 }
 
 async function checkSession(): Promise<void> {
@@ -125,6 +131,19 @@ async function load(): Promise<void> {
     return;
   }
   const d = await r.json();
+  const brand = document.querySelector(".topbar__brand");
+  if (brand) {
+    let tag = brand.querySelector<HTMLElement>(".livedot");
+    if (!tag) {
+      tag = document.createElement("span");
+      tag.className = "livedot";
+      tag.title = "Atualiza automaticamente";
+      brand.appendChild(tag);
+    }
+    tag.classList.remove("blink");
+    void tag.offsetWidth; // reinicia a animação
+    tag.classList.add("blink");
+  }
   renderLive(d.realtime || {}, d.newReturning || {});
   renderKpis(d.summary || {});
   renderFunnel(d.conv || {});

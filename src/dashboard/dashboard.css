@@ -82,6 +82,11 @@ body {
 .tabpane.is-active { display: block; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
+/* selo "ao vivo" que pisca a cada atualização */
+.livedot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-left: 4px; }
+.livedot.blink { animation: livedot 1s ease; }
+@keyframes livedot { 0% { transform: scale(2); opacity: 0.4; } 100% { transform: scale(1); opacity: 1; } }
+
 /* ---- tempo real ---- */
 .live { display: flex; gap: 22px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 16px;
   background: var(--card); border: 1px solid var(--border); border-radius: 14px; }

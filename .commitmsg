@@ -1,10 +1,3 @@
-﻿Grande upgrade do dashboard: visitantes reais, geo, conversao, horarios
-
-- Visitante = id anonimo fixo por aparelho (vid): mesmo PC conta 1 vez;
-  novos vs recorrentes
-- Localizacao (pais/cidade) via headers do Vercel, sem guardar IP (LGPD)
-- Funil de conversao: WhatsApp e formulario, com taxas
-- Tempo real (agora/hoje) e horarios de pico (hora do dia e dia da semana)
-- Novas abas: Conversao, Local, Horarios; tabela de visitantes com Local
+﻿Dashboard: atualizacao automatica a cada 30s (tempo real) + selo ao vivo
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
