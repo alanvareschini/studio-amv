@@ -12,10 +12,10 @@
     />
   </head>
   <body>
-    <!-- Tela de login (some após autenticar) -->
+    <!-- Login -->
     <div id="gate" class="gate">
       <form id="loginForm" class="gate__card">
-        <div class="gate__brand">AMV<span>·</span>Painel</div>
+        <div class="gate__brand">AMV<span>·</span>Analytics</div>
         <p class="gate__hint">Área restrita. Informe a senha para continuar.</p>
         <input id="pwd" type="password" placeholder="Senha" autocomplete="current-password" required />
         <button type="submit">Entrar</button>
@@ -23,54 +23,86 @@
       </form>
     </div>
 
-    <!-- Dashboard (aparece após login) -->
-    <main id="app" class="dash" hidden>
-      <header class="dash__top">
-        <div class="dash__title">Comportamento dos visitantes</div>
-        <div class="dash__tools">
+    <!-- Dashboard -->
+    <div id="app" class="dash" hidden>
+      <header class="topbar">
+        <div class="topbar__brand">
+          <span class="dot"></span> AMV <b>Analytics</b>
+        </div>
+        <div class="topbar__tools">
           <select id="range" aria-label="Período">
-            <option value="7">Últimos 7 dias</option>
-            <option value="30" selected>Últimos 30 dias</option>
-            <option value="90">Últimos 90 dias</option>
+            <option value="7">7 dias</option>
+            <option value="30" selected>30 dias</option>
+            <option value="90">90 dias</option>
+            <option value="365">1 ano</option>
           </select>
+          <a id="excludeMe" class="ghost" href="/?notrack=1" target="_blank" rel="noopener" title="Marca este navegador para não contar seus próprios acessos">Excluir meus acessos</a>
           <button id="logout" class="ghost">Sair</button>
         </div>
       </header>
 
-      <section class="cards" id="kpis"></section>
+      <nav class="tabs" id="tabs">
+        <button class="tab is-active" data-tab="overview">Visão geral</button>
+        <button class="tab" data-tab="visitors">Visitantes</button>
+        <button class="tab" data-tab="devices">Dispositivos</button>
+        <button class="tab" data-tab="pages">Páginas</button>
+        <button class="tab" data-tab="clicks">Cliques</button>
+      </nav>
 
-      <section class="panel">
-        <h2>Visitas por dia</h2>
-        <div id="chart" class="chart"></div>
+      <!-- Visão geral -->
+      <section class="tabpane is-active" data-pane="overview">
+        <div class="cards" id="kpis"></div>
+        <div class="panel">
+          <h2>Visitantes por dia</h2>
+          <div id="chart" class="chart"></div>
+        </div>
+        <div class="grid2">
+          <div class="panel"><h2>Dispositivos</h2><div id="devicesMini" class="list"></div></div>
+          <div class="panel"><h2>Origem do tráfego</h2><div id="refs" class="list"></div></div>
+        </div>
       </section>
 
-      <div class="grid2">
-        <section class="panel">
-          <h2>Páginas mais vistas <small>(e tempo médio)</small></h2>
-          <div id="topPages" class="list"></div>
-        </section>
-        <section class="panel">
-          <h2>Onde as pessoas menos ficam</h2>
-          <div id="least" class="list"></div>
-        </section>
-        <section class="panel">
-          <h2>Cliques (o que mais chama atenção)</h2>
-          <div id="clicks" class="list"></div>
-        </section>
-        <section class="panel">
-          <h2>Dispositivos</h2>
-          <div id="devices" class="list"></div>
-        </section>
-        <section class="panel">
-          <h2>Origem do tráfego</h2>
-          <div id="refs" class="list"></div>
-        </section>
-      </div>
+      <!-- Visitantes -->
+      <section class="tabpane" data-pane="visitors">
+        <div class="panel">
+          <h2>Visitantes recentes <small>(anônimos)</small></h2>
+          <div class="tablewrap">
+            <table class="vtable">
+              <thead>
+                <tr><th>Quando</th><th>Aparelho</th><th>Navegador</th><th>Sistema</th><th>Tempo</th><th>Rolagem</th></tr>
+              </thead>
+              <tbody id="visitsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dispositivos -->
+      <section class="tabpane" data-pane="devices">
+        <div class="grid2">
+          <div class="panel"><h2>Tipo de aparelho</h2><div id="devices" class="list"></div></div>
+          <div class="panel"><h2>Navegador</h2><div id="browsers" class="list"></div></div>
+          <div class="panel"><h2>Sistema operacional</h2><div id="systems" class="list"></div></div>
+        </div>
+      </section>
+
+      <!-- Páginas -->
+      <section class="tabpane" data-pane="pages">
+        <div class="grid2">
+          <div class="panel"><h2>Páginas mais visitadas <small>(e tempo médio)</small></h2><div id="topPages" class="list"></div></div>
+          <div class="panel"><h2>Onde as pessoas menos ficam</h2><div id="least" class="list"></div></div>
+        </div>
+      </section>
+
+      <!-- Cliques -->
+      <section class="tabpane" data-pane="clicks">
+        <div class="panel"><h2>O que mais recebe cliques</h2><div id="clicks" class="list"></div></div>
+      </section>
 
       <footer class="dash__foot">
-        Dados anônimos e agregados · sem cookies · em conformidade com a LGPD
+        Dados anônimos e agregados · sem cookies de rastreamento · em conformidade com a LGPD
       </footer>
-    </main>
+    </div>
 
     <script type="module" src="/src/dashboard/main.ts"></script>
   </body>

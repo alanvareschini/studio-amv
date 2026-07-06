@@ -67,7 +67,11 @@ export async function ensureSchema(): Promise<void> {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
+  // colunas adicionais (tabelas já existentes recebem via ALTER)
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS browser TEXT;`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS os TEXT;`;
   await sql`CREATE INDEX IF NOT EXISTS events_created_idx ON events (created_at);`;
   await sql`CREATE INDEX IF NOT EXISTS events_type_idx ON events (type);`;
+  await sql`CREATE INDEX IF NOT EXISTS events_visit_idx ON events (visit);`;
   schemaReady = true;
 }

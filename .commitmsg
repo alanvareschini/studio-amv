@@ -1,7 +1,11 @@
-﻿Auth do painel por token (imune a bloqueio de cookies)
+﻿Dashboard completo com abas + rastreio de aparelho/navegador/SO
 
-Login devolve um token alem do cookie; o painel guarda em localStorage e
-envia no cabecalho Authorization. O servidor aceita sessao via cookie OU
-token. Entra direto apos login, sem corrida de tempo do cookie.
+- Rastreador captura navegador e sistema (por categoria, anonimo) e modo
+  ?notrack=1 para o dono excluir os proprios acessos
+- DB ganha colunas browser/os (ALTER IF NOT EXISTS)
+- stats foca em VISITANTES unicos; adiciona navegadores, sistemas e lista
+  de visitantes recentes (aparelho, navegador, SO, tempo, rolagem, quando)
+- Dashboard reconstruido com abas (Visao geral, Visitantes, Dispositivos,
+  Paginas, Cliques) e visual profissional
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

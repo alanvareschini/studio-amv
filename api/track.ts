@@ -35,6 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const ref = clampStr(body.ref, 120);
     const deviceRaw = clampStr(body.device, 16);
     const device = deviceRaw && DEVICES.has(deviceRaw) ? deviceRaw : null;
+    const browser = clampStr(body.browser, 30);
+    const os = clampStr(body.os, 20);
     const label = clampStr(body.label, 80);
     const duration = clampInt(body.duration, 0, 1000 * 60 * 60); // até 1h
     const scroll = clampInt(body.scroll, 0, 100);
@@ -42,8 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await ensureSchema();
     await sql`
-      INSERT INTO events (type, path, ref, device, label, duration_ms, scroll_pct, visit)
-      VALUES (${type}, ${path}, ${ref}, ${device}, ${label}, ${duration}, ${scroll}, ${visit});
+      INSERT INTO events (type, path, ref, device, browser, os, label, duration_ms, scroll_pct, visit)
+      VALUES (${type}, ${path}, ${ref}, ${device}, ${browser}, ${os}, ${label}, ${duration}, ${scroll}, ${visit});
     `;
     res.status(204).end();
   } catch (e) {

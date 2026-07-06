@@ -14,6 +14,25 @@ function deviceType(): "mobile" | "tablet" | "desktop" {
   return "desktop";
 }
 
+// Detecção por CATEGORIA (não identifica a pessoa): navegador e sistema.
+function browserName(u: string): string {
+  if (/Edg\//.test(u)) return "Edge";
+  if (/OPR\/|Opera/.test(u)) return "Opera";
+  if (/SamsungBrowser/.test(u)) return "Samsung Internet";
+  if (/Firefox\//.test(u)) return "Firefox";
+  if (/Chrome\//.test(u)) return "Chrome";
+  if (/Safari\//.test(u)) return "Safari";
+  return "Outro";
+}
+function osName(u: string): string {
+  if (/Android/.test(u)) return "Android";
+  if (/iPhone|iPad|iPod/.test(u)) return "iOS";
+  if (/Windows/.test(u)) return "Windows";
+  if (/Mac OS X|Macintosh/.test(u)) return "macOS";
+  if (/Linux/.test(u)) return "Linux";
+  return "Outro";
+}
+
 function refDomain(): string | null {
   try {
     if (!document.referrer) return null;
@@ -43,12 +62,26 @@ export function initAnalytics(): void {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
   if (navigator.doNotTrack === "1") return; // respeita "não rastrear"
 
+  // Modo "não me rastreie" — o dono do site visita /?notrack=1 uma vez em cada
+  // aparelho/navegador para que suas próprias visitas NÃO entrem nas estatísticas.
+  try {
+    const p = new URLSearchParams(location.search);
+    if (p.get("notrack") === "1") localStorage.setItem("amv_notrack", "1");
+    if (p.get("track") === "1") localStorage.removeItem("amv_notrack");
+    if (localStorage.getItem("amv_notrack")) return;
+  } catch {
+    /* ignora */
+  }
+
   const visit = Math.random().toString(36).slice(2) + Date.now().toString(36);
   const device = deviceType();
+  const ua = navigator.userAgent || "";
+  const browser = browserName(ua);
+  const os = osName(ua);
   const path = location.pathname || "/";
 
   // 1) pageview
-  send({ type: "pageview", path, ref: refDomain(), device, visit });
+  send({ type: "pageview", path, ref: refDomain(), device, browser, os, visit });
 
   // 2) tempo engajado: só conta enquanto a aba está visível
   let engaged = 0;
@@ -102,7 +135,7 @@ export function initAnalytics(): void {
     if (sent) return;
     sent = true;
     tickPause();
-    send({ type: "leave", path, device, visit, duration: engaged, scroll: maxScroll });
+    send({ type: "leave", path, device, browser, os, visit, duration: engaged, scroll: maxScroll });
   };
   window.addEventListener("pagehide", leave);
 }

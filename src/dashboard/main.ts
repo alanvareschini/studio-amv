@@ -1,5 +1,5 @@
-// Painel administrativo (página separada, não linkada no site de vendas).
-// Faz login por senha, busca as estatísticas agregadas e desenha os gráficos.
+// Painel de analytics (página separada, não linkada no site de vendas).
+// Login por senha (com token), abas e renderização dos dados agregados.
 import "./dashboard.css";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -11,7 +11,6 @@ const loginErr = $("loginErr");
 const pwd = $<HTMLInputElement>("pwd");
 const rangeSel = $<HTMLSelectElement>("range");
 
-// Token de sessão (fallback caso o navegador bloqueie cookies).
 const TOK_KEY = "amv_dash_token";
 const getTok = () => localStorage.getItem(TOK_KEY) || "";
 const authHeaders = (): Record<string, string> => {
@@ -19,14 +18,28 @@ const authHeaders = (): Record<string, string> => {
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
 
-function fmtDuration(ms: number): string {
-  const s = Math.round(ms / 1000);
+const fmtInt = (n: unknown) => Number(n || 0).toLocaleString("pt-BR");
+function fmtDuration(ms: unknown): string {
+  const s = Math.round(Number(ms || 0) / 1000);
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
   return `${m}m ${s % 60}s`;
 }
-const fmtInt = (n: number) => Number(n || 0).toLocaleString("pt-BR");
+const esc = (s: unknown) =>
+  String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 
+// ---- abas ----
+$("tabs").addEventListener("click", (e) => {
+  const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".tab");
+  if (!btn) return;
+  const tab = btn.dataset.tab;
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("is-active", t === btn));
+  document.querySelectorAll<HTMLElement>(".tabpane").forEach((p) =>
+    p.classList.toggle("is-active", p.dataset.pane === tab)
+  );
+});
+
+// ---- sessão ----
 async function showDashboard(): Promise<void> {
   gate.hidden = true;
   app.hidden = false;
@@ -35,11 +48,7 @@ async function showDashboard(): Promise<void> {
 
 async function checkSession(): Promise<void> {
   try {
-    const r = await fetch("/api/auth", {
-      method: "GET",
-      credentials: "same-origin",
-      headers: authHeaders(),
-    });
+    const r = await fetch("/api/auth", { method: "GET", credentials: "same-origin", headers: authHeaders() });
     const j = await r.json();
     if (j.authed) await showDashboard();
   } catch {
@@ -65,7 +74,6 @@ loginForm.addEventListener("submit", async (e) => {
   }
   if (r.ok) {
     pwd.value = "";
-    // guarda o token (fallback a cookie) e entra direto — sem corrida de tempo
     try {
       const j = await r.json();
       if (j.token) localStorage.setItem(TOK_KEY, j.token);
@@ -73,7 +81,6 @@ loginForm.addEventListener("submit", async (e) => {
       /* ignora */
     }
     await showDashboard();
-    return;
   } else if (r.status === 401) {
     loginErr.textContent = "Senha incorreta.";
     loginErr.hidden = false;
@@ -92,9 +99,9 @@ $("logout").addEventListener("click", async () => {
 
 rangeSel.addEventListener("change", load);
 
+// ---- carregamento dos dados ----
 async function load(): Promise<void> {
-  const days = rangeSel.value;
-  const r = await fetch(`/api/stats?days=${days}`, {
+  const r = await fetch(`/api/stats?days=${rangeSel.value}`, {
     cache: "no-store",
     credentials: "same-origin",
     headers: authHeaders(),
@@ -114,131 +121,105 @@ async function load(): Promise<void> {
     }
     $("kpis").innerHTML = `<div class="card" style="grid-column:1/-1">
       <div class="card__l" style="color:#ff8590">Não foi possível carregar os dados</div>
-      <div class="card__h" style="margin-top:6px; word-break:break-word">${detail}</div>
-    </div>`;
+      <div class="card__h" style="margin-top:6px;word-break:break-word">${esc(detail)}</div></div>`;
     return;
   }
   const d = await r.json();
-  renderKpis(d.summary);
-  renderChart(d.series);
-  renderPages(d.topPages);
-  renderLeast(d.leastEngaged);
-  renderClicks(d.clicks);
-  renderDevices(d.devices);
-  renderRefs(d.referrers);
+  renderKpis(d.summary || {});
+  renderChart(d.series || []);
+  const devHtml = bars((d.devices || []).map((x: Rec) => ({ label: x.device, value: fmtInt(x.visitors), n: Number(x.visitors) })));
+  $("devicesMini").innerHTML = devHtml;
+  $("devices").innerHTML = devHtml;
+  $("browsers").innerHTML = bars((d.browsers || []).map((x: Rec) => ({ label: x.browser, value: fmtInt(x.visitors), n: Number(x.visitors) })));
+  $("systems").innerHTML = bars((d.systems || []).map((x: Rec) => ({ label: x.os, value: fmtInt(x.visitors), n: Number(x.visitors) })));
+  $("refs").innerHTML = bars((d.referrers || []).map((x: Rec) => ({ label: x.ref, value: fmtInt(x.visitors), n: Number(x.visitors) })));
+  $("topPages").innerHTML = bars((d.topPages || []).map((x: Rec) => ({ label: x.path, value: `${fmtInt(x.visitors)} · ${fmtDuration(x.avg_ms)}`, n: Number(x.visitors) })));
+  $("least").innerHTML = bars((d.leastEngaged || []).map((x: Rec) => ({ label: x.path, value: fmtDuration(x.avg_ms), n: Number(x.avg_ms) })));
+  $("clicks").innerHTML = bars((d.clicks || []).map((x: Rec) => ({ label: x.label, value: fmtInt(x.n), n: Number(x.n) })));
+  renderVisits(d.recentVisits || []);
 }
 
-function renderKpis(s: Record<string, number>): void {
+type Rec = Record<string, string>;
+
+function renderKpis(s: Rec): void {
   const cards = [
-    { label: "Visitas", value: fmtInt(s.visits), hint: "visitantes únicos" },
-    { label: "Páginas vistas", value: fmtInt(s.pageviews), hint: "total de aberturas" },
-    { label: "Tempo médio", value: fmtDuration(Number(s.avg_ms)), hint: "engajado por visita" },
+    { label: "Visitantes", value: fmtInt(s.visitors), hint: "pessoas únicas" },
+    { label: "Tempo médio", value: fmtDuration(s.avg_ms), hint: "engajado por visita" },
     { label: "Rolagem média", value: `${fmtInt(s.avg_scroll)}%`, hint: "da página" },
     { label: "Cliques", value: fmtInt(s.clicks), hint: "em botões e links" },
+    { label: "Celular", value: fmtInt(s.mobile), hint: "visitantes" },
+    { label: "Computador", value: fmtInt(s.desktop), hint: "visitantes" },
   ];
   $("kpis").innerHTML = cards
     .map(
-      (c) => `<div class="card">
-        <div class="card__v">${c.value}</div>
-        <div class="card__l">${c.label}</div>
-        <div class="card__h">${c.hint}</div>
-      </div>`
+      (c) => `<div class="card"><div class="card__v">${c.value}</div>
+        <div class="card__l">${c.label}</div><div class="card__h">${c.hint}</div></div>`
     )
     .join("");
 }
 
-type Point = { day: string; visits: number };
-function renderChart(series: Point[]): void {
+function renderChart(series: Array<{ day: string; visitors: number }>): void {
   const box = $("chart");
-  if (!series || series.length === 0) {
-    box.innerHTML = `<div class="empty">Ainda sem dados neste período.</div>`;
+  if (!series.length) {
+    box.innerHTML = `<div class="empty">Ainda sem visitas neste período.</div>`;
     return;
   }
   const W = 900, H = 240, pad = 30;
-  const max = Math.max(1, ...series.map((p) => Number(p.visits)));
+  const max = Math.max(1, ...series.map((p) => Number(p.visitors)));
   const stepX = series.length > 1 ? (W - pad * 2) / (series.length - 1) : 0;
   const x = (i: number) => pad + i * stepX;
   const y = (v: number) => H - pad - (v / max) * (H - pad * 2);
-
-  const line = series.map((p, i) => `${x(i).toFixed(1)},${y(Number(p.visits)).toFixed(1)}`).join(" ");
+  const line = series.map((p, i) => `${x(i).toFixed(1)},${y(Number(p.visitors)).toFixed(1)}`).join(" ");
   const area = `${pad},${H - pad} ${line} ${x(series.length - 1)},${H - pad}`;
-  const dots = series
-    .map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(Number(p.visits)).toFixed(1)}" r="3" />`)
-    .join("");
+  const dots = series.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(Number(p.visitors)).toFixed(1)}" r="3" />`).join("");
+  const step = Math.ceil(series.length / 8);
   const labels = series
-    .filter((_, i) => i % Math.ceil(series.length / 8) === 0 || i === series.length - 1)
-    .map((p) => {
-      const i = series.indexOf(p);
-      const d = p.day.slice(5);
-      return `<text x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="middle">${d}</text>`;
-    })
+    .map((p, i) => (i % step === 0 || i === series.length - 1 ? `<text x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="middle">${p.day.slice(5)}</text>` : ""))
     .join("");
-
-  box.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="chart__svg">
-      <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="rgba(34,211,238,0.35)"/>
-          <stop offset="1" stop-color="rgba(34,211,238,0)"/>
-        </linearGradient>
-      </defs>
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="chart__svg">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="rgba(34,211,238,0.35)"/><stop offset="1" stop-color="rgba(34,211,238,0)"/>
+      </linearGradient></defs>
       <polygon points="${area}" fill="url(#g)"/>
       <polyline points="${line}" fill="none" stroke="#22d3ee" stroke-width="2.5"/>
-      <g class="dots">${dots}</g>
-      <g class="xlabels">${labels}</g>
-    </svg>`;
+      <g class="dots">${dots}</g><g class="xlabels">${labels}</g></svg>`;
 }
 
-function bars(rows: Array<{ label: string; value: string; n: number }>, unit = ""): string {
+function bars(rows: Array<{ label: string; value: string; n: number }>): string {
   if (!rows.length) return `<div class="empty">Sem dados ainda.</div>`;
   const max = Math.max(1, ...rows.map((r) => r.n));
   return rows
     .map(
-      (r) => `<div class="row">
-        <div class="row__bar" style="--w:${(r.n / max) * 100}%"></div>
-        <span class="row__label" title="${r.label}">${r.label}</span>
-        <span class="row__val">${r.value}${unit}</span>
-      </div>`
+      (r) => `<div class="row"><div class="row__bar" style="--w:${(r.n / max) * 100}%"></div>
+        <span class="row__label" title="${esc(r.label)}">${esc(r.label)}</span>
+        <span class="row__val">${esc(r.value)}</span></div>`
     )
     .join("");
 }
 
-function renderPages(rows: Array<Record<string, string>>): void {
-  $("topPages").innerHTML = bars(
-    (rows || []).map((r) => ({
-      label: r.path,
-      value: `${fmtInt(Number(r.views))} · ${fmtDuration(Number(r.avg_ms))}`,
-      n: Number(r.views),
-    }))
-  );
-}
+const deviceIcon = (d: string) =>
+  d === "mobile" ? "📱" : d === "tablet" ? "📲" : d === "desktop" ? "💻" : "❔";
+const deviceName = (d: string) =>
+  d === "mobile" ? "Celular" : d === "tablet" ? "Tablet" : d === "desktop" ? "Computador" : "—";
 
-function renderLeast(rows: Array<Record<string, string>>): void {
-  $("least").innerHTML = bars(
-    (rows || []).map((r) => ({
-      label: r.path,
-      value: fmtDuration(Number(r.avg_ms)),
-      n: Number(r.avg_ms),
-    }))
-  );
-}
-
-function renderClicks(rows: Array<Record<string, string>>): void {
-  $("clicks").innerHTML = bars(
-    (rows || []).map((r) => ({ label: r.label, value: fmtInt(Number(r.n)), n: Number(r.n) }))
-  );
-}
-
-function renderDevices(rows: Array<Record<string, string>>): void {
-  $("devices").innerHTML = bars(
-    (rows || []).map((r) => ({ label: r.device, value: fmtInt(Number(r.visits)), n: Number(r.visits) }))
-  );
-}
-
-function renderRefs(rows: Array<Record<string, string>>): void {
-  $("refs").innerHTML = bars(
-    (rows || []).map((r) => ({ label: r.ref, value: fmtInt(Number(r.n)), n: Number(r.n) }))
-  );
+function renderVisits(rows: Rec[]): void {
+  const body = $("visitsBody");
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="6" class="empty">Ainda sem visitantes neste período.</td></tr>`;
+    return;
+  }
+  body.innerHTML = rows
+    .map(
+      (v) => `<tr>
+        <td>${esc(v.quando)}</td>
+        <td>${deviceIcon(v.device)} ${deviceName(v.device)}</td>
+        <td>${esc(v.browser || "—")}</td>
+        <td>${esc(v.os || "—")}</td>
+        <td>${v.duration != null ? fmtDuration(v.duration) : "—"}</td>
+        <td>${v.scroll != null ? esc(v.scroll) + "%" : "—"}</td>
+      </tr>`
+    )
+    .join("");
 }
 
 checkSession();
