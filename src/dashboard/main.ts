@@ -67,7 +67,20 @@ async function load(): Promise<void> {
     gate.hidden = false;
     return;
   }
-  if (!r.ok) return;
+  if (!r.ok) {
+    let detail = `HTTP ${r.status}`;
+    try {
+      const j = await r.json();
+      detail = j.detail || j.error || detail;
+    } catch {
+      /* ignora */
+    }
+    $("kpis").innerHTML = `<div class="card" style="grid-column:1/-1">
+      <div class="card__l" style="color:#ff8590">Não foi possível carregar os dados</div>
+      <div class="card__h" style="margin-top:6px; word-break:break-word">${detail}</div>
+    </div>`;
+    return;
+  }
   const d = await r.json();
   renderKpis(d.summary);
   renderChart(d.series);

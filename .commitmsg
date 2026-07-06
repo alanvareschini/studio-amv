@@ -1,7 +1,3 @@
-﻿Conexao Postgres aceita POSTGRES_URL ou DATABASE_URL (Neon)
-
-O Vercel Postgres via Neon injeta a string com nomes diferentes. Cria o
-pool a partir de qualquer variavel disponivel e stats retorna o motivo
-do erro para diagnostico.
+﻿Dashboard mostra o motivo do erro ao carregar dados
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
