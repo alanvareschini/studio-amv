@@ -1,7 +1,3 @@
-﻿Troca driver do Postgres para pg (TCP nativo)
-
-O driver serverless do @vercel/postgres (WebSocket/HTTP) dava 404 com a
-string de conexao do Neon. O pg fala Postgres direto por TCP e funciona
-com qualquer string. sql vira tagged template parametrizado.
+﻿Dashboard: favicon inline (remove 404) 
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
