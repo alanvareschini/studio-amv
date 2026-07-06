@@ -1,6 +1,7 @@
-﻿Auth do painel: tolera espaco/newline na senha e blinda contra 500
+﻿Corrige crash das funcoes: imports ESM com extensao .js
 
-- checkPassword faz trim dos dois lados
-- /api/auth com try/catch: nunca estoura 500 silencioso; avisa quando DASHBOARD_PASSWORD nao esta configurada
+O projeto usa type=module; no runtime ESM os imports relativos exigem
+extensao explicita. Sem ela a funcao quebrava na inicializacao (500
+FUNCTION_INVOCATION_FAILED). Ajusta imports e tsconfig da API para NodeNext.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

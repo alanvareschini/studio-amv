@@ -2,8 +2,8 @@
 // Retorna: resumo, série por dia, páginas mais/menos engajadas, cliques,
 // dispositivos e origens de tráfego. Tudo agregado (nada individual).
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { ensureSchema, sql } from "./_db";
-import { isAuthed } from "./_auth";
+import { ensureSchema, sql } from "./_db.js";
+import { isAuthed } from "./_auth.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!isAuthed(req)) {

@@ -1,7 +1,7 @@
 // Login do painel: POST { password } → cookie de sessão. DELETE → logout.
 // GET → informa se a sessão atual é válida (para o front decidir o que mostrar).
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { checkPassword, makeToken, setCookie, clearCookie, isAuthed } from "./_auth";
+import { checkPassword, makeToken, setCookie, clearCookie, isAuthed } from "./_auth.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {

@@ -1,7 +1,7 @@
 // Recebe os eventos de comportamento do site de vendas e grava no Postgres.
 // Aberto (é o que o site chama), mas só ACEITA eventos — nunca devolve dados.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { ensureSchema, sql } from "./_db";
+import { ensureSchema, sql } from "./_db.js";
 
 const TYPES = new Set(["pageview", "click", "leave"]);
 const DEVICES = new Set(["mobile", "tablet", "desktop"]);
