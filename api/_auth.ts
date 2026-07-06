@@ -43,9 +43,16 @@ export function clearCookie(): string {
   return `${COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
 }
 
+export function bearerToken(req: { headers: Record<string, unknown> }): string | undefined {
+  const h = (req.headers["authorization"] || req.headers["Authorization"]) as string | undefined;
+  if (h && h.startsWith("Bearer ")) return h.slice(7);
+  return undefined;
+}
+
 export function isAuthed(req: { headers: Record<string, unknown> }): boolean {
   const cookie = req.headers["cookie"] as string | undefined;
-  return validToken(readCookie(cookie));
+  // aceita sessão via cookie OU via token no cabeçalho (imune a bloqueio de cookies)
+  return validToken(readCookie(cookie)) || validToken(bearerToken(req));
 }
 
 // Compara a senha enviada com a do ambiente, sem vazar tempo.

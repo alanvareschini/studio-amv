@@ -11,6 +11,14 @@ const loginErr = $("loginErr");
 const pwd = $<HTMLInputElement>("pwd");
 const rangeSel = $<HTMLSelectElement>("range");
 
+// Token de sessão (fallback caso o navegador bloqueie cookies).
+const TOK_KEY = "amv_dash_token";
+const getTok = () => localStorage.getItem(TOK_KEY) || "";
+const authHeaders = (): Record<string, string> => {
+  const t = getTok();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
+
 function fmtDuration(ms: number): string {
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s}s`;
@@ -27,7 +35,11 @@ async function showDashboard(): Promise<void> {
 
 async function checkSession(): Promise<void> {
   try {
-    const r = await fetch("/api/auth", { method: "GET", credentials: "same-origin" });
+    const r = await fetch("/api/auth", {
+      method: "GET",
+      credentials: "same-origin",
+      headers: authHeaders(),
+    });
     const j = await r.json();
     if (j.authed) await showDashboard();
   } catch {
@@ -53,18 +65,15 @@ loginForm.addEventListener("submit", async (e) => {
   }
   if (r.ok) {
     pwd.value = "";
-    // confirma que a sessão realmente colou antes de abrir o painel
-    const ok = await fetch("/api/auth", { method: "GET", credentials: "same-origin" })
-      .then((x) => x.json())
-      .then((j) => j.authed)
-      .catch(() => false);
-    if (ok) {
-      await showDashboard();
-    } else {
-      loginErr.textContent =
-        "Login aceito, mas a sessão não foi salva (verifique se o navegador aceita cookies deste site).";
-      loginErr.hidden = false;
+    // guarda o token (fallback a cookie) e entra direto — sem corrida de tempo
+    try {
+      const j = await r.json();
+      if (j.token) localStorage.setItem(TOK_KEY, j.token);
+    } catch {
+      /* ignora */
     }
+    await showDashboard();
+    return;
   } else if (r.status === 401) {
     loginErr.textContent = "Senha incorreta.";
     loginErr.hidden = false;
@@ -76,7 +85,8 @@ loginForm.addEventListener("submit", async (e) => {
 });
 
 $("logout").addEventListener("click", async () => {
-  await fetch("/api/auth", { method: "DELETE", credentials: "same-origin" });
+  await fetch("/api/auth", { method: "DELETE", credentials: "same-origin", headers: authHeaders() });
+  localStorage.removeItem(TOK_KEY);
   location.reload();
 });
 
@@ -84,7 +94,11 @@ rangeSel.addEventListener("change", load);
 
 async function load(): Promise<void> {
   const days = rangeSel.value;
-  const r = await fetch(`/api/stats?days=${days}`, { cache: "no-store", credentials: "same-origin" });
+  const r = await fetch(`/api/stats?days=${days}`, {
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: authHeaders(),
+  });
   if (r.status === 401) {
     app.hidden = true;
     gate.hidden = false;

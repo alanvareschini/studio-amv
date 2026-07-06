@@ -33,8 +33,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(401).json({ error: "senha" });
         return;
       }
-      res.setHeader("Set-Cookie", setCookie(makeToken()));
-      res.status(200).json({ ok: true });
+      const token = makeToken();
+      res.setHeader("Set-Cookie", setCookie(token));
+      res.status(200).json({ ok: true, token }); // token = fallback se cookie for bloqueado
       return;
     }
 

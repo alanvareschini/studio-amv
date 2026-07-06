@@ -1,7 +1,7 @@
-﻿Login do painel: cookie SameSite=Lax, credenciais explicitas e erro claro
+﻿Auth do painel por token (imune a bloqueio de cookies)
 
-O cookie de sessao nao colava (SameSite=Strict); troca para Lax, forca
-credentials same-origin nas chamadas e confirma a sessao apos login
-mostrando mensagem se o cookie nao for salvo.
+Login devolve um token alem do cookie; o painel guarda em localStorage e
+envia no cabecalho Authorization. O servidor aceita sessao via cookie OU
+token. Entra direto apos login, sem corrida de tempo do cookie.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
