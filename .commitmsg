@@ -1,7 +1,7 @@
-﻿Postgres: converte string direta para pooled (host -pooler) do Neon
+﻿Troca driver do Postgres para pg (TCP nativo)
 
-O driver serverless do Neon conecta via WebSocket e exige a string
-pooled; convertendo o host automaticamente resolve o 'Unexpected server
-response: 404'.
+O driver serverless do @vercel/postgres (WebSocket/HTTP) dava 404 com a
+string de conexao do Neon. O pg fala Postgres direto por TCP e funciona
+com qualquer string. sql vira tagged template parametrizado.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
