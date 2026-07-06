@@ -1,0 +1,6 @@
+﻿Auth do painel: tolera espaco/newline na senha e blinda contra 500
+
+- checkPassword faz trim dos dois lados
+- /api/auth com try/catch: nunca estoura 500 silencioso; avisa quando DASHBOARD_PASSWORD nao esta configurada
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

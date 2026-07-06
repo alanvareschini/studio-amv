@@ -6,7 +6,7 @@ const COOKIE = "amv_dash";
 const MAX_AGE = 60 * 60 * 12; // 12h
 
 function secret(): string {
-  return process.env.SESSION_SECRET || process.env.DASHBOARD_PASSWORD || "dev-insecure-secret";
+  return (process.env.SESSION_SECRET || process.env.DASHBOARD_PASSWORD || "dev-insecure-secret").trim();
 }
 
 export function makeToken(): string {
@@ -49,10 +49,12 @@ export function isAuthed(req: { headers: Record<string, unknown> }): boolean {
 }
 
 // Compara a senha enviada com a do ambiente, sem vazar tempo.
+// Faz trim dos dois lados: evita falha por espaço/quebra de linha colada no
+// valor da variável de ambiente (causa comum de "senha incorreta").
 export function checkPassword(input: unknown): boolean {
-  const expected = process.env.DASHBOARD_PASSWORD || "";
+  const expected = (process.env.DASHBOARD_PASSWORD || "").trim();
   if (!expected || typeof input !== "string") return false;
-  const a = new Uint8Array(Buffer.from(input));
+  const a = new Uint8Array(Buffer.from(input.trim()));
   const b = new Uint8Array(Buffer.from(expected));
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
