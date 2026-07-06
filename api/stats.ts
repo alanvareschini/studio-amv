@@ -94,6 +94,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (e) {
     console.error("[stats] erro", e);
-    res.status(500).json({ error: "server", detail: e instanceof Error ? e.message : String(e) });
+    res.status(500).json({ error: "server", detail: describeError(e) });
   }
+}
+
+function describeError(e: unknown): string {
+  if (e instanceof Error) {
+    const anyE = e as { code?: string; detail?: string };
+    return [e.message, anyE.code, anyE.detail].filter(Boolean).join(" | ");
+  }
+  if (e && typeof e === "object") {
+    const o = e as Record<string, unknown>;
+    const parts = ["message", "code", "detail", "name", "severity", "hint"]
+      .map((k) => (o[k] != null ? `${k}=${String(o[k])}` : ""))
+      .filter(Boolean);
+    if (parts.length) return parts.join(" | ");
+    try {
+      return JSON.stringify(e);
+    } catch {
+      return String(e);
+    }
+  }
+  return String(e);
 }
