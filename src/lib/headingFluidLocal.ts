@@ -428,7 +428,22 @@ export function initHeadingFluid(): void {
     });
   });
 
-  addEventListener("resize", () => layers.forEach(rebuildLayer), { passive: true });
+  // Rasterizar o texto é pesado; no zoom/rolagem o resize dispara em rajada.
+  // Só refaz a largura mudar de fato, e com debounce (quando o usuário para).
+  let lastRw = window.innerWidth;
+  let rzTimer = 0;
+  addEventListener(
+    "resize",
+    () => {
+      if (window.innerWidth === lastRw) return; // só altura (barra do navegador) → ignora
+      window.clearTimeout(rzTimer);
+      rzTimer = window.setTimeout(() => {
+        lastRw = window.innerWidth;
+        layers.forEach(rebuildLayer);
+      }, 220);
+    },
+    { passive: true }
+  );
   // ao trocar de tema, re-rasteriza os títulos com a cor nova (branco→preto no claro)
   addEventListener("themechange", () => layers.forEach(rebuildLayer), { passive: true });
   addEventListener("pointerdown", pointerDown, { passive: true });

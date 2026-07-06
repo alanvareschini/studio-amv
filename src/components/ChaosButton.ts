@@ -242,7 +242,16 @@ class ChaosButtonGL {
     this.button.addEventListener("pointerup", deactivate);
     this.button.addEventListener("pointerleave", deactivate);
     this.button.addEventListener("pointercancel", deactivate);
-    window.addEventListener("resize", () => this.resize());
+    // debounce: evita refazer o canvas em rajada durante zoom/rolagem
+    let rzTimer = 0;
+    window.addEventListener(
+      "resize",
+      () => {
+        window.clearTimeout(rzTimer);
+        rzTimer = window.setTimeout(() => this.resize(), 200);
+      },
+      { passive: true }
+    );
   }
 
   private observeVisibility(): void {

@@ -1,3 +1,9 @@
-﻿Dashboard: atualizacao automatica a cada 30s (tempo real) + selo ao vivo
+﻿Corrige travamento no zoom/redimensionamento (debounce)
+
+Zoom e a barra de endereco do celular disparam resize em rajada; refazer
+o A 3D, o fluido dos titulos (rasteriza texto) e os botoes WebGL a cada
+evento travava tudo. Agora: debounce ~200ms, ignora mudanca so de altura
+(barra do navegador) e listeners passivos. Nao muda o layout em nenhum
+tamanho de tela.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

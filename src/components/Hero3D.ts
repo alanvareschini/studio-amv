@@ -31,6 +31,9 @@ class LetterScene {
   private clock = new THREE.Clock();
   private mat: THREE.MeshStandardMaterial | null = null;
   private bgTex: THREE.Texture | null = null;
+  private lastW = window.innerWidth;
+  private lastH = window.innerHeight;
+  private resizeTimer = 0;
 
   // Fundo em degradê radial: um foco de luz suave atrás do "A" que escurece
   // para as bordas (vinheta natural) — dá profundidade sem parecer chapado.
@@ -130,7 +133,7 @@ class LetterScene {
 
     window.addEventListener("pointermove", this.onPointer, { passive: true });
     window.addEventListener("pointerleave", () => (this.ptr.inside = false), { passive: true });
-    window.addEventListener("resize", this.onResize);
+    window.addEventListener("resize", this.onResize, { passive: true });
     this.updateResolution();
 
     new FontLoader().load("/font.json", (font) => this.build(font));
@@ -241,13 +244,30 @@ class LetterScene {
     this.ptr.inside = true;
   };
 
+  // Redimensiona com "debounce" e ignora mudanças que não são reais.
+  // Zoom e a barra de endereço do celular disparam resize em rajada; refazer
+  // a cena a cada evento trava tudo. Aqui só refazemos quando o usuário PARA
+  // de mexer, e ignoramos variações só de altura (barra do navegador).
   private onResize = (): void => {
-    const w = window.innerWidth, h = window.innerHeight;
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
-    this.composer.setSize(w, h);
-    this.updateResolution();
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const dw = Math.abs(w - this.lastW);
+    const dh = Math.abs(h - this.lastH);
+    // largura igual + pequena mudança de altura = barra do navegador → ignora
+    if (dw === 0 && dh < 130) return;
+
+    if (this.resizeTimer) window.clearTimeout(this.resizeTimer);
+    this.resizeTimer = window.setTimeout(() => {
+      const nw = window.innerWidth;
+      const nh = window.innerHeight;
+      this.lastW = nw;
+      this.lastH = nh;
+      this.camera.aspect = nw / nh;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(nw, nh);
+      this.composer.setSize(nw, nh);
+      this.updateResolution();
+    }, 200);
   };
 
   private updateResolution(): void {
