@@ -1,3 +1,7 @@
-﻿Dashboard: favicon inline (remove 404) 
+﻿Login do painel: cookie SameSite=Lax, credenciais explicitas e erro claro
+
+O cookie de sessao nao colava (SameSite=Strict); troca para Lax, forca
+credentials same-origin nas chamadas e confirma a sessao apos login
+mostrando mensagem se o cookie nao for salvo.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

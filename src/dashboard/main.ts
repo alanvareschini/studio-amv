@@ -27,7 +27,7 @@ async function showDashboard(): Promise<void> {
 
 async function checkSession(): Promise<void> {
   try {
-    const r = await fetch("/api/auth", { method: "GET" });
+    const r = await fetch("/api/auth", { method: "GET", credentials: "same-origin" });
     const j = await r.json();
     if (j.authed) await showDashboard();
   } catch {
@@ -38,22 +38,45 @@ async function checkSession(): Promise<void> {
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginErr.hidden = true;
-  const r = await fetch("/api/auth", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: pwd.value }),
-  });
+  let r: Response;
+  try {
+    r = await fetch("/api/auth", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd.value }),
+    });
+  } catch {
+    loginErr.textContent = "Falha de conexão. Tente novamente.";
+    loginErr.hidden = false;
+    return;
+  }
   if (r.ok) {
     pwd.value = "";
-    await showDashboard();
-  } else {
+    // confirma que a sessão realmente colou antes de abrir o painel
+    const ok = await fetch("/api/auth", { method: "GET", credentials: "same-origin" })
+      .then((x) => x.json())
+      .then((j) => j.authed)
+      .catch(() => false);
+    if (ok) {
+      await showDashboard();
+    } else {
+      loginErr.textContent =
+        "Login aceito, mas a sessão não foi salva (verifique se o navegador aceita cookies deste site).";
+      loginErr.hidden = false;
+    }
+  } else if (r.status === 401) {
     loginErr.textContent = "Senha incorreta.";
+    loginErr.hidden = false;
+  } else {
+    const j = await r.json().catch(() => ({}));
+    loginErr.textContent = j.hint || j.error || "Erro ao entrar. Tente novamente.";
     loginErr.hidden = false;
   }
 });
 
 $("logout").addEventListener("click", async () => {
-  await fetch("/api/auth", { method: "DELETE" });
+  await fetch("/api/auth", { method: "DELETE", credentials: "same-origin" });
   location.reload();
 });
 
@@ -61,7 +84,7 @@ rangeSel.addEventListener("change", load);
 
 async function load(): Promise<void> {
   const days = rangeSel.value;
-  const r = await fetch(`/api/stats?days=${days}`, { cache: "no-store" });
+  const r = await fetch(`/api/stats?days=${days}`, { cache: "no-store", credentials: "same-origin" });
   if (r.status === 401) {
     app.hidden = true;
     gate.hidden = false;

@@ -36,11 +36,11 @@ export function readCookie(header: string | undefined, name = COOKIE): string | 
 }
 
 export function setCookie(token: string): string {
-  return `${COOKIE}=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${MAX_AGE}`;
+  return `${COOKIE}=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${MAX_AGE}`;
 }
 
 export function clearCookie(): string {
-  return `${COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
+  return `${COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
 }
 
 export function isAuthed(req: { headers: Record<string, unknown> }): boolean {
