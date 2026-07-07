@@ -23,6 +23,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(405).json({ error: "method" });
     return;
   }
+  // ignora robôs pelo user-agent do servidor (não são visitas reais)
+  const ua = String(req.headers["user-agent"] || "").toLowerCase();
+  if (/bot|crawl|spider|slurp|headless|lighthouse|pagespeed|monitor|bingpreview|facebookexternalhit|embedly|phantom|puppeteer|playwright|vercel|uptime|dataprovider|scan/i.test(ua)) {
+    res.status(204).end();
+    return;
+  }
   try {
     // sendBeacon manda como texto; o body pode vir como string
     const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};

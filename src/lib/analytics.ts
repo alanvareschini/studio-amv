@@ -72,6 +72,12 @@ export function initAnalytics(): void {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
   if (navigator.doNotTrack === "1") return; // respeita "não rastrear"
 
+  // Ignora ROBÔS / navegadores automatizados (crawlers, monitores, headless,
+  // as minhas capturas de tela, etc.) — não são clientes de verdade.
+  const nav = navigator as Navigator & { webdriver?: boolean };
+  if (nav.webdriver) return;
+  if (/bot|crawl|spider|slurp|headless|lighthouse|pagespeed|monitor|bingpreview|facebookexternalhit|embedly|phantom|puppeteer|playwright/i.test(navigator.userAgent || "")) return;
+
   // Modo "não me rastreie" — o dono do site visita /?notrack=1 uma vez em cada
   // aparelho/navegador para que suas próprias visitas NÃO entrem nas estatísticas.
   try {

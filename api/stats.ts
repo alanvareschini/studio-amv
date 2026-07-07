@@ -178,6 +178,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       GROUP BY ref ORDER BY visitors DESC LIMIT 10;
     `;
 
+    // Quem está ONLINE agora (últimos 5 min): aparelho, navegador, local.
+    const online = await sql`
+      SELECT
+        MAX(device)  AS device,
+        MAX(browser) AS browser,
+        MAX(os)      AS os,
+        MAX(country) AS country,
+        MAX(city)    AS city,
+        to_char(MAX(created_at) AT TIME ZONE 'America/Sao_Paulo','HH24:MI') AS visto
+      FROM events
+      WHERE created_at >= now() - interval '5 minutes' AND visit IS NOT NULL
+      GROUP BY COALESCE(vid, visit)
+      ORDER BY MAX(created_at) DESC
+      LIMIT 20;
+    `;
+
     // Cada visitante (anônimo): aparelho, navegador, SO, local, tempo e quando.
     const recentVisits = await sql`
       SELECT
@@ -217,6 +233,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       referrers: referrers.rows,
       peakHours: peakHours.rows,
       peakDays: peakDays.rows,
+      online: online.rows,
       recentVisits: recentVisits.rows,
     });
   } catch (e) {

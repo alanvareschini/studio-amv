@@ -1,7 +1,8 @@
-﻿Corrige painel: login realmente esconde o dashboard ([hidden] !important)
+﻿Analytics: filtra robos (bots) e mostra 'quem esta online agora'
 
-O CSS .gate (display:grid) sobrepunha o atributo hidden, deixando o login
-e o dashboard visiveis juntos. Agora [hidden] esconde de fato. Sem sessao
-valida o painel continua vazio e a API bloqueia (401).
+- Ignora bots/crawlers/headless (cliente e servidor via user-agent) - era
+  o que gerava o falso 'San Jose, US / Linux'
+- Nova secao 'Quem esta online agora' (ultimos 5 min) com local, aparelho,
+  navegador e sistema, na aba Visitantes
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

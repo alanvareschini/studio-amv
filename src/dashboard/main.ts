@@ -161,6 +161,7 @@ async function load(): Promise<void> {
   $("topPages").innerHTML = bars((d.topPages || []).map((x: Rec) => ({ label: x.path, value: `${fmtInt(x.visitors)} · ${fmtDuration(x.avg_ms)}`, n: Number(x.visitors) })));
   $("least").innerHTML = bars((d.leastEngaged || []).map((x: Rec) => ({ label: x.path, value: fmtDuration(x.avg_ms), n: Number(x.avg_ms) })));
   $("clicks").innerHTML = bars((d.clicks || []).map((x: Rec) => ({ label: x.label, value: fmtInt(x.n), n: Number(x.n) })));
+  renderOnline(d.online || []);
   renderVisits(d.recentVisits || []);
 }
 
@@ -292,6 +293,29 @@ const deviceIcon = (d: string) =>
   d === "mobile" ? "📱" : d === "tablet" ? "📲" : d === "desktop" ? "💻" : "❔";
 const deviceName = (d: string) =>
   d === "mobile" ? "Celular" : d === "tablet" ? "Tablet" : d === "desktop" ? "Computador" : "—";
+const localTxt = (v: Rec) => {
+  const parts = [v.city, v.country].filter((x) => x && x !== "—");
+  return parts.length ? esc(parts.join(", ")) : "—";
+};
+
+function renderOnline(rows: Rec[]): void {
+  const body = $("onlineBody");
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="5" class="empty">Ninguém online agora.</td></tr>`;
+    return;
+  }
+  body.innerHTML = rows
+    .map(
+      (v) => `<tr>
+        <td>${esc(v.visto)}</td>
+        <td>${localTxt(v)}</td>
+        <td>${deviceIcon(v.device)} ${deviceName(v.device)}</td>
+        <td>${esc(v.browser || "—")}</td>
+        <td>${esc(v.os || "—")}</td>
+      </tr>`
+    )
+    .join("");
+}
 
 function renderVisits(rows: Rec[]): void {
   const body = $("visitsBody");
