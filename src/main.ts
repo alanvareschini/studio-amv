@@ -30,6 +30,7 @@ import { ModalShell, initModal } from "./components/Modal";
 import { Menu, initMenu } from "./components/Menu";
 import { WhatsAppFab } from "./components/WhatsAppFab";
 import { initAnalytics } from "./lib/analytics";
+import { initHeroIntro } from "./lib/heroIntro";
 
 const supportsRegisteredProperties =
   typeof CSS !== "undefined" && typeof CSS.registerProperty === "function";
@@ -63,6 +64,8 @@ if (app) {
     WhatsAppFab(),
   ].join("");
 
+  initHeroIntro();
+
   // Cada init é isolado: se um efeito falhar, NÃO derruba os outros.
   const safe = (label: string, fn: () => void) => {
     try {
@@ -93,59 +96,27 @@ if (app) {
   safe("emojiMotion", initEmojiMotion);
   safe("flowLines", initFlowLines);
 
-  // A intro acompanha a montagem real do conteúdo, em vez de depender apenas
-  // de um cronômetro. Dois frames garantem que o primeiro layout já foi pintado.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => window.dispatchEvent(new Event("amv:ready")));
-  });
-
   // -------------------------------------------------------------------------
-  // Efeitos PESADOS (Three.js): carregam em um chunk separado, DEPOIS da
-  // primeira pintura, pra não travar o carregamento inicial do site.
-  // O "A" 3D continua aparecendo; só entra um instante após a página abrir.
+  // Efeitos pesados (Three.js): carregam num chunk separado, depois da primeira
+  // pintura, pra não travar o carregamento. O "A" 3D é a identidade da hero.
+  import("./components/Hero3D")
+    .then((m) => safe("hero3d", m.initHero3D))
+    .catch((e) => console.error("[init] Hero3D não carregou", e));
+
+  // Fluido dos títulos — decorativo; carrega ocioso e pula em reduced-motion.
   const whenIdle = (fn: () => void) => {
     const w = window as unknown as {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void;
     };
-    if (typeof w.requestIdleCallback === "function") {
-      w.requestIdleCallback(fn, { timeout: 1500 });
-    } else {
-      window.setTimeout(fn, 200);
-    }
+    if (typeof w.requestIdleCallback === "function") w.requestIdleCallback(fn, { timeout: 1500 });
+    else window.setTimeout(fn, 200);
   };
-
-  const loadHeavy = () => {
-    // O "A" 3D da hero (mantém a identidade da marca).
-    import("./components/Hero3D")
-      .then((m) => safe("hero3d", m.initHero3D))
-      .catch((e) => console.error("[init] Hero3D não carregou", e));
-
-    // Fluido nos títulos — puramente decorativo; pula se o usuário prefere menos movimento.
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  window.setTimeout(() => {
+    whenIdle(() => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       import("./lib/headingFluidLocal")
         .then((m) => safe("headingFluid", m.initHeadingFluid))
         .catch((e) => console.error("[init] headingFluid não carregou", e));
-    }
-  };
-
-  if (document.readyState === "complete") {
-    whenIdle(loadHeavy);
-  } else {
-    window.addEventListener("load", () => whenIdle(loadHeavy), { once: true });
-  }
-
-  // -------------------------------------------------------------------------
-  // Esconde a tela de abertura quando o site está pronto (mínimo de ~700ms
-  // para não "piscar", e no máximo espera o load da página).
-  // A sequência da abertura é controlada pelo script inline do index.html.
-  // Aqui só uma rede de segurança: se por algum motivo o preloader continuar
-  // na tela, força a remoção depois de alguns segundos.
-  window.setTimeout(() => {
-    const pl = document.getElementById("preloader");
-    if (pl) {
-      document.body.classList.remove("is-preloading");
-      pl.classList.add("is-hidden");
-      window.setTimeout(() => pl.remove(), 950);
-    }
-  }, 6000);
+    });
+  }, 900);
 }

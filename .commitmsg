@@ -1,7 +1,9 @@
-﻿Efeitos automaticos em tablets (touch): borda animada, holo e brilho
+﻿Remove o mascote e a intro (preloader)
 
-Em aparelhos de toque nao ha cursor, entao tilt/holo/borda ficavam off e
-a tela parecia morta. Liga versoes automaticas suaves via @media (hover:
-none) and (min-width:640px) - nao afeta desktop nem celular pequeno.
+- Remove o mascote (Mascot.ts/mascot.css e ligacoes)
+- Remove o preloader/intro do index.html (estilo, markup e script) e o
+  acoplamento no main.ts; o hero aparece direto (heroIntro revela sozinho)
+- Corrige o A que travava apos a hero (remove a pausa por visibilidade;
+  mantem so a economia do rastro, que nao trava o movimento)
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

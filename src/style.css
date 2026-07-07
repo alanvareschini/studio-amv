@@ -1111,6 +1111,33 @@ ol {
   background-clip: text;
   color: transparent;
 }
+.hero__brand--intro {
+  background: none;
+  color: inherit;
+}
+.hero-intro__clip {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  color: var(--text);
+}
+.hero-intro__word {
+  display: inline-block;
+  background: var(--grad-main);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transform-origin: left bottom;
+  will-change: transform;
+}
+.is-intro-pending .hero-intro__word {
+  transform: translate3d(0, 1.7em, 0) rotate(15deg);
+}
+.is-intro-pending .hero__subtitle,
+.is-intro-pending .hero__actions {
+  opacity: 0;
+  transform: scale(0.8);
+}
 .hero__name .spin-mark {
   --radius: clamp(26px, 7vw, 44px);
   --radius-text: clamp(18px, 5vw, 30px);

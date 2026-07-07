@@ -34,6 +34,7 @@ class LetterScene {
   private lastW = window.innerWidth;
   private lastH = window.innerHeight;
   private resizeTimer = 0;
+  private frostIdle = 999; // quadros sem interação (pula a simulação do rastro)
   // referência de zoom capturada no carregamento (por aparelho).
   private baseDPR = window.devicePixelRatio || 1;
 
@@ -102,7 +103,7 @@ class LetterScene {
   private splatVel = 0;
   private lastMove = 0;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, onReady: () => void, onError: () => void) {
     this.isMobile = window.matchMedia("(max-width: 760px)").matches;
     const w = window.innerWidth, h = window.innerHeight;
 
@@ -147,7 +148,18 @@ class LetterScene {
     window.addEventListener("resize", this.onResize, { passive: true });
     this.updateResolution();
 
-    new FontLoader().load("/font.json", (font) => this.build(font));
+    new FontLoader().load(
+      "/font.json",
+      (font) => {
+        this.build(font);
+        requestAnimationFrame(onReady);
+      },
+      undefined,
+      (error) => {
+        console.error("Fonte da cena 3D não carregou:", error);
+        onError();
+      },
+    );
     this.tick();
   }
 
@@ -343,6 +355,7 @@ class LetterScene {
 
   private tick = (): void => {
     requestAnimationFrame(this.tick);
+    // pausa só quando a aba está oculta (o A continua se movendo ao rolar)
     if (document.hidden) return;
     const elapsed = this.clock.getElapsedTime();
     const s = this.scrollT;
@@ -354,7 +367,10 @@ class LetterScene {
     } else {
       this.overA = false;
     }
-    this.updateFrost(elapsed); // rastro na superfície também no mobile (toque)
+    // Só roda a simulação do rastro (loop de 16k células) quando há interação
+    // ou logo depois (enquanto o rastro some). Parado = pula, economiza CPU.
+    this.frostIdle = this.overA ? 0 : this.frostIdle + 1;
+    if (this.frostIdle < 100) this.updateFrost(elapsed);
 
     // coreografia pelo scroll
     const active = LetterScene.smoothstep(0, 0.14, s) * (1 - LetterScene.smoothstep(0.84, 1, s));
@@ -376,19 +392,25 @@ class LetterScene {
   };
 }
 
-export function initHero3D(): void {
+export function initHero3D(): Promise<void> {
   const canvas = document.querySelector<HTMLCanvasElement>(".hero3d-canvas");
   const host = document.querySelector<HTMLElement>(".hero3d");
-  if (!canvas || !host) return;
+  if (!canvas || !host) return Promise.resolve();
 
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     host.classList.add("is-static");
-    return;
+    return Promise.resolve();
   }
-  try {
-    new LetterScene(canvas);
-  } catch (err) {
-    console.error("Cena 3D falhou, usando fallback:", err);
-    host.classList.add("is-static");
-  }
+  return new Promise((resolve) => {
+    const fallback = () => {
+      host.classList.add("is-static");
+      resolve();
+    };
+    try {
+      new LetterScene(canvas, resolve, fallback);
+    } catch (err) {
+      console.error("Cena 3D falhou, usando fallback:", err);
+      fallback();
+    }
+  });
 }

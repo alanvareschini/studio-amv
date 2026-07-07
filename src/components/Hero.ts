@@ -14,7 +14,15 @@ export function Hero(): string {
 
       <div class="container hero__inner hero__inner--center">
         <div class="hero__content">
-          <h1 class="hero__brand">${site.brand}</h1>
+          <h1 class="hero__brand hero__brand--intro" aria-label="${site.brand}">
+            ${site.brand
+              .split(" ")
+              .map(
+                (word) =>
+                  `<span class="hero-intro__clip" aria-hidden="true"><span class="hero-intro__word">${word}</span></span>`,
+              )
+              .join(" ")}
+          </h1>
           <p class="hero__subtitle">
             Sites profissionais que fazem seu negócio
             <span class="text-gradient">vender mais.</span>
