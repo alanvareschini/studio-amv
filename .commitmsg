@@ -1,7 +1,7 @@
-﻿Painel: sempre pede a senha (remove o 'ficar logado')
+﻿Painel: volta o login automatico para quem ja logou com a senha certa
 
-Token so na memoria (some ao recarregar) e sem login automatico: a tela
-de senha aparece toda vez. Limpa cookie/token de sessoes anteriores no
-carregamento. Mais seguro.
+Token salvo no localStorage (12h); checkSession entra automatico se a
+sessao for valida. Quem nunca acertou a senha continua vendo a tela de
+login. Mantem o fix do [hidden] (login esconde o painel de fato).
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
