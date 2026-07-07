@@ -31,6 +31,7 @@ import { Menu, initMenu } from "./components/Menu";
 import { WhatsAppFab } from "./components/WhatsAppFab";
 import { initAnalytics } from "./lib/analytics";
 import { initHeroIntro } from "./lib/heroIntro";
+import { initSecretAccess } from "./lib/secretAccess";
 
 const supportsRegisteredProperties =
   typeof CSS !== "undefined" && typeof CSS.registerProperty === "function";
@@ -77,6 +78,8 @@ if (app) {
 
   // Analytics anônimo (invisível ao usuário) — nunca deve quebrar o site.
   safe("analytics", initAnalytics);
+  // Acesso secreto ao painel (palavra no teclado ou 5 toques na marca).
+  safe("secret", initSecretAccess);
 
   // Leves e essenciais rodam já (menu, tema, formulário, etc.).
   safe("menu", initMenu);
