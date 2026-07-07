@@ -74,8 +74,218 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Intro "cortina de código": tecido de caracteres no gradiente; puxe a
+         corda para abrir a tela e revelar o site. CSS crítico inline. -->
+    <style>
+      body.ci-lock { overflow: hidden; }
+      #clothintro {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: #070a12;
+        transition: opacity 0.6s ease;
+      }
+      :root[data-theme="light"] #clothintro { background: #eef1f8; }
+      #clothintro.ci-gone { opacity: 0; pointer-events: none; }
+      #clothintro canvas { position: absolute; inset: 0; display: block; touch-action: none; }
+    </style>
   </head>
-  <body>
+  <body class="ci-lock">
+    <div id="clothintro" role="button" aria-label="Puxe a corda para entrar">
+      <canvas id="ci-canvas"></canvas>
+    </div>
+    <script>
+      (function () {
+        var host = document.getElementById("clothintro");
+        var canvas = document.getElementById("ci-canvas");
+        if (!host || !canvas || !canvas.getContext) { finishNow(); return; }
+        function finishNow() {
+          if (host) host.remove();
+          document.body.classList.remove("ci-lock");
+        }
+        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { finishNow(); return; }
+
+        var ctx = canvas.getContext("2d");
+        var W = 0, H = 0, dpr = 1;
+        var light = document.documentElement.dataset.theme === "light";
+        var CHARS = "AMV·WEB·STUDIO·SITES·QUE·VENDEM·</>·{ }·( )·=>·#·01·λ·";
+
+        // cores do gradiente da loja
+        function mix(a, b, t) { return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+        var PUR = [168,85,247], CYA = [34,211,238], GRN = [0,255,136];
+        function grad(t) {
+          t = t < 0 ? 0 : t > 1 ? 1 : t;
+          var c = t < 0.5 ? mix(PUR, CYA, t*2) : mix(CYA, GRN, (t-0.5)*2);
+          return "rgb(" + (c[0]|0) + "," + (c[1]|0) + "," + (c[2]|0) + ")";
+        }
+
+        var SP, cols, rows, P, cord, handle;
+        var grav = 0.4, damp = 0.99, iters = 3;
+        var opening = false, openT = 0, started = performance.now();
+
+        function build() {
+          W = window.innerWidth; H = window.innerHeight;
+          dpr = Math.min(2, window.devicePixelRatio || 1);
+          canvas.width = W * dpr; canvas.height = H * dpr;
+          canvas.style.width = W + "px"; canvas.style.height = H + "px";
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          SP = Math.max(W < 640 ? 40 : 34, Math.round(W / 40));
+          cols = Math.ceil(W / SP) + 2;
+          rows = Math.ceil(H / SP) + 2;
+          P = [];
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              var x = c * SP, y = r * SP;
+              P.push({ x: x, y: y, ox: x, oy: y, pin: r === 0, ch: CHARS[(r * cols + c) % CHARS.length], col: grad((x / W + y / H) / 2) });
+            }
+          }
+          // corda à direita
+          var cx = Math.min(W - 60, W * 0.84), segs = 16, seglen = Math.min(H * 0.34, 300) / 16;
+          cord = [];
+          for (var i = 0; i < segs; i++) cord.push({ x: cx, y: i * seglen, ox: cx, oy: i * seglen, pin: i === 0, len: seglen });
+          handle = cord[cord.length - 1];
+        }
+
+        function idx(r, c) { return r * cols + c; }
+
+        var ptr = { x: -1, y: -1, down: false, grab: false };
+        function pos(e) {
+          var t = e.touches ? e.touches[0] : e;
+          ptr.x = t.clientX; ptr.y = t.clientY;
+        }
+        host.addEventListener("pointerdown", function (e) {
+          pos(e); ptr.down = true;
+          var dx = ptr.x - handle.x, dy = ptr.y - handle.y;
+          if (dx * dx + dy * dy < 60 * 60) ptr.grab = true;
+        });
+        window.addEventListener("pointermove", function (e) { pos(e); }, { passive: true });
+        window.addEventListener("pointerup", function () { ptr.down = false; ptr.grab = false; });
+
+        function verlet(a, g) {
+          for (var i = 0; i < a.length; i++) {
+            var p = a[i];
+            if (p.pin) continue;
+            var vx = (p.x - p.ox) * damp, vy = (p.y - p.oy) * damp;
+            p.ox = p.x; p.oy = p.y;
+            p.x += vx; p.y += vy + g;
+          }
+        }
+        function link(p1, p2, rest, stiff) {
+          var dx = p2.x - p1.x, dy = p2.y - p1.y, d = Math.hypot(dx, dy) || 0.001;
+          var diff = ((rest - d) / d) * 0.5 * stiff;
+          var ox = dx * diff, oy = dy * diff;
+          if (!p1.pin) { p1.x -= ox; p1.y -= oy; }
+          if (!p2.pin) { p2.x += ox; p2.y += oy; }
+        }
+        function solveCloth() {
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              var p = P[idx(r, c)];
+              if (c < cols - 1) link(p, P[idx(r, c + 1)], SP, 1);
+              if (r < rows - 1) link(p, P[idx(r + 1, c)], SP, 1);
+            }
+          }
+        }
+        function solveCord() {
+          for (var i = 0; i < cord.length - 1; i++) link(cord[i], cord[i + 1], cord[i].len, 1);
+        }
+
+        function repel() {
+          if (ptr.x < 0) return;
+          var R = 120, R2 = R * R;
+          for (var i = 0; i < P.length; i++) {
+            var p = P[i]; if (p.pin) continue;
+            var dx = p.x - ptr.x, dy = p.y - ptr.y, d2 = dx * dx + dy * dy;
+            if (d2 < R2 && d2 > 1) {
+              var f = (1 - d2 / R2) * 6, d = Math.sqrt(d2);
+              p.x += (dx / d) * f; p.y += (dy / d) * f;
+            }
+          }
+        }
+
+        function step() {
+          verlet(P, grav);
+          verlet(cord, grav * 1.1);
+          if (ptr.grab) { handle.x = ptr.x; handle.y = ptr.y; handle.ox = ptr.x; handle.oy = ptr.y; }
+          repel();
+          for (var k = 0; k < iters; k++) { solveCloth(); solveCord(); }
+          // gatilho: puxou a corda pra baixo o suficiente
+          if (!opening && handle.y > H * 0.6) open();
+          // auto-abre depois de um tempo se ninguém puxar
+          if (!opening && performance.now() - started > 9000) open();
+        }
+
+        function open() {
+          opening = true; openT = performance.now();
+          for (var i = 0; i < P.length; i++) P[i].pin = false;      // a cortina cai
+          for (var j = 0; j < cord.length; j++) cord[j].pin = false;
+          host.classList.add("ci-gone");
+        }
+
+        function draw() {
+          ctx.clearRect(0, 0, W, H);
+          // caracteres do tecido, girados conforme o tecido
+          ctx.font = "700 " + Math.round(SP * 0.82) + "px 'Plus Jakarta Sans', monospace";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              var p = P[idx(r, c)];
+              if (!p.ch || p.ch === " ") continue;
+              var ang = 0;
+              if (r < rows - 1) { var d = P[idx(r + 1, c)]; ang = Math.atan2(d.y - p.y, d.x - p.x) - Math.PI / 2; }
+              ctx.setTransform(dpr * Math.cos(ang), dpr * Math.sin(ang), -dpr * Math.sin(ang), dpr * Math.cos(ang), p.x * dpr, p.y * dpr);
+              ctx.fillStyle = p.col;
+              ctx.fillText(p.ch, 0, 0);
+            }
+          }
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          // corda
+          ctx.beginPath();
+          ctx.moveTo(cord[0].x, cord[0].y);
+          for (var i = 1; i < cord.length; i++) ctx.lineTo(cord[i].x, cord[i].y);
+          ctx.strokeStyle = light ? "rgba(11,16,32,0.8)" : "rgba(245,247,255,0.85)";
+          ctx.lineWidth = 3; ctx.lineJoin = "round"; ctx.stroke();
+          // puxador (anel no gradiente)
+          ctx.beginPath();
+          ctx.arc(handle.x, handle.y, 14, 0, Math.PI * 2);
+          ctx.fillStyle = grad(0.5); ctx.fill();
+          ctx.beginPath(); ctx.arc(handle.x, handle.y, 7, 0, Math.PI * 2);
+          ctx.fillStyle = light ? "#eef1f8" : "#070a12"; ctx.fill();
+          // dica
+          if (!opening && !ptr.grab) {
+            var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 400);
+            ctx.globalAlpha = 0.4 + pulse * 0.5;
+            ctx.font = "700 15px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillStyle = light ? "#0b1020" : "#f5f7ff";
+            ctx.textAlign = "center";
+            ctx.fillText("puxe a corda ↓", handle.x, handle.y + 40);
+            ctx.globalAlpha = 1;
+          }
+        }
+
+        var raf;
+        function loop() {
+          raf = requestAnimationFrame(loop);
+          step();
+          draw();
+          if (opening && performance.now() - openT > 1100) {
+            cancelAnimationFrame(raf);
+            finishNow();
+          }
+        }
+
+        var rz;
+        window.addEventListener("resize", function () {
+          clearTimeout(rz);
+          rz = setTimeout(function () { if (!opening) build(); }, 200);
+        }, { passive: true });
+
+        build();
+        loop();
+      })();
+    </script>
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>

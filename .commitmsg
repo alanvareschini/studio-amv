@@ -1,3 +1,9 @@
-﻿Reescreve index.html limpo (corrige build quebrado e acentos UTF-8)
+﻿Nova intro: cortina de codigo (tecido verlet) com corda pra abrir
+
+Tela cheia de caracteres da marca no gradiente, com fisica de tecido
+(verlet). Uma corda a direita: ao puxar pra baixo, a cortina cai e revela
+o site inteiro. Interativo (mouse/toque afasta os caracteres), tema-aware,
+auto-abre em ~9s, respeita reduced-motion. Autossuficiente (sem imports
+externos do CodePen).
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
