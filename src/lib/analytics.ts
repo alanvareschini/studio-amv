@@ -117,22 +117,23 @@ export function initAnalytics(): void {
     send({ type: "conv", path, label: name, device, visit, vid });
   });
 
-  // 2) tempo engajado: só conta enquanto a aba está visível
+  // 2) tempo ENGAJADO: conta só quando a aba está visível E há interação
+  // recente (mouse, rolagem, toque ou teclado). Parado 30s = não conta.
   let engaged = 0;
-  let last = document.visibilityState === "visible" ? Date.now() : 0;
-  const tickPause = () => {
-    if (last) {
-      engaged += Date.now() - last;
-      last = 0;
+  let lastActivity = Date.now();
+  const IDLE_MS = 30000;
+  const markActive = () => {
+    lastActivity = Date.now();
+  };
+  ["pointerdown", "pointermove", "keydown", "scroll", "touchstart", "click", "wheel"].forEach((ev) =>
+    window.addEventListener(ev, markActive, { passive: true })
+  );
+  const engagedTimer = window.setInterval(() => {
+    if (document.visibilityState === "visible" && Date.now() - lastActivity < IDLE_MS) {
+      engaged += 1000;
     }
-  };
-  const tickResume = () => {
-    if (!last) last = Date.now();
-  };
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") tickResume();
-    else tickPause();
-  });
+  }, 1000);
+  window.addEventListener("pagehide", () => window.clearInterval(engagedTimer));
 
   // 3) rolagem máxima (0-100%)
   let maxScroll = 0;
@@ -174,7 +175,6 @@ export function initAnalytics(): void {
   const leave = () => {
     if (sent) return;
     sent = true;
-    tickPause();
     send({ type: "leave", path, device, browser, os, visit, vid, duration: engaged, scroll: maxScroll });
   };
   window.addEventListener("pagehide", leave);

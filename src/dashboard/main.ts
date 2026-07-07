@@ -90,6 +90,8 @@ loginForm.addEventListener("submit", async (e) => {
     try {
       const j = await r.json();
       if (j.token) localStorage.setItem(TOK_KEY, j.token);
+      // dono do painel: não contar os próprios acessos ao site (dados limpos)
+      localStorage.setItem("amv_notrack", "1");
     } catch {
       /* ignora */
     }

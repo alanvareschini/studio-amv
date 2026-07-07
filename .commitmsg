@@ -1,7 +1,8 @@
-﻿Painel: volta o login automatico para quem ja logou com a senha certa
+﻿Analytics mais preciso: pausa por inatividade e auto-exclui o dono
 
-Token salvo no localStorage (12h); checkSession entra automatico se a
-sessao for valida. Quem nunca acertou a senha continua vendo a tela de
-login. Mantem o fix do [hidden] (login esconde o painel de fato).
+- Tempo engajado so conta com aba visivel E interacao recente (parado 30s
+  nao conta) -> tempo medio real, sem inflar com abas abertas paradas
+- Ao logar no painel, o navegador do dono para de contar os proprios
+  acessos (amv_notrack) -> dados limpos, so de clientes reais
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
