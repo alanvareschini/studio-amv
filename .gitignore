@@ -9,3 +9,6 @@ backup/
 .vite-dev.out.log
 
 .tmp-cloth/
+
+.chrome-cloth-check/
+.chrome-*/
