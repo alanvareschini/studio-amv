@@ -1,9 +1,7 @@
-﻿Intro: duas cortinas de teatro (tecido verlet) que abrem na corda
+﻿Analytics: detecta aparelho por userAgent (corrige 'tablet + Windows')
 
-Duas cortinas de tecido escuro com letrinhas pequenas no gradiente
-(fisica verlet igual a referencia). Corda no canto superior direito: ao
-puxar pra baixo, as cortinas abrem pros lados e revelam o site. Malha
-reduzida (SP 24/30) para rodar liso; caracteres pre-renderizados em
-faixas de cor. Tema-aware, auto-abre em ~10s, respeita reduced-motion.
+A classificacao por largura da janela marcava PC Windows estreito como
+tablet. Agora usa userAgent (iPad/Android tablet -> tablet; celular ->
+mobile; resto -> desktop), sem esse falso positivo.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

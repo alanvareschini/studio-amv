@@ -1,16 +1,26 @@
 // Rastreamento ANÔNIMO e leve do site de vendas (LGPD-friendly):
-// - Sem cookies, sem localStorage, sem identificar a pessoa.
-// - Mede tempo ENGAJADO (só conta quando a aba está visível), rolagem máxima
-//   e cliques em elementos marcados. Envia via sendBeacon (não trava a página).
-// O "visit" é um id aleatório em memória (some ao fechar a aba) usado só para
-// correlacionar os eventos de uma mesma visita no cálculo de médias.
+// - Sem cookies de rastreamento e sem identificar a pessoa.
+// - Usa um id aleatório anônimo no localStorage (amv_vid) só para não contar o
+//   mesmo aparelho várias vezes; e amv_notrack para o dono se excluir.
+// - Mede tempo ENGAJADO (só quando a aba está visível), rolagem e cliques.
+//   Envia via sendBeacon (não trava a página).
 
 const ENDPOINT = "/api/track";
 
-function deviceType(): "mobile" | "tablet" | "desktop" {
-  const w = window.innerWidth;
-  if (w < 640) return "mobile";
-  if (w < 1024) return "tablet";
+// Tipo de aparelho pelo userAgent (não pela largura da janela): assim um PC
+// com Windows nunca vira "tablet" só por estar com a janela estreita/zoom.
+function deviceType(u: string): "mobile" | "tablet" | "desktop" {
+  // tablets: iPad, Android sem "Mobile", e outros
+  if (/\b(iPad|Tablet|PlayBook|Silk)\b/i.test(u) || (/Android/i.test(u) && !/Mobile/i.test(u))) {
+    return "tablet";
+  }
+  // iPadOS recente se identifica como Mac com toque
+  if (/Macintosh/.test(u) && typeof navigator !== "undefined" && (navigator.maxTouchPoints || 0) > 1) {
+    return "tablet";
+  }
+  if (/Mobi|iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|IEMobile|Opera Mini/i.test(u)) {
+    return "mobile";
+  }
   return "desktop";
 }
 
@@ -86,8 +96,8 @@ export function initAnalytics(): void {
   } catch {
     vid = "anon";
   }
-  const device = deviceType();
   const ua = navigator.userAgent || "";
+  const device = deviceType(ua);
   const browser = browserName(ua);
   const os = osName(ua);
   const path = location.pathname || "/";

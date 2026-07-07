@@ -47,5 +47,7 @@ export function initHeroIntro(): void {
   };
 
   window.addEventListener("amv:intro-complete", reveal, { once: true });
-  if (!document.getElementById("preloader")) requestAnimationFrame(reveal);
+  if (!document.getElementById("preloader") && !document.getElementById("clothintro")) {
+    requestAnimationFrame(reveal);
+  }
 }

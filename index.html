@@ -79,17 +79,377 @@
          Puxe a corda no canto → as cortinas abrem e revelam o site. -->
     <style>
       body.ci-lock { overflow: hidden; }
-      #clothintro { position: fixed; inset: 0; z-index: 9999; background: #070a12; }
-      :root[data-theme="light"] #clothintro { background: #eef1f8; }
+      #clothintro { position: fixed; inset: 0; z-index: 9999; background: transparent; }
+      :root[data-theme="light"] #clothintro { background: transparent; }
       #clothintro canvas { position: absolute; inset: 0; display: block; touch-action: none; }
+      body.ci-lock #app,
+      body.ci-lock .skip-link {
+        opacity: 0;
+        visibility: hidden;
+      }
     </style>
   </head>
-  <body class="ci-lock">
-    <div id="clothintro" role="button" aria-label="Puxe a corda para entrar">
+  <body class="ci-lock is-intro-pending">
+    <div id="clothintro" role="button" tabindex="0" aria-label="Puxe a corda para entrar">
       <canvas id="ci-canvas"></canvas>
     </div>
     <script>
+      window.__amvClothIntro = function () {
+        var host = document.getElementById("clothintro");
+        var canvas = document.getElementById("ci-canvas");
+        var raf = 0;
+        var resizeTimer = 0;
+        var finished = false;
+
+        function finishNow() {
+          if (finished) return;
+          finished = true;
+          if (raf) cancelAnimationFrame(raf);
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          window.removeEventListener("resize", onResize);
+          if (host && host.parentNode) host.remove();
+          document.body.classList.remove("ci-lock");
+          window.dispatchEvent(new CustomEvent("amv:intro-complete"));
+        }
+
+        if (!host || !canvas || !canvas.getContext) { finishNow(); return true; }
+        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { finishNow(); return true; }
+
+        var ctx = canvas.getContext("2d", { alpha: true });
+        if (!ctx) { finishNow(); return true; }
+
+        var CHARS = "AMV WEB STUDIO SITES QUE VENDEM </> {} () => #01 ";
+        var BANDS = 5;
+        var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
+        var W = 0, H = 0, dpr = 1, SP = 26;
+        var GRAV = 0.2, DAMP = 0.99, ITERS = 5;
+        var COMPRESS = 0.02, STRETCH = 1.1, H_COMPRESS = 0.6, H_STRETCH = 4;
+        var MOUSE_SIZE = 5000, MOUSE_STRENGTH = 4;
+        var STEP_MS = 1000 / 60, MAX_STEPS = 2;
+        var curtains = [], cord = [], handle = null, bandImg = [];
+        var opening = false, openT = 0, started = performance.now(), lastT = started, acc = 0;
+        var ptr = { x: -9999, y: -9999, grab: false };
+
+        function mix(a, b, t) {
+          return [
+            a[0] + (b[0] - a[0]) * t,
+            a[1] + (b[1] - a[1]) * t,
+            a[2] + (b[2] - a[2]) * t
+          ];
+        }
+        function grad(t) {
+          var c = t < 0.5 ? mix(PUR, CYA, t * 2) : mix(CYA, GRN, (t - 0.5) * 2);
+          return "rgb(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + ")";
+        }
+        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function makeChars(fs) {
+          bandImg = [];
+          for (var bi = 0; bi < BANDS; bi++) {
+            var col = grad(bi / (BANDS - 1));
+            var map = {};
+            var seen = {};
+            for (var i = 0; i < CHARS.length; i++) {
+              var ch = CHARS[i];
+              if (ch === " " || seen[ch]) continue;
+              seen[ch] = 1;
+              var s = Math.ceil(fs * 1.72);
+              var off = document.createElement("canvas");
+              off.width = s;
+              off.height = s;
+              var o = off.getContext("2d");
+              o.font = "bold " + fs + "px monospace";
+              o.textAlign = "center";
+              o.textBaseline = "middle";
+              o.fillStyle = col;
+              o.fillText(ch, s / 2, s / 2);
+              map[ch] = off;
+            }
+            bandImg.push(map);
+          }
+        }
+
+        function makeCurtain(x0, x1, dir) {
+          var width = x1 - x0;
+          var cols = Math.max(12, Math.min(50, Math.floor(width / 10)));
+          var rows = Math.max(16, Math.min(50, Math.floor(W / 5)));
+          var hrest = (x1 - x0) / (cols - 1);
+          var vrest = H / (rows - 1);
+          var P = [];
+          var links = [];
+
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              var x = x0 + c * hrest;
+              var y = r * vrest;
+              var band = Math.max(0, Math.min(BANDS - 1, Math.round((x / Math.max(1, W)) * (BANDS - 1))));
+              P.push({ x: x, y: y, ox: x, oy: y, ax: 0, ay: 0, hx: x, hy: y, pin: r === 0, ch: CHARS[(r * cols + c) % CHARS.length], band: band });
+            }
+          }
+
+          function add(a, b, rest, min, max) { links.push([a, b, rest * min, rest * max]); }
+          for (var rr = 0; rr < rows; rr++) {
+            for (var cc = 0; cc < cols; cc++) {
+              var id = rr * cols + cc;
+              if (cc < cols - 1) add(id, id + 1, hrest, H_COMPRESS, H_STRETCH);
+              if (rr < rows - 1) add(id, id + cols, vrest, COMPRESS, STRETCH);
+            }
+          }
+
+          return { P: P, links: links, cols: cols, rows: rows, hrest: hrest, vrest: vrest, dir: dir, open: 0 };
+        }
+
+        function build() {
+          W = window.innerWidth;
+          H = window.innerHeight;
+          dpr = Math.min(W < 640 ? 1.25 : 1.5, window.devicePixelRatio || 1);
+          SP = W < 640 ? 34 : W < 980 ? 30 : 26;
+          canvas.width = Math.max(1, Math.round(W * dpr));
+          canvas.height = Math.max(1, Math.round(H * dpr));
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          makeChars(Math.round(Math.max(12, (H / (Math.max(16, Math.min(50, Math.floor(W / 5))) - 1)) * 1.2) * dpr));
+          curtains = [makeCurtain(0, W / 2, -1), makeCurtain(W / 2, W, 1)];
+
+          var segs = 13;
+          var cx = W - Math.min(40, W * 0.09);
+          var sl = Math.min(H * 0.3, 250) / (segs - 1);
+          cord = [];
+          for (var i = 0; i < segs; i++) cord.push({ x: cx, y: i * sl, ox: cx, oy: i * sl, ax: 0, ay: 0, pin: i === 0, len: sl });
+          handle = cord[cord.length - 1];
+          acc = 0;
+          lastT = performance.now();
+        }
+
+        function verlet(points, gravity, dt) {
+          var damp = Math.pow(DAMP, dt);
+          for (var i = 0; i < points.length; i++) {
+            var p = points[i];
+            if (p.pin) { p.ax = 0; p.ay = 0; continue; }
+            var vx = (p.x - p.ox) * damp;
+            var vy = (p.y - p.oy) * damp;
+            p.ox = p.x;
+            p.oy = p.y;
+            p.ay += gravity;
+            p.x += vx + p.ax * dt * dt;
+            p.y += vy + p.ay * dt * dt;
+            p.ax = 0;
+            p.ay = 0;
+          }
+        }
+
+        function link(p1, p2, minLength, maxLength) {
+          var dx = p2.x - p1.x;
+          var dy = p2.y - p1.y;
+          var d = Math.hypot(dx, dy) || 0.001;
+          var targetLength = 0;
+          if (d < minLength) targetLength = minLength;
+          else if (d > maxLength) targetLength = maxLength;
+          else return;
+          var diff = targetLength - d;
+          var percent = diff / d / 2;
+          var ox = dx * percent;
+          var oy = dy * percent;
+          if (!p1.pin) { p1.x -= ox; p1.y -= oy; }
+          if (!p2.pin) { p2.x += ox; p2.y += oy; }
+        }
+
+        function solveCurtain(cur) {
+          var P = cur.P;
+          var links = cur.links;
+          for (var i = 0; i < links.length; i++) {
+            var l = links[i];
+            link(P[l[0]], P[l[1]], l[2], l[3]);
+          }
+        }
+        function solveCord() {
+          for (var i = 0; i < cord.length - 1; i++) link(cord[i], cord[i + 1], cord[i].len, cord[i].len);
+        }
+
+        function smoothstep(edge0, edge1, x) {
+          var t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+          return t * t * (3 - 2 * t);
+        }
+        function repel() {
+          if (!ptr.grab || ptr.x < -1000) return;
+          for (var k = 0; k < curtains.length; k++) {
+            var P = curtains[k].P;
+            for (var i = 0; i < P.length; i++) {
+              var p = P[i];
+              if (p.pin) continue;
+              var dx = ptr.x - p.x;
+              var dy = ptr.y - p.y;
+              var ls = dx * dx + dy * dy;
+              if (ls < MOUSE_SIZE && ls > 1) {
+                var a = Math.atan2(dy, dx) - Math.PI;
+                var strength = smoothstep(MOUSE_SIZE, -2000, ls) * MOUSE_STRENGTH / 300;
+                if (ptr.grab) strength *= 1.45;
+                p.ax += Math.cos(a) * strength;
+                p.ay += Math.sin(a) * strength;
+              }
+            }
+          }
+        }
+
+        function step(dt) {
+          for (var k = 0; k < curtains.length; k++) verlet(curtains[k].P, GRAV, dt);
+          verlet(cord, GRAV * 1.08, dt);
+
+          if (ptr.grab && handle) {
+            handle.x = ptr.x;
+            handle.y = Math.max(0, ptr.y);
+            handle.ox = handle.x;
+            handle.oy = handle.y;
+          }
+
+          repel();
+
+          if (opening) {
+            for (var j = 0; j < curtains.length; j++) {
+              var cur = curtains[j];
+              cur.open = Math.min(1, cur.open + 0.026 * dt);
+              var e = easeOutCubic(cur.open);
+              for (var c = 0; c < cur.cols; c++) {
+                var p = cur.P[c];
+                var u = c / Math.max(1, cur.cols - 1);
+                var edgePull = 0.68 + Math.abs(u - 0.5) * 0.32;
+                p.x = p.hx + cur.dir * e * (W * 0.72) * edgePull;
+                p.y = p.hy + Math.sin(u * Math.PI) * e * 26;
+                p.ox = p.x;
+                p.oy = p.y;
+              }
+            }
+          }
+
+          for (var it = 0; it < ITERS; it++) {
+            for (var n = 0; n < curtains.length; n++) solveCurtain(curtains[n]);
+            solveCord();
+          }
+
+          if (!opening && handle && handle.y > H * 0.55) open();
+          if (!opening && performance.now() - started > 10000) open();
+        }
+
+        function open() {
+          if (opening) return;
+          opening = true;
+          openT = performance.now();
+          host.style.background = "transparent";
+        }
+
+        function ix(cur, r, c) { return r * cur.cols + c; }
+
+        function drawCurtain(cur) {
+          var P = cur.P;
+          var rows = cur.rows;
+          var cols = cur.cols;
+          for (var r2 = 0; r2 < rows; r2++) {
+            for (var c2 = 0; c2 < cols; c2++) {
+              var pp = P[ix(cur, r2, c2)];
+              var img = bandImg[pp.band] && bandImg[pp.band][pp.ch];
+              if (!img) continue;
+              var ang = 0;
+              if (r2 < rows - 1) {
+                var down = P[ix(cur, r2 + 1, c2)];
+                ang = Math.atan2(down.y - pp.y, down.x - pp.x) - Math.PI / 2;
+              }
+              var co = Math.cos(ang), si = Math.sin(ang);
+              ctx.setTransform(co, si, -si, co, pp.x * dpr, pp.y * dpr);
+              ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            }
+          }
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function draw() {
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          for (var k = 0; k < curtains.length; k++) drawCurtain(curtains[k]);
+          if (!handle) return;
+
+          ctx.beginPath();
+          ctx.moveTo(cord[0].x, cord[0].y);
+          for (var i = 1; i < cord.length; i++) ctx.lineTo(cord[i].x, cord[i].y);
+          ctx.strokeStyle = "rgba(245,247,255,0.85)";
+          ctx.lineWidth = 3;
+          ctx.lineJoin = "round";
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(handle.x, handle.y, 13, 0, Math.PI * 2);
+          ctx.fillStyle = grad(0.5);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(handle.x, handle.y, 6, 0, Math.PI * 2);
+          ctx.fillStyle = "#0a0f1c";
+          ctx.fill();
+
+          if (!opening && !ptr.grab) {
+            ctx.globalAlpha = 0.45 + 0.45 * Math.sin(performance.now() / 380);
+            ctx.font = "700 14px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillStyle = "#f5f7ff";
+            ctx.textAlign = "center";
+            ctx.fillText("puxe v", handle.x, handle.y + 34);
+            ctx.globalAlpha = 1;
+          }
+        }
+
+        function onMove(e) {
+          ptr.x = e.clientX;
+          ptr.y = e.clientY;
+        }
+        function onUp() { ptr.grab = false; }
+        function onResize() {
+          clearTimeout(resizeTimer);
+          resizeTimer = window.setTimeout(function () { if (!opening) build(); }, 180);
+        }
+
+        host.addEventListener("pointerdown", function (e) {
+          onMove(e);
+          var dx = ptr.x - handle.x;
+          var dy = ptr.y - handle.y;
+          if (dx * dx + dy * dy < 62 * 62) {
+            ptr.grab = true;
+            if (host.setPointerCapture) host.setPointerCapture(e.pointerId);
+          }
+        });
+        host.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+          }
+        });
+        window.addEventListener("pointermove", onMove, { passive: true });
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("resize", onResize, { passive: true });
+
+        function loop(now) {
+          raf = requestAnimationFrame(loop);
+          var elapsed = Math.min(50, now - lastT);
+          lastT = now;
+          acc += elapsed;
+          var steps = 0;
+          while (acc >= STEP_MS && steps < MAX_STEPS) {
+            step(1);
+            acc -= STEP_MS;
+            steps++;
+          }
+          if (steps === 0) step(Math.max(0.5, elapsed / STEP_MS));
+          else if (acc >= STEP_MS) acc = 0;
+          draw();
+          if (opening && performance.now() - openT > 1200) finishNow();
+        }
+
+        build();
+        raf = requestAnimationFrame(loop);
+        return true;
+      };
+      window.__amvClothIntro();
+    </script>
+    <script type="application/json" id="legacy-clothintro-disabled">
       (function () {
+        if (window.__amvClothIntro && window.__amvClothIntro()) return;
         var host = document.getElementById("clothintro");
         var canvas = document.getElementById("ci-canvas");
         function finishNow() { if (host && host.parentNode) host.remove(); document.body.classList.remove("ci-lock"); }
