@@ -1,3 +1,7 @@
-﻿Codigo secreto: guarda so o hash da palavra (nao aparece no codigo)
+﻿Corrige painel: login realmente esconde o dashboard ([hidden] !important)
+
+O CSS .gate (display:grid) sobrepunha o atributo hidden, deixando o login
+e o dashboard visiveis juntos. Agora [hidden] esconde de fato. Sem sessao
+valida o painel continua vazio e a API bloqueia (401).
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

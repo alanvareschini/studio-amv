@@ -10,6 +10,8 @@
   --green: #00ff88;
 }
 * { margin: 0; box-sizing: border-box; }
+/* garante que o atributo `hidden` realmente esconda (login/painel) */
+[hidden] { display: none !important; }
 body {
   background:
     radial-gradient(circle at 15% -10%, rgba(168, 85, 247, 0.12), transparent 40%),
