@@ -75,8 +75,122 @@
       rel="stylesheet"
     />
 
+    <!-- Intro "o site sendo construído": wireframe → pintura no gradiente →
+         revela o hero. CSS crítico inline (aparece antes do bundle). -->
+    <style>
+      body.is-building { overflow: hidden; }
+      #buildintro {
+        --bi-bg: #070a12;
+        --bi-skin: #161d2c;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        overflow: hidden;
+        background: var(--bi-bg);
+        display: grid;
+        place-items: center;
+        will-change: opacity, transform;
+      }
+      :root[data-theme="light"] #buildintro { --bi-bg: #eef1f8; --bi-skin: #d3dbea; }
+      #buildintro .bi-stage {
+        width: min(640px, 82vw);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 22px;
+      }
+      #buildintro .bi-nav { display: flex; gap: 10px; align-self: flex-end; margin-bottom: 8px; }
+      #buildintro .bi-bar {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        opacity: 0;
+        background: linear-gradient(135deg, #a855f7, #22d3ee, #00ff88);
+        will-change: transform, opacity;
+      }
+      #buildintro .bi-skin { position: absolute; inset: 0; background: var(--bi-skin); }
+      #buildintro .bi-shim {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+        transform: translateX(-100%);
+        animation: bi-shim 1.3s ease-in-out infinite;
+      }
+      @keyframes bi-shim { to { transform: translateX(100%); } }
+      #buildintro .bi-nav .bi-bar { width: 54px; height: 15px; border-radius: 7px; }
+      #buildintro .bi-title1 { width: 80%; height: 48px; }
+      #buildintro .bi-title2 { width: 56%; height: 48px; }
+      #buildintro .bi-sub { width: 62%; height: 18px; }
+      #buildintro .bi-btns { display: flex; gap: 14px; margin-top: 6px; }
+      #buildintro .bi-btn { width: 150px; height: 46px; border-radius: 999px; }
+      #buildintro .bi-sweep {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 120px;
+        pointer-events: none;
+        opacity: 0;
+        background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.5), rgba(168, 85, 247, 0.35), transparent);
+        filter: blur(6px);
+      }
+      @media (max-width: 600px) {
+        #buildintro .bi-title1, #buildintro .bi-title2 { height: 38px; }
+        #buildintro .bi-btn { width: 120px; }
+      }
+    </style>
   </head>
-  <body>
+  <body class="is-building">
+    <div id="buildintro" role="status" aria-label="Carregando">
+      <div class="bi-sweep" id="bi-sweep"></div>
+      <div class="bi-stage" id="bi-stage">
+        <div class="bi-nav"><div class="bi-bar" data-b><span class="bi-skin"></span><span class="bi-shim"></span></div><div class="bi-bar" data-b><span class="bi-skin"></span><span class="bi-shim"></span></div></div>
+        <div class="bi-bar bi-title1" data-b><span class="bi-skin"></span><span class="bi-shim"></span></div>
+        <div class="bi-bar bi-title2" data-b><span class="bi-skin"></span><span class="bi-shim"></span></div>
+        <div class="bi-bar bi-sub" data-b><span class="bi-skin"></span><span class="bi-shim"></span></div>
+        <div class="bi-btns"><div class="bi-bar bi-btn" data-b><span class="bi-skin"></span><span class="bi-shim"></span></div><div class="bi-bar bi-btn" data-b><span class="bi-skin"></span><span class="bi-shim"></span></div></div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var intro = document.getElementById("buildintro");
+        if (!intro) return;
+        var bars = [].slice.call(intro.querySelectorAll("[data-b]"));
+        var stage = document.getElementById("bi-stage");
+        var sweep = document.getElementById("bi-sweep");
+        function done() {
+          document.body.classList.remove("is-building");
+          if (intro.parentNode) intro.remove();
+        }
+        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { done(); return; }
+        var IN_DUR = 650, IN_STAG = 90, PAINT_START = 1050, PAINT_STAG = 120, PAINT_DUR = 460, DONE = 2050, END = 2750;
+        function cl(v) { return Math.max(0, Math.min(1, v)); }
+        function outBack(x) { var c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+        function ease(x) { return x * x * (3 - 2 * x); }
+        function render(t) {
+          for (var i = 0; i < bars.length; i++) {
+            var b = bars[i];
+            var pin = cl((t - i * IN_STAG) / IN_DUR), e = outBack(pin);
+            b.style.opacity = cl(pin * 1.4);
+            b.style.transform = "translateY(" + ((1 - e) * 26).toFixed(1) + "px)";
+            var pp = cl((t - (PAINT_START + i * PAINT_STAG)) / PAINT_DUR);
+            b.querySelector(".bi-skin").style.opacity = (1 - pp).toFixed(3);
+            var sh = b.querySelector(".bi-shim"); if (sh) sh.style.opacity = pp > 0 ? "0" : "1";
+          }
+          var sp = cl((t - PAINT_START + 150) / (PAINT_STAG * bars.length + PAINT_DUR));
+          if (sweep && stage) {
+            sweep.style.opacity = (sp > 0 && sp < 1) ? "1" : "0";
+            var r = stage.getBoundingClientRect();
+            sweep.style.left = (r.left - 60 + ease(sp) * (r.width + 120)).toFixed(0) + "px";
+          }
+          var rp = cl((t - DONE) / 600);
+          intro.style.opacity = (1 - rp).toFixed(3);
+          intro.style.transform = "translateY(" + (-4 * ease(rp)).toFixed(2) + "%) scale(" + (1 + 0.03 * ease(rp)).toFixed(3) + ")";
+          if (rp > 0) intro.style.pointerEvents = "none";
+        }
+        var s = performance.now();
+        (function loop(n) { var t = n - s; render(t); if (t < END) requestAnimationFrame(loop); else done(); })(s);
+      })();
+    </script>
     <a class="skip-link" href="#conteudo">Pular para o conteÃºdo</a>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>

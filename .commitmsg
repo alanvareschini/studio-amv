@@ -1,9 +1,8 @@
-﻿Remove o mascote e a intro (preloader)
+﻿Nova intro: 'o site sendo construido' (wireframe -> pintura -> hero)
 
-- Remove o mascote (Mascot.ts/mascot.css e ligacoes)
-- Remove o preloader/intro do index.html (estilo, markup e script) e o
-  acoplamento no main.ts; o hero aparece direto (heroIntro revela sozinho)
-- Corrige o A que travava apos a hero (remove a pausa por visibilidade;
-  mantem so a economia do rastro, que nao trava o movimento)
+Esqueleto (wireframe) do hero se monta, um raio de luz pinta tudo no
+gradiente da loja, e a intro dissolve revelando o hero. Demonstra o
+proprio trabalho da AMV. CSS/JS inline (instantaneo), tema-aware,
+respeita reduced-motion. Validada quadro a quadro (headless).
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
