@@ -1,6 +1,3 @@
-﻿Acesso secreto ao painel: palavra no teclado ou 5 toques na marca
-
-Sem link visivel. Teclado: digitar 'amvpainel'. Clique/toque: tocar 5x
-rapido em 'AMV Web Studio' da hero. Leva direto ao /dashboard.
+﻿Codigo secreto: guarda so o hash da palavra (nao aparece no codigo)
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
