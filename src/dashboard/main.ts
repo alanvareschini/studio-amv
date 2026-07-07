@@ -11,12 +11,16 @@ const loginErr = $("loginErr");
 const pwd = $<HTMLInputElement>("pwd");
 const rangeSel = $<HTMLSelectElement>("range");
 
-const TOK_KEY = "amv_dash_token";
-const getTok = () => localStorage.getItem(TOK_KEY) || "";
-const authHeaders = (): Record<string, string> => {
-  const t = getTok();
-  return t ? { Authorization: `Bearer ${t}` } : {};
-};
+// Token só na MEMÓRIA (some ao recarregar a página) → sempre pede a senha.
+let sessionToken = "";
+const authHeaders = (): Record<string, string> =>
+  sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+// limpa qualquer sessão antiga que tenha ficado salva de versões anteriores
+try {
+  localStorage.removeItem("amv_dash_token");
+} catch {
+  /* ignora */
+}
 
 const fmtInt = (n: unknown) => Number(n || 0).toLocaleString("pt-BR");
 function fmtDuration(ms: unknown): string {
@@ -52,16 +56,6 @@ async function showDashboard(): Promise<void> {
   }, 30000);
 }
 
-async function checkSession(): Promise<void> {
-  try {
-    const r = await fetch("/api/auth", { method: "GET", credentials: "same-origin", headers: authHeaders() });
-    const j = await r.json();
-    if (j.authed) await showDashboard();
-  } catch {
-    /* mostra login */
-  }
-}
-
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginErr.hidden = true;
@@ -82,7 +76,7 @@ loginForm.addEventListener("submit", async (e) => {
     pwd.value = "";
     try {
       const j = await r.json();
-      if (j.token) localStorage.setItem(TOK_KEY, j.token);
+      sessionToken = j.token || "";
     } catch {
       /* ignora */
     }
@@ -99,7 +93,7 @@ loginForm.addEventListener("submit", async (e) => {
 
 $("logout").addEventListener("click", async () => {
   await fetch("/api/auth", { method: "DELETE", credentials: "same-origin", headers: authHeaders() });
-  localStorage.removeItem(TOK_KEY);
+  sessionToken = "";
   location.reload();
 });
 
@@ -342,4 +336,6 @@ function renderVisits(rows: Rec[]): void {
     .join("");
 }
 
-checkSession();
+// Sem login automático: a tela de senha aparece SEMPRE. Só entra digitando.
+// Limpa também qualquer cookie de sessão anterior para não deixar brecha.
+fetch("/api/auth", { method: "DELETE", credentials: "same-origin" }).catch(() => {});

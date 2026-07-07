@@ -1,8 +1,7 @@
-﻿Analytics: filtra robos (bots) e mostra 'quem esta online agora'
+﻿Painel: sempre pede a senha (remove o 'ficar logado')
 
-- Ignora bots/crawlers/headless (cliente e servidor via user-agent) - era
-  o que gerava o falso 'San Jose, US / Linux'
-- Nova secao 'Quem esta online agora' (ultimos 5 min) com local, aparelho,
-  navegador e sistema, na aba Visitantes
+Token so na memoria (some ao recarregar) e sem login automatico: a tela
+de senha aparece toda vez. Limpa cookie/token de sessoes anteriores no
+carregamento. Mais seguro.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
