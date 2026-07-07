@@ -15,6 +15,14 @@
       } catch (e) {}
     </script>
 
+    <!-- Recarrega se a página voltar do cache (bfcache), pra o WebGL (fluido,
+         "A" 3D, botões) não ficar "morto" ao usar o botão voltar. -->
+    <script>
+      window.addEventListener("pageshow", function (e) {
+        if (e.persisted) window.location.reload();
+      });
+    </script>
+
     <!-- RNF07 — SEO básico -->
     <title>AMV Web Studio | Sites profissionais para negócios locais</title>
     <meta
@@ -614,6 +622,17 @@
           draw();
           if (opening && performance.now() - openT > 1200) finishNow();
         }
+
+        // toca a intro só uma vez por sessão da aba (ex.: não repete ao voltar
+        // do dashboard / recarregar do cache) — só revela o site direto
+        try {
+          if (sessionStorage.getItem("amv_intro_seen")) {
+            revealSite();
+            finishNow();
+            return true;
+          }
+          sessionStorage.setItem("amv_intro_seen", "1");
+        } catch (e) {}
 
         build();
         raf = requestAnimationFrame(loop);
