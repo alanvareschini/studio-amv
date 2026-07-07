@@ -1,7 +1,7 @@
-﻿Analytics: detecta aparelho por userAgent (corrige 'tablet + Windows')
+﻿Analytics melhor: variacao vs periodo anterior, conversao e rejeicao
 
-A classificacao por largura da janela marcava PC Windows estreito como
-tablet. Agora usa userAgent (iPad/Android tablet -> tablet; celular ->
-mobile; resto -> desktop), sem esse falso positivo.
+- KPIs com seta de variacao (up/down %) comparando com o periodo anterior
+- Nova KPI de Taxa de Conversao (visitantes que clicaram WhatsApp/enviaram)
+- Nova KPI de Taxa de Rejeicao (sairam em menos de 10s)
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

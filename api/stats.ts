@@ -27,11 +27,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         COALESCE(ROUND(AVG(duration_ms) FILTER (WHERE type='leave')),0) AS avg_ms,
         COALESCE(ROUND(AVG(scroll_pct)  FILTER (WHERE type='leave')),0) AS avg_scroll,
         COUNT(*) FILTER (WHERE type='click')                          AS clicks,
+        COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE type='conv') AS convs,
         COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE device='mobile')  AS mobile,
         COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE device='desktop') AS desktop,
         COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE device='tablet')  AS tablet
       FROM events
       WHERE created_at >= now() - ${since}::interval;
+    `;
+
+    // período ANTERIOR (mesma duração, logo antes) — para as setas de variação
+    const prevWin = `${days * 2} days`;
+    const prev = await sql`
+      SELECT
+        COUNT(DISTINCT COALESCE(vid, visit))                          AS visitors,
+        COALESCE(ROUND(AVG(duration_ms) FILTER (WHERE type='leave')),0) AS avg_ms,
+        COUNT(*) FILTER (WHERE type='click')                          AS clicks,
+        COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE type='conv') AS convs
+      FROM events
+      WHERE created_at >= now() - ${prevWin}::interval AND created_at < now() - ${since}::interval;
+    `;
+
+    // taxa de rejeição: visitantes que quase não ficaram (< 10s ou sem tempo)
+    const bounce = await sql`
+      WITH per AS (
+        SELECT COALESCE(vid, visit) AS who, MAX(duration_ms) AS dur
+        FROM events WHERE created_at >= now() - ${since}::interval
+        GROUP BY COALESCE(vid, visit)
+      )
+      SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE dur IS NULL OR dur < 10000) AS bounced FROM per;
     `;
 
     // tempo real: pessoas nos últimos 5 min e hoje
@@ -177,6 +200,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({
       days,
       summary: summary.rows[0],
+      prev: prev.rows[0],
+      bounce: bounce.rows[0],
       realtime: realtime.rows[0],
       newReturning: newReturning.rows[0],
       conv: conv.rows[0],

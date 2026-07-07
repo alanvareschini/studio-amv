@@ -82,14 +82,14 @@
       #clothintro { position: fixed; inset: 0; z-index: 9999; background: transparent; }
       :root[data-theme="light"] #clothintro { background: transparent; }
       #clothintro canvas { position: absolute; inset: 0; display: block; touch-action: none; }
-      body.ci-lock #app,
-      body.ci-lock .skip-link {
+      body.ci-site-hidden #app,
+      body.ci-site-hidden .skip-link {
         opacity: 0;
         visibility: hidden;
       }
     </style>
   </head>
-  <body class="ci-lock is-intro-pending">
+  <body class="ci-lock ci-site-hidden is-intro-pending">
     <div id="clothintro" role="button" tabindex="0" aria-label="Puxe a corda para entrar">
       <canvas id="ci-canvas"></canvas>
     </div>
@@ -110,7 +110,7 @@
           window.removeEventListener("resize", onResize);
           if (host && host.parentNode) host.remove();
           document.body.classList.remove("ci-lock");
-          window.dispatchEvent(new CustomEvent("amv:intro-complete"));
+          revealSite();
         }
 
         if (!host || !canvas || !canvas.getContext) { finishNow(); return true; }
@@ -123,13 +123,30 @@
         var BANDS = 5;
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
         var W = 0, H = 0, dpr = 1, SP = 26;
-        var GRAV = 0.2, DAMP = 0.99, ITERS = 5;
+        var GRAV = 0.2, DAMP = 0.992, ITERS = 5;
         var COMPRESS = 0.02, STRETCH = 1.1, H_COMPRESS = 0.6, H_STRETCH = 4;
+        var HOME_FORCE = 0.0028, HOME_DEADZONE = 10;
         var MOUSE_SIZE = 5000, MOUSE_STRENGTH = 4;
         var STEP_MS = 1000 / 60, MAX_STEPS = 2;
         var curtains = [], cord = [], handle = null, bandImg = [];
         var opening = false, openT = 0, started = performance.now(), lastT = started, acc = 0;
-        var ptr = { x: -9999, y: -9999, grab: false };
+        var siteRevealed = false;
+        var ptr = {
+          x: -9999,
+          y: -9999,
+          cordGrab: false,
+          cordParticle: null,
+          cordParticleWasPinned: false,
+          cordStartY: 0,
+          cordArmed: false,
+          cordPeakY: 0,
+          cordReturnParticle: null,
+          cordReleaseY: 0,
+          cordReturnStartedAt: 0,
+          cordWaitingReturn: false,
+          particle: null,
+          particleWasPinned: false
+        };
 
         function mix(a, b, t) {
           return [
@@ -216,7 +233,7 @@
           var cx = W - Math.min(40, W * 0.09);
           var sl = Math.min(H * 0.3, 250) / (segs - 1);
           cord = [];
-          for (var i = 0; i < segs; i++) cord.push({ x: cx, y: i * sl, ox: cx, oy: i * sl, ax: 0, ay: 0, pin: i === 0, len: sl });
+          for (var i = 0; i < segs; i++) cord.push({ x: cx, y: i * sl, ox: cx, oy: i * sl, ax: 0, ay: 0, hx: cx, hy: i * sl, pin: i === 0, len: sl, cord: true });
           handle = cord[cord.length - 1];
           acc = 0;
           lastT = performance.now();
@@ -232,6 +249,16 @@
             p.ox = p.x;
             p.oy = p.y;
             p.ay += gravity;
+            if (!opening && p !== ptr.particle && typeof p.hx === "number" && typeof p.hy === "number") {
+              var homeDx = p.hx - p.x;
+              var homeDy = p.hy - p.y;
+              var homeD2 = homeDx * homeDx + homeDy * homeDy;
+              var homeEase = Math.min(1, Math.max(0, (Math.sqrt(homeD2) - (p.cord ? 2 : HOME_DEADZONE)) / (p.cord ? 60 : 90)));
+              homeEase = homeEase * homeEase * (3 - 2 * homeEase);
+              var homeForce = p.cord ? 0.018 : HOME_FORCE;
+              p.ax += homeDx * homeForce * homeEase;
+              p.ay += homeDy * homeForce * homeEase;
+            }
             p.x += vx + p.ax * dt * dt;
             p.y += vy + p.ay * dt * dt;
             p.ax = 0;
@@ -267,12 +294,53 @@
           for (var i = 0; i < cord.length - 1; i++) link(cord[i], cord[i + 1], cord[i].len, cord[i].len);
         }
 
+        function pointToSegmentDistanceSq(x, y, a, b) {
+          var dx = b.x - a.x;
+          var dy = b.y - a.y;
+          var len2 = dx * dx + dy * dy || 1;
+          var t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / len2));
+          var px = a.x + dx * t;
+          var py = a.y + dy * t;
+          var ddx = x - px;
+          var ddy = y - py;
+          return ddx * ddx + ddy * ddy;
+        }
+
+        function findCordParticle(x, y) {
+          if (!cord.length) return null;
+          var radius = W < 640 ? 34 : 26;
+          var radius2 = radius * radius;
+          var best = null;
+          var bestD2 = radius2;
+
+          for (var i = 0; i < cord.length; i++) {
+            var p = cord[i];
+            var dx = p.x - x;
+            var dy = p.y - y;
+            var d2 = dx * dx + dy * dy;
+            if (d2 < bestD2) {
+              bestD2 = d2;
+              best = p;
+            }
+          }
+
+          for (var j = 0; j < cord.length - 1; j++) {
+            var segD2 = pointToSegmentDistanceSq(x, y, cord[j], cord[j + 1]);
+            if (segD2 < bestD2) {
+              bestD2 = segD2;
+              best = cord[j + 1];
+            }
+          }
+
+          return best;
+        }
+
         function smoothstep(edge0, edge1, x) {
           var t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
           return t * t * (3 - 2 * t);
         }
         function repel() {
-          if (!ptr.grab || ptr.x < -1000) return;
+          if (ptr.x < -1000) return;
           for (var k = 0; k < curtains.length; k++) {
             var P = curtains[k].P;
             for (var i = 0; i < P.length; i++) {
@@ -284,7 +352,7 @@
               if (ls < MOUSE_SIZE && ls > 1) {
                 var a = Math.atan2(dy, dx) - Math.PI;
                 var strength = smoothstep(MOUSE_SIZE, -2000, ls) * MOUSE_STRENGTH / 300;
-                if (ptr.grab) strength *= 1.45;
+                if (ptr.cordGrab || ptr.particle) strength *= 1.45;
                 p.ax += Math.cos(a) * strength;
                 p.ay += Math.sin(a) * strength;
               }
@@ -292,15 +360,64 @@
           }
         }
 
+        function findParticle(x, y) {
+          var best = null;
+          var bestD2 = 28 * 28;
+          for (var k = 0; k < curtains.length; k++) {
+            var P = curtains[k].P;
+            for (var i = 0; i < P.length; i++) {
+              var p = P[i];
+              var dx = p.x - x;
+              var dy = p.y - y;
+              var d2 = dx * dx + dy * dy;
+              if (d2 < bestD2) {
+                bestD2 = d2;
+                best = p;
+              }
+            }
+          }
+          return best;
+        }
+
+        function cordPullThreshold() {
+          return Math.min(78, H * 0.1);
+        }
+
+        function armCordIfPulled() {
+          if (!ptr.cordGrab || ptr.cordWaitingReturn) return;
+          ptr.cordPeakY = Math.max(ptr.cordPeakY, ptr.y);
+          if (ptr.y > ptr.cordStartY + cordPullThreshold()) ptr.cordArmed = true;
+        }
+
+        function openWhenCordReturns() {
+          if (opening || !ptr.cordWaitingReturn || ptr.cordGrab) return;
+          var watch = ptr.cordReturnParticle || handle;
+          if (!watch) return;
+          var returnedEnough = watch.y < ptr.cordReleaseY - (W < 640 ? 4 : 6);
+          if (returnedEnough) {
+            ptr.cordWaitingReturn = false;
+            ptr.cordReturnParticle = null;
+            open();
+          }
+        }
+
         function step(dt) {
           for (var k = 0; k < curtains.length; k++) verlet(curtains[k].P, GRAV, dt);
           verlet(cord, GRAV * 1.08, dt);
 
-          if (ptr.grab && handle) {
-            handle.x = ptr.x;
-            handle.y = Math.max(0, ptr.y);
-            handle.ox = handle.x;
-            handle.oy = handle.y;
+          if (ptr.cordGrab && ptr.cordParticle) {
+            var vx = ptr.x - ptr.cordParticle.x;
+            var vy = ptr.y - ptr.cordParticle.y;
+            ptr.cordParticle.x = ptr.x;
+            ptr.cordParticle.y = Math.max(0, ptr.y);
+            ptr.cordParticle.ox = ptr.cordParticle.x - vx * 0.45;
+            ptr.cordParticle.oy = ptr.cordParticle.y - vy * 0.45;
+          }
+          if (ptr.particle) {
+            ptr.particle.x = ptr.x;
+            ptr.particle.y = ptr.y;
+            ptr.particle.ox = ptr.x;
+            ptr.particle.oy = ptr.y;
           }
 
           repel();
@@ -327,8 +444,8 @@
             solveCord();
           }
 
-          if (!opening && handle && handle.y > H * 0.55) open();
-          if (!opening && performance.now() - started > 10000) open();
+          armCordIfPulled();
+          openWhenCordReturns();
         }
 
         function open() {
@@ -336,6 +453,14 @@
           opening = true;
           openT = performance.now();
           host.style.background = "transparent";
+          revealSite();
+        }
+
+        function revealSite() {
+          if (siteRevealed) return;
+          siteRevealed = true;
+          document.body.classList.remove("ci-site-hidden");
+          window.dispatchEvent(new CustomEvent("amv:intro-complete"));
         }
 
         function ix(cur, r, c) { return r * cur.cols + c; }
@@ -369,24 +494,29 @@
           for (var k = 0; k < curtains.length; k++) drawCurtain(curtains[k]);
           if (!handle) return;
 
+          ctx.save();
+          ctx.shadowColor = "rgba(34, 211, 238, 0.55)";
+          ctx.shadowBlur = 14;
           ctx.beginPath();
           ctx.moveTo(cord[0].x, cord[0].y);
           for (var i = 1; i < cord.length; i++) ctx.lineTo(cord[i].x, cord[i].y);
-          ctx.strokeStyle = "rgba(245,247,255,0.85)";
-          ctx.lineWidth = 3;
+          ctx.strokeStyle = "rgba(245, 247, 255, 0.98)";
+          ctx.lineWidth = W < 640 ? 5 : 4;
           ctx.lineJoin = "round";
+          ctx.lineCap = "round";
           ctx.stroke();
 
           ctx.beginPath();
-          ctx.arc(handle.x, handle.y, 13, 0, Math.PI * 2);
+          ctx.arc(handle.x, handle.y, W < 640 ? 18 : 15, 0, Math.PI * 2);
           ctx.fillStyle = grad(0.5);
           ctx.fill();
           ctx.beginPath();
-          ctx.arc(handle.x, handle.y, 6, 0, Math.PI * 2);
+          ctx.arc(handle.x, handle.y, W < 640 ? 8 : 7, 0, Math.PI * 2);
           ctx.fillStyle = "#0a0f1c";
           ctx.fill();
+          ctx.restore();
 
-          if (!opening && !ptr.grab) {
+          if (!opening && !ptr.cordGrab) {
             ctx.globalAlpha = 0.45 + 0.45 * Math.sin(performance.now() / 380);
             ctx.font = "700 14px 'Plus Jakarta Sans', sans-serif";
             ctx.fillStyle = "#f5f7ff";
@@ -399,8 +529,30 @@
         function onMove(e) {
           ptr.x = e.clientX;
           ptr.y = e.clientY;
+          armCordIfPulled();
         }
-        function onUp() { ptr.grab = false; }
+        function onUp() {
+          var shouldOpenOnReturn = ptr.cordGrab && ptr.cordArmed;
+          var returnParticle = ptr.cordParticle || handle;
+          var releaseY = ptr.cordPeakY || ptr.y;
+          ptr.cordGrab = false;
+          if (ptr.cordParticle) {
+            ptr.cordParticle.pin = ptr.cordParticleWasPinned;
+            ptr.cordParticle = null;
+          }
+          if (shouldOpenOnReturn) {
+            ptr.cordWaitingReturn = true;
+            ptr.cordReturnParticle = returnParticle;
+            ptr.cordReleaseY = releaseY;
+            ptr.cordReturnStartedAt = performance.now();
+          }
+          ptr.cordArmed = false;
+          ptr.cordPeakY = 0;
+          if (ptr.particle) {
+            ptr.particle.pin = ptr.particleWasPinned;
+            ptr.particle = null;
+          }
+        }
         function onResize() {
           clearTimeout(resizeTimer);
           resizeTimer = window.setTimeout(function () { if (!opening) build(); }, 180);
@@ -408,10 +560,32 @@
 
         host.addEventListener("pointerdown", function (e) {
           onMove(e);
-          var dx = ptr.x - handle.x;
-          var dy = ptr.y - handle.y;
-          if (dx * dx + dy * dy < 62 * 62) {
-            ptr.grab = true;
+          ptr.cordParticle = findCordParticle(ptr.x, ptr.y);
+          if (ptr.cordParticle) {
+            ptr.cordGrab = true;
+            ptr.cordParticleWasPinned = ptr.cordParticle.pin;
+            ptr.cordStartY = ptr.y;
+            ptr.cordArmed = false;
+            ptr.cordPeakY = ptr.y;
+            ptr.cordWaitingReturn = false;
+            ptr.cordReturnParticle = null;
+            ptr.cordParticle.pin = true;
+            ptr.cordParticle.x = ptr.x;
+            ptr.cordParticle.y = ptr.y;
+            ptr.cordParticle.ox = ptr.x;
+            ptr.cordParticle.oy = ptr.y;
+            if (host.setPointerCapture) host.setPointerCapture(e.pointerId);
+            return;
+          }
+
+          ptr.particle = findParticle(ptr.x, ptr.y);
+          if (ptr.particle) {
+            ptr.particleWasPinned = ptr.particle.pin;
+            ptr.particle.pin = true;
+            ptr.particle.x = ptr.x;
+            ptr.particle.y = ptr.y;
+            ptr.particle.ox = ptr.x;
+            ptr.particle.oy = ptr.y;
             if (host.setPointerCapture) host.setPointerCapture(e.pointerId);
           }
         });
@@ -447,7 +621,7 @@
       };
       window.__amvClothIntro();
     </script>
-    <script type="application/json" id="legacy-clothintro-disabled">
+    <script type="text/plain" id="legacy-clothintro-disabled">
       (function () {
         if (window.__amvClothIntro && window.__amvClothIntro()) return;
         var host = document.getElementById("clothintro");
@@ -556,7 +730,6 @@
           }
           for (var it = 0; it < iters; it++) { for (var k = 0; k < curtains.length; k++) solveCurtain(curtains[k]); solveCord(); }
           if (!opening && handle.y > H * 0.55) open();
-          if (!opening && performance.now() - started > 10000) open();
         }
 
         function open() { opening = true; openT = performance.now(); host.style.background = "transparent"; }

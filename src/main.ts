@@ -111,12 +111,24 @@ if (app) {
     if (typeof w.requestIdleCallback === "function") w.requestIdleCallback(fn, { timeout: 1500 });
     else window.setTimeout(fn, 200);
   };
-  window.setTimeout(() => {
+  const afterIntro = (fn: () => void) => {
+    if (!document.body.classList.contains("ci-site-hidden")) {
+      window.setTimeout(fn, 1200);
+      return;
+    }
+    window.addEventListener(
+      "amv:intro-complete",
+      () => window.setTimeout(fn, 1200),
+      { once: true },
+    );
+  };
+
+  afterIntro(() => {
     whenIdle(() => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       import("./lib/headingFluidLocal")
         .then((m) => safe("headingFluid", m.initHeadingFluid))
         .catch((e) => console.error("[init] headingFluid não carregou", e));
     });
-  }, 900);
+  });
 }

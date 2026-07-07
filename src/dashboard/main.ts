@@ -145,7 +145,7 @@ async function load(): Promise<void> {
     tag.classList.add("blink");
   }
   renderLive(d.realtime || {}, d.newReturning || {});
-  renderKpis(d.summary || {});
+  renderKpis(d.summary || {}, d.prev || {}, d.bounce || {});
   renderFunnel(d.conv || {});
   renderChart(d.series || []);
   $("countries").innerHTML = bars((d.countries || []).map((x: Rec) => ({ label: x.country, value: fmtInt(x.visitors), n: Number(x.visitors) })));
@@ -217,18 +217,33 @@ function renderPeakDays(rows: Array<{ dow: number; sessions: number }>): void {
   $("peakDays").innerHTML = bars(all);
 }
 
-function renderKpis(s: Rec): void {
+// variação vs período anterior → seta ↑/↓ com cor
+function delta(cur: unknown, prev: unknown): string {
+  const c = Number(cur || 0), p = Number(prev || 0);
+  if (p === 0) return c > 0 ? `<span class="chg up">novo</span>` : "";
+  const pct = Math.round(((c - p) / p) * 100);
+  if (pct === 0) return `<span class="chg flat">0%</span>`;
+  const up = pct > 0;
+  return `<span class="chg ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${Math.abs(pct)}%</span>`;
+}
+
+function renderKpis(s: Rec, prev: Rec, bounce: Rec): void {
+  const visitors = Number(s.visitors || 0);
+  const convs = Number(s.convs || 0);
+  const convRate = visitors > 0 ? Math.round((convs / visitors) * 100) : 0;
+  const bTotal = Number(bounce.total || 0), bounced = Number(bounce.bounced || 0);
+  const bounceRate = bTotal > 0 ? Math.round((bounced / bTotal) * 100) : 0;
   const cards = [
-    { label: "Visitantes", value: fmtInt(s.visitors), hint: "pessoas únicas" },
-    { label: "Tempo médio", value: fmtDuration(s.avg_ms), hint: "engajado por visita" },
+    { label: "Visitantes", value: fmtInt(s.visitors), hint: "pessoas únicas", chg: delta(s.visitors, prev.visitors) },
+    { label: "Tempo médio", value: fmtDuration(s.avg_ms), hint: "engajado por visita", chg: delta(s.avg_ms, prev.avg_ms) },
+    { label: "Conversão", value: `${convRate}%`, hint: `${fmtInt(convs)} de ${fmtInt(visitors)}`, chg: delta(s.convs, prev.convs) },
+    { label: "Rejeição", value: `${bounceRate}%`, hint: "saíram em < 10s" },
+    { label: "Cliques", value: fmtInt(s.clicks), hint: "em botões e links", chg: delta(s.clicks, prev.clicks) },
     { label: "Rolagem média", value: `${fmtInt(s.avg_scroll)}%`, hint: "da página" },
-    { label: "Cliques", value: fmtInt(s.clicks), hint: "em botões e links" },
-    { label: "Celular", value: fmtInt(s.mobile), hint: "visitantes" },
-    { label: "Computador", value: fmtInt(s.desktop), hint: "visitantes" },
   ];
   $("kpis").innerHTML = cards
     .map(
-      (c) => `<div class="card"><div class="card__v">${c.value}</div>
+      (c) => `<div class="card"><div class="card__v">${c.value} ${c.chg || ""}</div>
         <div class="card__l">${c.label}</div><div class="card__h">${c.hint}</div></div>`
     )
     .join("");
