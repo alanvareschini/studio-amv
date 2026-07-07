@@ -7,3 +7,5 @@ dist
 backup/
 
 .vite-dev.out.log
+
+.tmp-cloth/
