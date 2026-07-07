@@ -91,6 +91,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE created_at >= now() - ${since}::interval;
     `;
 
+    // funil por etapa (por aparelho): visitante → rolou 50% → clicou → converteu
+    const funnel = await sql`
+      WITH per AS (
+        SELECT COALESCE(vid, visit) AS who,
+          MAX(scroll_pct)      AS scr,
+          bool_or(type='click') AS clicked,
+          bool_or(type='conv')  AS converted
+        FROM events
+        WHERE created_at >= now() - ${since}::interval AND COALESCE(vid, visit) IS NOT NULL
+        GROUP BY COALESCE(vid, visit)
+      )
+      SELECT
+        COUNT(*)                                    AS visitors,
+        COUNT(*) FILTER (WHERE scr >= 50)           AS scrolled,
+        COUNT(*) FILTER (WHERE clicked)             AS clicked,
+        COUNT(*) FILTER (WHERE converted)           AS converted
+      FROM per;
+    `;
+
+    // conversões por dia (para o gráfico) + visitantes do dia (para a taxa)
+    const convSeries = await sql`
+      SELECT to_char(day,'YYYY-MM-DD') AS day,
+             COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE type='conv') AS conversions,
+             COUNT(DISTINCT COALESCE(vid, visit))                            AS visitors
+      FROM events
+      WHERE created_at >= now() - ${since}::interval
+      GROUP BY day ORDER BY day;
+    `;
+
+    // conversão por tipo de aparelho (quem converte mais)
+    const convByDevice = await sql`
+      SELECT COALESCE(device,'desconhecido') AS device,
+             COUNT(DISTINCT COALESCE(vid, visit))                            AS visitors,
+             COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE type='conv') AS conversions
+      FROM events
+      WHERE created_at >= now() - ${since}::interval
+      GROUP BY device ORDER BY visitors DESC;
+    `;
+
     // localização (país e cidade), por aparelho
     const countries = await sql`
       SELECT COALESCE(NULLIF(country,''),'—') AS country, COUNT(DISTINCT COALESCE(vid, visit)) AS visitors
@@ -221,6 +260,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       realtime: realtime.rows[0],
       newReturning: newReturning.rows[0],
       conv: conv.rows[0],
+      funnel: funnel.rows[0],
+      convSeries: convSeries.rows,
+      convByDevice: convByDevice.rows,
       series: series.rows,
       topPages: topPages.rows,
       leastEngaged: leastEngaged.rows,

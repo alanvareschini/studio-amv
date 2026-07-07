@@ -1,8 +1,9 @@
-﻿Analytics mais preciso: pausa por inatividade e auto-exclui o dono
+﻿Analytics profissional: funil detalhado, conversao/dia, por aparelho, meta e CSV
 
-- Tempo engajado so conta com aba visivel E interacao recente (parado 30s
-  nao conta) -> tempo medio real, sem inflar com abas abertas paradas
-- Ao logar no painel, o navegador do dono para de contar os proprios
-  acessos (amv_notrack) -> dados limpos, so de clientes reais
+- Funil por etapa com % de queda (visitou -> rolou 50% -> clicou -> converteu)
+- Grafico de conversoes por dia
+- Conversao por tipo de aparelho (taxa por device)
+- Meta de conversoes com barra de progresso (guardada no navegador)
+- Botao Exportar CSV (resumo + visitantes por dia + visitantes recentes)
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

@@ -34,6 +34,10 @@ function fmtDuration(ms: unknown): string {
 const esc = (s: unknown) =>
   String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 
+// último payload de /api/stats (para exportar CSV e recalcular a meta)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let lastData: any = null;
+
 // ---- abas ----
 $("tabs").addEventListener("click", (e) => {
   const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".tab");
@@ -118,6 +122,62 @@ $("logout").addEventListener("click", async () => {
 
 rangeSel.addEventListener("change", load);
 
+// ---- exportar CSV ----
+function toCSV(rows: Array<Record<string, unknown>>, cols: string[]): string {
+  const head = cols.join(";");
+  const body = rows
+    .map((r) => cols.map((c) => `"${String(r[c] ?? "").replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+  return head + "\n" + body;
+}
+function download(name: string, text: string): void {
+  const blob = new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+$("export").addEventListener("click", () => {
+  if (!lastData) return;
+  const d = lastData;
+  const s = d.summary || {};
+  const c = d.conv || {};
+  const resumo = toCSV(
+    [
+      { metrica: "Visitantes", valor: s.visitors },
+      { metrica: "Paginas vistas", valor: s.pageviews },
+      { metrica: "Tempo medio (ms)", valor: s.avg_ms },
+      { metrica: "Rolagem media (%)", valor: s.avg_scroll },
+      { metrica: "Cliques", valor: s.clicks },
+      { metrica: "Conversoes WhatsApp", valor: c.whatsapp },
+      { metrica: "Conversoes Formulario", valor: c.forms },
+    ],
+    ["metrica", "valor"]
+  );
+  const visitas = toCSV(
+    (d.recentVisits || []).map((v: Record<string, unknown>) => ({
+      quando: v.quando,
+      cidade: v.city,
+      pais: v.country,
+      aparelho: v.device,
+      navegador: v.browser,
+      sistema: v.os,
+      tempo_ms: v.duration,
+      rolagem_pct: v.scroll,
+    })),
+    ["quando", "cidade", "pais", "aparelho", "navegador", "sistema", "tempo_ms", "rolagem_pct"]
+  );
+  const dias = toCSV(
+    (d.series || []).map((r: Record<string, unknown>) => ({ dia: r.day, visitantes: r.visitors })),
+    ["dia", "visitantes"]
+  );
+  const stamp = new Date().toISOString().slice(0, 10);
+  download(`amv-analytics-${d.days}d-${stamp}.csv`,
+    `RESUMO (${d.days} dias)\n${resumo}\n\nVISITANTES POR DIA\n${dias}\n\nVISITANTES RECENTES\n${visitas}\n`);
+});
+
 // ---- carregamento dos dados ----
 async function load(): Promise<void> {
   const r = await fetch(`/api/stats?days=${rangeSel.value}`, {
@@ -144,6 +204,7 @@ async function load(): Promise<void> {
     return;
   }
   const d = await r.json();
+  lastData = d; // guarda para exportar CSV
   const brand = document.querySelector(".topbar__brand");
   if (brand) {
     let tag = brand.querySelector<HTMLElement>(".livedot");
@@ -159,7 +220,10 @@ async function load(): Promise<void> {
   }
   renderLive(d.realtime || {}, d.newReturning || {});
   renderKpis(d.summary || {}, d.prev || {}, d.bounce || {});
-  renderFunnel(d.conv || {});
+  renderFunnelSteps(d.funnel || {});
+  renderConvChart(d.convSeries || []);
+  renderConvDevices(d.convByDevice || []);
+  renderGoal(d.conv || {});
   renderChart(d.series || []);
   $("countries").innerHTML = bars((d.countries || []).map((x: Rec) => ({ label: x.country, value: fmtInt(x.visitors), n: Number(x.visitors) })));
   $("cities").innerHTML = bars((d.cities || []).map((x: Rec) => ({ label: x.city, value: fmtInt(x.visitors), n: Number(x.visitors) })));
@@ -194,25 +258,93 @@ function renderLive(rt: Rec, nr: Rec): void {
     .join("");
 }
 
-function renderFunnel(c: Rec): void {
-  const visitors = Number(c.visitors || 0);
-  const wa = Number(c.whatsapp || 0);
-  const forms = Number(c.forms || 0);
-  const pct = (n: number) => (visitors > 0 ? Math.round((n / visitors) * 100) : 0);
-  const steps = [
-    { label: "Visitantes", n: visitors, p: 100, color: "var(--cyan)" },
-    { label: "Clicaram no WhatsApp", n: wa, p: pct(wa), color: "var(--green)" },
-    { label: "Enviaram o formulário", n: forms, p: pct(forms), color: "var(--purple)" },
+// Funil por etapa, com % do total e % de QUEDA em relação à etapa anterior
+function renderFunnelSteps(f: Rec): void {
+  const visitors = Number(f.visitors || 0);
+  const raw = [
+    { label: "Visitaram o site", n: visitors, color: "var(--cyan)" },
+    { label: "Rolaram metade da página", n: Number(f.scrolled || 0), color: "#38bdf8" },
+    { label: "Clicaram em algo", n: Number(f.clicked || 0), color: "var(--purple)" },
+    { label: "Converteram (WhatsApp/form)", n: Number(f.converted || 0), color: "var(--green)" },
   ];
-  $("funnel").innerHTML = steps
-    .map(
-      (s) => `<div class="fstep">
-        <div class="fstep__top"><span>${s.label}</span><b>${fmtInt(s.n)} <small>· ${s.p}%</small></b></div>
-        <div class="fstep__bar"><i style="width:${s.p}%;background:${s.color}"></i></div>
-      </div>`
-    )
+  const box = $("funnelSteps");
+  if (!visitors) {
+    box.innerHTML = `<div class="empty">Ainda sem visitas neste período.</div>`;
+    return;
+  }
+  box.innerHTML = raw
+    .map((s, i) => {
+      const p = visitors > 0 ? Math.round((s.n / visitors) * 100) : 0;
+      const prevN = i > 0 ? raw[i - 1].n : s.n;
+      const drop = i > 0 && prevN > 0 ? Math.round(((prevN - s.n) / prevN) * 100) : 0;
+      const dropTxt = i > 0 ? `<em class="drop">↓ ${drop}% saíram aqui</em>` : "";
+      return `<div class="fstep">
+        <div class="fstep__top"><span>${s.label} ${dropTxt}</span><b>${fmtInt(s.n)} <small>· ${p}%</small></b></div>
+        <div class="fstep__bar"><i style="width:${p}%;background:${s.color}"></i></div>
+      </div>`;
+    })
     .join("");
 }
+
+function renderConvChart(series: Array<{ day: string; conversions: number; visitors: number }>): void {
+  const box = $("convChart");
+  if (!series.length) {
+    box.innerHTML = `<div class="empty">Sem dados ainda.</div>`;
+    return;
+  }
+  const W = 900, H = 200, pad = 26;
+  const max = Math.max(1, ...series.map((p) => Number(p.conversions)));
+  const stepX = series.length > 1 ? (W - pad * 2) / (series.length - 1) : 0;
+  const x = (i: number) => pad + i * stepX;
+  const y = (v: number) => H - pad - (v / max) * (H - pad * 2);
+  const bw = Math.max(3, Math.min(24, stepX * 0.5));
+  const barsSvg = series
+    .map((p, i) => {
+      const h = ((Number(p.conversions) / max) * (H - pad * 2)) || 0;
+      return `<rect x="${(x(i) - bw / 2).toFixed(1)}" y="${(H - pad - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="url(#cg)" />`;
+    })
+    .join("");
+  const step = Math.ceil(series.length / 8);
+  const labels = series
+    .map((p, i) => (i % step === 0 || i === series.length - 1 ? `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${p.day.slice(5)}</text>` : ""))
+    .join("");
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="chart__svg">
+    <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#00ff88"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+    ${barsSvg}<g class="xlabels">${labels}</g></svg>`;
+  void y;
+}
+
+function renderConvDevices(rows: Rec[]): void {
+  const withRate = rows.map((r) => {
+    const v = Number(r.visitors || 0), c = Number(r.conversions || 0);
+    const rate = v > 0 ? Math.round((c / v) * 100) : 0;
+    return {
+      label: `${deviceIcon(r.device)} ${deviceName(r.device)}`,
+      value: `${rate}% · ${fmtInt(c)}/${fmtInt(v)}`,
+      n: rate,
+    };
+  });
+  $("convDevices").innerHTML = bars(withRate);
+}
+
+// Meta de conversões (guardada no navegador do dono)
+const GOAL_KEY = "amv_goal";
+function renderGoal(c: Rec): void {
+  const convs = Number(c.whatsapp || 0) + Number(c.forms || 0);
+  const input = $<HTMLInputElement>("goalInput");
+  let goal = Number(localStorage.getItem(GOAL_KEY) || "10");
+  if (!goal || goal < 1) goal = 10;
+  if (document.activeElement !== input) input.value = String(goal);
+  const pct = goal > 0 ? Math.min(100, Math.round((convs / goal) * 100)) : 0;
+  $("goalFill").style.width = `${pct}%`;
+  $("goalTxt").textContent = `${fmtInt(convs)} de ${fmtInt(goal)} conversões — ${pct}% da meta`;
+}
+$<HTMLInputElement>("goalInput").addEventListener("input", (e) => {
+  const v = Math.max(1, Math.round(Number((e.target as HTMLInputElement).value) || 0));
+  localStorage.setItem(GOAL_KEY, String(v));
+  renderGoal((lastData && lastData.conv) || {});
+});
 
 function renderPeakHours(rows: Array<{ hour: number; sessions: number }>): void {
   const map = new Map(rows.map((r) => [Number(r.hour), Number(r.sessions)]));

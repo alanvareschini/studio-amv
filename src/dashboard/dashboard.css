@@ -103,7 +103,18 @@ body {
 }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,255,136,0.5); } 70% { box-shadow: 0 0 0 10px rgba(0,255,136,0); } 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0); } }
 
+/* ---- meta ---- */
+.goal__row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--dim); font-size: 0.9rem; }
+.goal__row input {
+  width: 90px; padding: 0.4rem 0.6rem; background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; font-weight: 700;
+}
+.goal__bar { height: 16px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
+.goal__bar i { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--purple), var(--cyan), var(--green)); transition: width 0.5s ease; }
+.goal__txt { margin-top: 8px; color: var(--dim); font-size: 0.85rem; }
+
 /* ---- funil ---- */
+.fstep__top .drop { color: #f8a; font-style: normal; font-weight: 600; font-size: 0.78rem; margin-left: 6px; }
 .funnel { display: flex; flex-direction: column; gap: 16px; }
 .fstep__top { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.95rem; }
 .fstep__top b { font-weight: 700; }

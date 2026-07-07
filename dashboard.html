@@ -37,6 +37,7 @@
             <option value="365">1 ano</option>
           </select>
           <a id="excludeMe" class="ghost" href="/?notrack=1" target="_blank" rel="noopener" title="Marca este navegador para não contar seus próprios acessos">Excluir meus acessos</a>
+          <button id="export" class="ghost" title="Baixar os dados em CSV">Exportar CSV</button>
           <button id="logout" class="ghost">Sair</button>
         </div>
       </header>
@@ -69,8 +70,24 @@
       <!-- Conversão -->
       <section class="tabpane" data-pane="conv">
         <div class="panel">
-          <h2>Funil de conversão</h2>
-          <div id="funnel" class="funnel"></div>
+          <h2>Meta de conversões <small>(no período)</small></h2>
+          <div class="goal">
+            <div class="goal__row">
+              <span>Meta:</span>
+              <input id="goalInput" type="number" min="1" step="1" />
+              <span>conversões</span>
+            </div>
+            <div class="goal__bar"><i id="goalFill"></i></div>
+            <div class="goal__txt" id="goalTxt"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Funil de conversão <small>(onde você perde gente)</small></h2>
+          <div id="funnelSteps" class="funnel"></div>
+        </div>
+        <div class="grid2">
+          <div class="panel"><h2>Conversões por dia</h2><div id="convChart" class="chart"></div></div>
+          <div class="panel"><h2>Conversão por aparelho</h2><div id="convDevices" class="list"></div></div>
         </div>
       </section>
 
