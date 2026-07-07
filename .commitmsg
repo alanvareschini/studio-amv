@@ -1,8 +1,3 @@
-﻿Nova intro: 'o site sendo construido' (wireframe -> pintura -> hero)
-
-Esqueleto (wireframe) do hero se monta, um raio de luz pinta tudo no
-gradiente da loja, e a intro dissolve revelando o hero. Demonstra o
-proprio trabalho da AMV. CSS/JS inline (instantaneo), tema-aware,
-respeita reduced-motion. Validada quadro a quadro (headless).
+﻿Remove a intro e corrige acentos do <head> (UTF-8)
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
