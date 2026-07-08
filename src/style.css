@@ -1045,17 +1045,23 @@ ol {
   text-transform: uppercase;
   color: var(--text-dim);
 }
-/* blob dentro do menu: normal (não fixo), pequeno, sem sobrar espaço */
-.menu-theme .hero-blob {
+/* blob dentro do menu: caixa fixa de 64px que mantém o blob inteiro e
+   centralizado (o truque antigo de margin negativa jogava metade pra fora
+   da borda direita do painel, aparecendo só um "triângulo") */
+.menu-theme__blob {
   position: relative;
-  top: auto;
-  right: auto;
+  width: 64px;
+  height: 64px;
+  flex: none;
+}
+.menu-theme__blob .hero-blob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 220px;
   height: 220px;
-  transform: scale(0.3);
+  transform: translate(-50%, -50%) scale(0.29);
   transform-origin: center;
-  margin: -77px; /* colapsa a caixa de 220px p/ ~66px visíveis */
-  flex: none;
 }
 
 /* ----------------------------------------------------------------- Hero */
