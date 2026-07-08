@@ -135,6 +135,198 @@ export function initPackages(): void {
   initFeatStagger();
 }
 
+type LetterBody = {
+  el: HTMLElement;
+  baseX: number;
+  baseY: number;
+  w: number;
+  h: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rot: number;
+  vr: number;
+};
+
+type PhysicsCard = {
+  card: HTMLElement;
+  bodies: LetterBody[];
+  width: number;
+  height: number;
+  startedAt: number;
+  lastTs: number;
+};
+
+const physicsCards = new Map<HTMLElement, PhysicsCard>();
+let physicsRaf = 0;
+
+function splitPackageLetters(card: HTMLElement): HTMLElement[] {
+  if (card.dataset.lettersReady !== "1") {
+    const targets = card.querySelectorAll<HTMLElement>(
+      ".pkg__badge, .pkg__name, .pkg__value, .pkg__note, .pkg__audience, .pkg__features li"
+    );
+
+    targets.forEach((target) => {
+      const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+      const textNodes: Text[] = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode as Text;
+        if (node.textContent?.trim()) textNodes.push(node);
+      }
+
+      textNodes.forEach((node) => {
+        const frag = document.createDocumentFragment();
+        const parts = (node.textContent || "").match(/\s+|\S+/g) || [];
+
+        parts.forEach((part) => {
+          if (/^\s+$/.test(part)) {
+            frag.appendChild(document.createTextNode(part));
+            return;
+          }
+
+          const word = document.createElement("span");
+          word.className = "pkg-phys-word";
+          Array.from(part).forEach((char) => {
+            const span = document.createElement("span");
+            span.className = "pkg-phys-char";
+            span.textContent = char;
+            word.appendChild(span);
+          });
+          frag.appendChild(word);
+        });
+
+        node.replaceWith(frag);
+      });
+    });
+
+    card.dataset.lettersReady = "1";
+  }
+
+  return Array.from(card.querySelectorAll<HTMLElement>(".pkg-phys-char"));
+}
+
+function visiblePackageCards(cards: HTMLElement[]): HTMLElement[] {
+  return cards.filter((card) => {
+    const r = card.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+  });
+}
+
+function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const now = performance.now();
+  visiblePackageCards(cards).forEach((card) => {
+    if (physicsCards.has(card)) return;
+
+    const cardRect = card.getBoundingClientRect();
+    const letters = splitPackageLetters(card);
+    const bodies = letters.map((el, i) => {
+      const r = el.getBoundingClientRect();
+      const seed = ((i * 1103515245 + 12345) >>> 0) / 4294967295;
+      el.classList.add("is-phys");
+      el.style.transition = "none";
+      return {
+        el,
+        baseX: r.left - cardRect.left,
+        baseY: r.top - cardRect.top,
+        w: Math.max(3, r.width),
+        h: Math.max(8, r.height),
+        x: 0,
+        y: 0,
+        vx: impulse * (260 + seed * 240) + (seed - 0.5) * 90,
+        vy: -40 - seed * 110,
+        rot: 0,
+        vr: impulse * (90 + seed * 160),
+      };
+    });
+
+    card.classList.add("pkg--physics-active");
+    physicsCards.set(card, {
+      card,
+      bodies,
+      width: cardRect.width,
+      height: cardRect.height,
+      startedAt: now,
+      lastTs: now,
+    });
+  });
+
+  if (!physicsRaf && physicsCards.size) physicsRaf = requestAnimationFrame(tickLetterPhysics);
+}
+
+function finishLetterPhysics(state: PhysicsCard): void {
+  state.card.classList.remove("pkg--physics-active");
+  state.bodies.forEach((body) => {
+    body.el.style.transition = "transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)";
+    body.el.style.transform = "";
+    window.setTimeout(() => {
+      body.el.classList.remove("is-phys");
+      body.el.style.transition = "";
+    }, 950);
+  });
+  physicsCards.delete(state.card);
+}
+
+function tickLetterPhysics(ts: number): void {
+  physicsRaf = 0;
+  physicsCards.forEach((state) => {
+    const dt = Math.min(0.032, Math.max(0.001, (ts - state.lastTs) / 1000));
+    state.lastTs = ts;
+
+    const alive = ts - state.startedAt < 10000;
+    const pull = alive ? 0 : 16;
+    const gravity = 1350;
+    const wall = 12;
+    const floor = state.height - 22;
+
+    state.bodies.forEach((body) => {
+      body.vy += gravity * dt;
+      body.vx += (-body.x * pull - body.vx * 0.6) * dt;
+      body.vy += (-body.y * pull - body.vy * 0.12) * dt;
+
+      body.x += body.vx * dt;
+      body.y += body.vy * dt;
+      body.rot += body.vr * dt;
+      body.vx *= 0.992;
+      body.vy *= 0.996;
+      body.vr *= 0.99;
+
+      const left = body.baseX + body.x;
+      const right = left + body.w;
+      const top = body.baseY + body.y;
+      const bottom = top + body.h;
+
+      if (left < wall) {
+        body.x += wall - left;
+        body.vx = Math.abs(body.vx) * 0.52;
+        body.vr += body.vx * 0.04;
+      } else if (right > state.width - wall) {
+        body.x -= right - (state.width - wall);
+        body.vx = -Math.abs(body.vx) * 0.52;
+        body.vr += body.vx * 0.04;
+      }
+
+      if (bottom > floor) {
+        body.y -= bottom - floor;
+        body.vy = -Math.abs(body.vy) * 0.36;
+        body.vx *= 0.88;
+        body.vr *= 0.82;
+      } else if (top < wall) {
+        body.y += wall - top;
+        body.vy = Math.abs(body.vy) * 0.35;
+      }
+
+      body.el.style.transform = `translate3d(${body.x.toFixed(2)}px, ${body.y.toFixed(2)}px, 0) rotate(${body.rot.toFixed(2)}deg)`;
+    });
+
+    if (!alive && ts - state.startedAt > 10900) finishLetterPhysics(state);
+  });
+
+  if (physicsCards.size) physicsRaf = requestAnimationFrame(tickLetterPhysics);
+}
+
 // preço "conta" de 0 até o valor quando o card entra na tela
 function initPriceCount(): void {
   const io = new IntersectionObserver(
@@ -388,6 +580,11 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   let rx = 0;
   let targetRy = 0;
   let targetRx = 0;
+  let lastGamma: number | null = null;
+  let lastGammaTs = 0;
+  let lastBurstSign = 0;
+  let lastBurstAt = 0;
+  let physicsCooldownUntil = 0;
   let gotEvent = false;
   let started = false;
 
@@ -425,6 +622,28 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
       window.setTimeout(() => btn?.classList.add("is-gone"), 1800);
     }
     if (!base) base = { beta: e.beta, gamma: e.gamma };
+    const now = performance.now();
+    if (lastGamma !== null && lastGammaTs) {
+      const dt = Math.max(16, now - lastGammaTs) / 1000;
+      const velocity = (e.gamma - lastGamma) / dt;
+      const sign = Math.sign(velocity);
+      const strongLateralSnap = Math.abs(velocity) > 155 && Math.abs(e.gamma - base.gamma) > 5;
+
+      if (strongLateralSnap && sign !== 0) {
+        const reversedFast = lastBurstSign !== 0 && sign !== lastBurstSign && now - lastBurstAt < 620;
+        if (reversedFast && now > physicsCooldownUntil) {
+          const impulse = Math.max(-1.15, Math.min(1.15, velocity / 260));
+          startLetterPhysics(cards, impulse);
+          physicsCooldownUntil = now + 12000;
+          lastBurstSign = 0;
+        } else {
+          lastBurstSign = sign;
+          lastBurstAt = now;
+        }
+      }
+    }
+    lastGamma = e.gamma;
+    lastGammaTs = now;
     targetRy = clamp(deadzone((e.gamma - base.gamma) * SENS));
     targetRx = clamp(deadzone(-(e.beta - base.beta) * SENS));
     if (!raf) raf = requestAnimationFrame(apply);

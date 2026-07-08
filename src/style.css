@@ -2128,6 +2128,31 @@ html.amv-touch .gyro-btn { display: inline-flex; }
   position: relative;
   z-index: 1;
 }
+.pkg-phys-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+.pkg-phys-char {
+  display: inline-block;
+  transform-origin: 50% 70%;
+}
+.pkg-phys-char.is-phys {
+  position: relative;
+  z-index: 7;
+  pointer-events: none;
+  text-shadow:
+    0 0 10px rgba(34, 211, 238, 0.28),
+    0 0 18px rgba(168, 85, 247, 0.16);
+  will-change: transform;
+}
+.pkg--physics-active .pkg__holo {
+  opacity: 0.52;
+  filter: saturate(1.18);
+}
+.pkg--physics-active > .btn {
+  z-index: 9;
+  transform: translateZ(0);
+}
 .pkg--featured::before {
   content: "";
   position: absolute;
