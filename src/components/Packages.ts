@@ -88,6 +88,17 @@ export function Packages(): string {
   `;
 }
 
+// Detecção de toque CONFIÁVEL. Não usamos só "(hover: none)" porque vários
+// Android/Chrome reportam "hover: hover" por engano, desligando tudo no celular.
+function isTouchDevice(): boolean {
+  return (
+    (navigator.maxTouchPoints || 0) > 0 ||
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.matchMedia("(hover: none)").matches ||
+    "ontouchstart" in window
+  );
+}
+
 // pré-seleciona o pacote no formulário e rola até ele
 function goToForm(pacote: string): void {
   const select = document.getElementById("f-pacote") as HTMLSelectElement | null;
@@ -113,6 +124,10 @@ export function initPackages(): void {
       });
     });
   });
+
+  // marca o documento como "toque" pra o CSS ligar os efeitos de celular
+  // (botão de giro, holo automático, balanço, borda animada etc.)
+  if (isTouchDevice()) document.documentElement.classList.add("amv-touch");
 
   initTilt();
   initCheckFx();
@@ -174,7 +189,7 @@ function initFeatStagger(): void {
 // Ao clicar num item do checklist, o próprio "v" se redesenha em GRADIENTE
 // (elástico) — só naquele item. Clicar de novo desfaz.
 function initCheckFx(): void {
-  const isTouch = !window.matchMedia("(hover: hover)").matches;
+  const isTouch = isTouchDevice();
 
   document.querySelectorAll<HTMLElement>(".pkg__feat").forEach((li) => {
     const draw = li.querySelector<SVGPathElement>(".pkg-check__draw");
@@ -228,7 +243,7 @@ function initTilt(): void {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const MAX_ANGLE = 12; // graus máximos de inclinação
-  const isTouch = !window.matchMedia("(hover: hover)").matches;
+  const isTouch = isTouchDevice();
 
   // No celular/tablet não há cursor: os cards inclinam com o GIRO do aparelho
   // (giroscópio). Não briga com a rolagem, ao contrário do "seguir o dedo".

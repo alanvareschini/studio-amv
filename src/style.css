@@ -2021,53 +2021,52 @@ ol {
    Também bloqueamos o menu de "copiar link"/seleção que o navegador abre no
    toque longo sobre cards e botões (atrapalhava a experiência).
    ------------------------------------------------------------------------- */
-@media (hover: none) {
-  .pkg::after {
-    opacity: 0.9;
-    animation: pkg-border-route 5s linear infinite, pkg-border-hue 7s ease-in-out infinite;
-  }
-  .pkg__holo {
-    opacity: 0.32;
-    animation: holo-drift 6s ease-in-out infinite;
-  }
-  .card::after {
-    opacity: 0.7;
-  }
-  .card {
-    animation: touch-glow 5s ease-in-out infinite;
-  }
-  /* card ganha um balanço 3D suave (substitui o tilt do cursor no toque) */
-  .pkg {
-    animation: touch-glow 5s ease-in-out infinite, pkg-sway 8s ease-in-out infinite;
-  }
-  /* enquanto o dedo desliza sobre o card, ele segue o dedo (pausa o balanço) */
-  .pkg.is-touching {
-    animation: touch-glow 5s ease-in-out infinite;
-    transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(var(--lift));
-  }
-
-  /* toque longo não abre "copiar link"/seleção nos elementos interativos */
-  .pkg,
-  .card,
-  .btn,
-  a.btn,
-  .pkg__holo,
-  .pkg-check,
-  .pkg__badge,
-  .wa-fab,
-  .wa-fab * {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
+/* IMPORTANTE: usamos a classe .amv-touch (adicionada por JS via maxTouchPoints)
+   em vez de @media (hover: none), porque vários Android/Chrome reportam
+   "hover: hover" por engano — o que desligava TODOS os efeitos de toque. */
+html.amv-touch .pkg::after {
+  opacity: 0.9;
+  animation: pkg-border-route 5s linear infinite, pkg-border-hue 7s ease-in-out infinite;
 }
-
+html.amv-touch .pkg__holo {
+  opacity: 0.32;
+  animation: holo-drift 6s ease-in-out infinite;
+}
+html.amv-touch .card::after {
+  opacity: 0.7;
+}
+html.amv-touch .card {
+  animation: touch-glow 5s ease-in-out infinite;
+}
+/* card ganha um balanço 3D suave (substitui o tilt do cursor no toque) */
+html.amv-touch .pkg {
+  animation: touch-glow 5s ease-in-out infinite, pkg-sway 8s ease-in-out infinite;
+}
+/* enquanto o giro/dedo controla o card, ele segue (pausa o balanço) */
+html.amv-touch .pkg.is-touching {
+  animation: touch-glow 5s ease-in-out infinite;
+  transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(var(--lift));
+}
 /* dá um "respiro" de defasagem pra os cards não pulsarem todos juntos */
-@media (hover: none) {
-  .pkg-wrap:nth-child(2) .pkg { animation-delay: -1.6s; }
-  .pkg-wrap:nth-child(3) .pkg { animation-delay: -3.2s; }
+html.amv-touch .pkg-wrap:nth-child(2) .pkg { animation-delay: -1.6s; }
+html.amv-touch .pkg-wrap:nth-child(3) .pkg { animation-delay: -3.2s; }
+
+/* toque longo não abre "copiar link"/seleção nos elementos interativos */
+html.amv-touch .pkg,
+html.amv-touch .card,
+html.amv-touch .btn,
+html.amv-touch a.btn,
+html.amv-touch .pkg__holo,
+html.amv-touch .pkg-check,
+html.amv-touch .pkg__badge,
+html.amv-touch .wa-fab,
+html.amv-touch .wa-fab * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
+
 @keyframes holo-drift {
   0%, 100% { background-position: 0 0, 22% 28%; }
   50% { background-position: 0 0, 78% 72%; }
@@ -2076,30 +2075,29 @@ ol {
   0%, 100% { box-shadow: 0 8px 30px rgba(34, 211, 238, 0.08); }
   50% { box-shadow: 0 12px 44px rgba(168, 85, 247, 0.18); }
 }
-/* botão "Ativar movimento 3D" — só em telas de toque */
-.gyro-btn { display: none; }
-@media (hover: none) {
-  .gyro-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin: 1rem auto 0;
-    padding: 0.55rem 1.1rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--card);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s ease, color 0.3s ease;
-  }
-  .gyro-btn.is-ok { color: #34d399; border-color: rgba(52, 211, 153, 0.5); }
-  .gyro-btn.is-err { color: #f8a; border-color: rgba(255, 136, 170, 0.5); }
-  .gyro-btn.is-gone { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+
+/* botão "Ativar movimento 3D" — só aparece em telas de toque (classe por JS) */
+.gyro-btn {
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1rem auto 0;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s ease, color 0.3s ease;
 }
+html.amv-touch .gyro-btn { display: inline-flex; }
+.gyro-btn.is-ok { color: #34d399; border-color: rgba(52, 211, 153, 0.5); }
+.gyro-btn.is-err { color: #f8a; border-color: rgba(255, 136, 170, 0.5); }
+.gyro-btn.is-gone { opacity: 0; transform: translateY(-6px); pointer-events: none; }
 
 /* balanço 3D automático dos cards no toque (sem cursor pra seguir) */
 @keyframes pkg-sway {
