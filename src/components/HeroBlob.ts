@@ -4,14 +4,16 @@ export function HeroBlob(): string {
   return /* html */ `
     <div id="wrap" class="hero-blob" role="button" tabindex="0" aria-label="Alternar dia e noite">
       <div id="blobOuter">
-        <div id="blobFill"></div>
+        <div id="blobClip">
+          <div id="blobFill"></div>
+          <svg id="wave" viewBox="0 0 264 132" preserveAspectRatio="none" aria-hidden="true">
+            <path id="w1" d="M0 58 Q 66 40 132 58 T 264 58 V132 H0 Z" fill="#1e3a5f"/>
+            <path id="w2" d="M0 74 Q 66 58 132 74 T 264 74 V132 H0 Z" fill="#2a4f78"/>
+            <path id="w3" d="M0 90 Q 66 74 132 90 T 264 90 V132 H0 Z" fill="#3a6490"/>
+          </svg>
+        </div>
         <div class="cel" id="sun"></div>
         <div class="cel" id="moon"></div>
-        <svg id="wave" viewBox="0 0 264 132" preserveAspectRatio="none" aria-hidden="true">
-          <path id="w1" d="M0 58 Q 66 40 132 58 T 264 58 V132 H0 Z" fill="#1e3a5f"/>
-          <path id="w2" d="M0 74 Q 66 58 132 74 T 264 74 V132 H0 Z" fill="#2a4f78"/>
-          <path id="w3" d="M0 90 Q 66 74 132 90 T 264 90 V132 H0 Z" fill="#3a6490"/>
-        </svg>
       </div>
       <div class="label-wrap">
         <span class="lbl" id="lNight">NOITE</span>

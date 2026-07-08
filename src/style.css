@@ -848,6 +848,12 @@ ol {
 .hero-blob #blobOuter {
   position: absolute;
   inset: 0;
+}
+/* só o MAR e o preenchimento seguem a forma de blob; o sol e a lua ficam
+   fora deste recorte pra não serem cortados quando orbitam pela borda */
+.hero-blob #blobClip {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   clip-path: path('M 112 6 C 158 2 208 36 214 80 C 220 124 198 172 162 192 C 126 212 76 216 44 194 C 12 172 -4 128 6 88 C 16 48 52 14 88 8 C 96 6 104 6 112 6 Z');
   animation: blob-breathe 4.5s ease-in-out infinite;
@@ -2002,12 +2008,14 @@ ol {
 }
 
 /* -------------------------------------------------------------------------
-   Aparelhos de TOQUE (tablets): não têm cursor, então os efeitos de hover
-   (tilt, holo, borda animada) ficavam desligados e a tela parecia "morta".
-   Aqui ligamos versões automáticas e suaves — só em toque + tela média,
-   sem afetar desktop (mouse) nem celular pequeno.
+   Aparelhos de TOQUE (celular e tablet): não têm cursor, então os efeitos
+   de hover (tilt, holo, borda animada) ficavam desligados e a tela parecia
+   "morta" — pior que no PC. Aqui ligamos versões automáticas e suaves em
+   QUALQUER tela de toque, sem afetar desktop (mouse).
+   Também bloqueamos o menu de "copiar link"/seleção que o navegador abre no
+   toque longo sobre cards e botões (atrapalhava a experiência).
    ------------------------------------------------------------------------- */
-@media (hover: none) and (min-width: 640px) {
+@media (hover: none) {
   .pkg::after {
     opacity: 0.9;
     animation: pkg-border-route 5s linear infinite, pkg-border-hue 7s ease-in-out infinite;
@@ -2019,10 +2027,40 @@ ol {
   .card::after {
     opacity: 0.7;
   }
-  .card,
-  .pkg {
+  .card {
     animation: touch-glow 5s ease-in-out infinite;
   }
+  /* card ganha um balanço 3D suave (substitui o tilt do cursor no toque) */
+  .pkg {
+    animation: touch-glow 5s ease-in-out infinite, pkg-sway 8s ease-in-out infinite;
+  }
+  /* enquanto o dedo desliza sobre o card, ele segue o dedo (pausa o balanço) */
+  .pkg.is-touching {
+    animation: touch-glow 5s ease-in-out infinite;
+    transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(var(--lift));
+  }
+
+  /* toque longo não abre "copiar link"/seleção nos elementos interativos */
+  .pkg,
+  .card,
+  .btn,
+  a.btn,
+  .pkg__holo,
+  .pkg-check,
+  .pkg__badge,
+  .wa-fab,
+  .wa-fab * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* dá um "respiro" de defasagem pra os cards não pulsarem todos juntos */
+@media (hover: none) {
+  .pkg-wrap:nth-child(2) .pkg { animation-delay: -1.6s; }
+  .pkg-wrap:nth-child(3) .pkg { animation-delay: -3.2s; }
 }
 @keyframes holo-drift {
   0%, 100% { background-position: 0 0, 22% 28%; }
@@ -2031,6 +2069,11 @@ ol {
 @keyframes touch-glow {
   0%, 100% { box-shadow: 0 8px 30px rgba(34, 211, 238, 0.08); }
   50% { box-shadow: 0 12px 44px rgba(168, 85, 247, 0.18); }
+}
+/* balanço 3D automático dos cards no toque (sem cursor pra seguir) */
+@keyframes pkg-sway {
+  0%, 100% { transform: rotateX(2.2deg) rotateY(-5deg) translateZ(0); }
+  50% { transform: rotateX(-2.2deg) rotateY(5deg) translateZ(0); }
 }
 /* conteúdo sempre acima do holo, pra o texto não ser "lavado" pelo color-dodge */
 .pkg__name,

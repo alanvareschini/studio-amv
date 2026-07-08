@@ -35,6 +35,7 @@ class LetterScene {
   private lastH = window.innerHeight;
   private resizeTimer = 0;
   private frostIdle = 999; // quadros sem interação (pula a simulação do rastro)
+  private autoFrame = 0; // contador para dividir a simulação por 2 no mobile
   // referência de zoom capturada no carregamento (por aparelho).
   private baseDPR = window.devicePixelRatio || 1;
 
@@ -360,8 +361,19 @@ class LetterScene {
     const elapsed = this.clock.getElapsedTime();
     const s = this.scrollT;
 
+    // No MOBILE não existe cursor: uma luz automática atravessa o A em curva,
+    // acendendo a superfície no gradiente (substitui o rastro do cursor).
+    // Só enquanto o A está em cena (economiza bateria ao rolar a página).
+    const autoSurface = this.isMobile && s < 0.3;
+
     // rastro só onde está sobre o A
-    if (this.mesh && this.ptr.inside) {
+    if (autoSurface) {
+      const t = elapsed * 0.5;
+      this.ptr.x = 0.5 + Math.cos(t * 1.3) * 0.24;
+      this.ptr.y = 0.5 + Math.sin(t * 1.7) * 0.28;
+      this.ptr.inside = true;
+      this.overA = true;
+    } else if (this.mesh && this.ptr.inside) {
       this.raycaster.setFromCamera(this.ndc, this.camera);
       this.overA = this.raycaster.intersectObject(this.mesh, false).length > 0;
     } else {
@@ -369,8 +381,10 @@ class LetterScene {
     }
     // Só roda a simulação do rastro (loop de 16k células) quando há interação
     // ou logo depois (enquanto o rastro some). Parado = pula, economiza CPU.
+    // No mobile roda em quadros alternados (metade do custo).
     this.frostIdle = this.overA ? 0 : this.frostIdle + 1;
-    if (this.frostIdle < 100) this.updateFrost(elapsed);
+    const doFrost = this.frostIdle < 100 && (!this.isMobile || (this.autoFrame++ & 1) === 0);
+    if (doFrost) this.updateFrost(elapsed);
 
     // coreografia pelo scroll
     const active = LetterScene.smoothstep(0, 0.14, s) * (1 - LetterScene.smoothstep(0.84, 1, s));
@@ -383,8 +397,14 @@ class LetterScene {
     this.group.position.x += (tx - this.group.position.x) * 0.07;
     this.group.position.y += (ty - this.group.position.y) * 0.07;
 
-    const tiltY = this.mouse.x * 0.38;
-    const tiltX = -this.mouse.y * 0.3;
+    // Desktop: inclina seguindo o cursor. Mobile: balanço automático suave,
+    // pra o A nunca ficar congelado em repouso (não há cursor no toque).
+    let tiltY = this.mouse.x * 0.38;
+    let tiltX = -this.mouse.y * 0.3;
+    if (this.isMobile) {
+      tiltY = Math.sin(elapsed * 0.55) * 0.34;
+      tiltX = Math.sin(elapsed * 0.4) * 0.16;
+    }
     this.group.rotation.y += (tiltY - this.group.rotation.y) * 0.06;
     this.group.rotation.x += (tiltX - this.group.rotation.x) * 0.06;
 

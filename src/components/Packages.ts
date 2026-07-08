@@ -173,6 +173,8 @@ function initFeatStagger(): void {
 // Ao clicar num item do checklist, o próprio "v" se redesenha em GRADIENTE
 // (elástico) — só naquele item. Clicar de novo desfaz.
 function initCheckFx(): void {
+  const isTouch = !window.matchMedia("(hover: hover)").matches;
+
   document.querySelectorAll<HTMLElement>(".pkg__feat").forEach((li) => {
     const draw = li.querySelector<SVGPathElement>(".pkg-check__draw");
     if (!draw) return;
@@ -190,33 +192,62 @@ function initCheckFx(): void {
       });
     });
   });
+
+  // No mobile não há hover pra convidar o clique: os checks se colorem sozinhos
+  // (em cascata) quando o card entra na tela — mostra o efeito de gradiente.
+  if (!isTouch) return;
+  document.querySelectorAll<HTMLElement>(".pkg").forEach((card) => {
+    const draws = card.querySelectorAll<SVGPathElement>(".pkg-check__draw");
+    if (!draws.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting) return;
+          io.unobserve(e.target);
+          draws.forEach((d, i) => {
+            gsap.to(d, {
+              strokeDashoffset: 0,
+              duration: 1,
+              delay: 0.35 + i * 0.12,
+              ease: "elastic.out(1.1, 0.3)",
+            });
+          });
+        });
+      },
+      { threshold: 0.35 }
+    );
+    io.observe(card);
+  });
 }
 
 // Inclinação 3D que segue o cursor (eixos X e Y, para todos os lados).
 // Card fica reto por padrão; só inclina enquanto o mouse está sobre ele.
 function initTilt(): void {
-  // Pula em telas de toque ou quando o usuário prefere menos movimento.
-  if (
-    !window.matchMedia("(hover: hover)").matches ||
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  ) {
-    return;
-  }
+  // Só respeita a preferência de menos movimento (aí fica tudo parado).
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const MAX_ANGLE = 12; // graus máximos de inclinação
+  const isTouch = !window.matchMedia("(hover: hover)").matches;
+
+  // No celular/tablet não há cursor: os cards inclinam com o GIRO do aparelho
+  // (giroscópio). Não briga com a rolagem, ao contrário do "seguir o dedo".
+  if (isTouch) {
+    initGyroTilt(MAX_ANGLE);
+    return;
+  }
 
   document.querySelectorAll<HTMLElement>(".pkg").forEach((card) => {
     let raf = 0;
 
-    card.addEventListener("pointermove", (e) => {
+    const move = (clientX: number, clientY: number) => {
       const rect = card.getBoundingClientRect();
       // posição do cursor relativa ao centro do card (-1 a 1)
-      const px = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const py = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+      const px = ((clientX - rect.left) / rect.width) * 2 - 1;
+      const py = ((clientY - rect.top) / rect.height) * 2 - 1;
 
       // posição 0–100% para o brilho holográfico seguir o cursor
-      const hx = (((e.clientX - rect.left) / rect.width) * 100).toFixed(1);
-      const hy = (((e.clientY - rect.top) / rect.height) * 100).toFixed(1);
+      const hx = (((clientX - rect.left) / rect.width) * 100).toFixed(1);
+      const hy = (((clientY - rect.top) / rect.height) * 100).toFixed(1);
 
       card.classList.remove("is-resetting");
       cancelAnimationFrame(raf);
@@ -226,14 +257,73 @@ function initTilt(): void {
         card.style.setProperty("--hx", `${hx}%`);
         card.style.setProperty("--hy", `${hy}%`);
       });
-    });
+    };
 
+    card.addEventListener("pointermove", (e) => move(e.clientX, e.clientY));
     card.addEventListener("pointerleave", () => {
       cancelAnimationFrame(raf);
-      // volta ao reto com transição mais suave
       card.classList.add("is-resetting");
       card.style.setProperty("--rx", "0deg");
       card.style.setProperty("--ry", "0deg");
     });
   });
+}
+
+// Inclinação dos cards pelo giroscópio (mobile). A primeira posição do aparelho
+// vira o "neutro"; girar o telefone inclina todos os cards juntos, como se
+// reagissem à gravidade. No iOS 13+ é preciso pedir permissão num gesto.
+function initGyroTilt(MAX_ANGLE: number): void {
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".pkg"));
+  if (!cards.length) return;
+
+  const SENS = 0.6; // graus de inclinação do card por grau de giro
+  const clamp = (v: number) => Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, v));
+  let base: { beta: number; gamma: number } | null = null;
+  let raf = 0;
+  let ry = 0;
+  let rx = 0;
+
+  const apply = () => {
+    raf = 0;
+    cards.forEach((card) => {
+      // classe is-touching: usa o transform pelas variáveis e pausa o balanço
+      card.classList.add("is-touching");
+      card.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
+      card.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
+      // brilho holo acompanha a inclinação (mapeia -MAX..MAX → 0..100%)
+      card.style.setProperty("--hx", `${(50 + (ry / MAX_ANGLE) * 45).toFixed(1)}%`);
+      card.style.setProperty("--hy", `${(50 - (rx / MAX_ANGLE) * 45).toFixed(1)}%`);
+    });
+  };
+
+  const onOrient = (e: DeviceOrientationEvent) => {
+    if (e.beta == null || e.gamma == null) return;
+    if (!base) base = { beta: e.beta, gamma: e.gamma };
+    ry = clamp((e.gamma - base.gamma) * SENS); // esquerda-direita
+    rx = clamp(-(e.beta - base.beta) * SENS); // frente-trás
+    if (!raf) raf = requestAnimationFrame(apply);
+  };
+
+  const start = () =>
+    window.addEventListener("deviceorientation", onOrient, { passive: true });
+
+  const DOE = window.DeviceOrientationEvent as unknown as {
+    requestPermission?: () => Promise<"granted" | "denied">;
+  };
+  if (DOE && typeof DOE.requestPermission === "function") {
+    // iOS: precisa ser chamado dentro de um gesto do usuário.
+    const ask = () => {
+      DOE.requestPermission!()
+        .then((r) => {
+          if (r === "granted") start();
+        })
+        .catch(() => {});
+      window.removeEventListener("touchend", ask);
+      window.removeEventListener("click", ask);
+    };
+    window.addEventListener("touchend", ask, { once: true });
+    window.addEventListener("click", ask, { once: true });
+  } else if (typeof window.DeviceOrientationEvent !== "undefined") {
+    start();
+  }
 }
