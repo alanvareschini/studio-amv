@@ -41,6 +41,7 @@ export function Packages(): string {
           <span class="eyebrow">Pacotes</span>
           <h2 class="section__title">Escolha o plano <span class="text-gradient">ideal pro seu negócio</span></h2>
           <p class="section__lead">Preços aproximados. O valor final depende do escopo combinado no WhatsApp.</p>
+          <button class="gyro-btn" id="gyroBtn" type="button">Ativar movimento 3D</button>
         </header>
 
         <div class="scene-3d">
@@ -275,6 +276,7 @@ function initTilt(): void {
 function initGyroTilt(MAX_ANGLE: number): void {
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".pkg"));
   if (!cards.length) return;
+  const btn = document.getElementById("gyroBtn");
 
   const SENS = 0.6; // graus de inclinação do card por grau de giro
   const clamp = (v: number) => Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, v));
@@ -282,6 +284,15 @@ function initGyroTilt(MAX_ANGLE: number): void {
   let raf = 0;
   let ry = 0;
   let rx = 0;
+  let gotEvent = false;
+
+  const setBtn = (txt: string, cls?: "ok" | "err") => {
+    if (!btn) return;
+    btn.textContent = txt;
+    btn.classList.remove("is-ok", "is-err");
+    if (cls === "ok") btn.classList.add("is-ok");
+    if (cls === "err") btn.classList.add("is-err");
+  };
 
   const apply = () => {
     raf = 0;
@@ -298,6 +309,11 @@ function initGyroTilt(MAX_ANGLE: number): void {
 
   const onOrient = (e: DeviceOrientationEvent) => {
     if (e.beta == null || e.gamma == null) return;
+    if (!gotEvent) {
+      gotEvent = true;
+      setBtn("Movimento 3D ativo", "ok");
+      window.setTimeout(() => btn?.classList.add("is-gone"), 2500);
+    }
     if (!base) base = { beta: e.beta, gamma: e.gamma };
     ry = clamp((e.gamma - base.gamma) * SENS); // esquerda-direita
     rx = clamp(-(e.beta - base.beta) * SENS); // frente-trás
@@ -307,23 +323,34 @@ function initGyroTilt(MAX_ANGLE: number): void {
   const start = () =>
     window.addEventListener("deviceorientation", onOrient, { passive: true });
 
-  const DOE = window.DeviceOrientationEvent as unknown as {
-    requestPermission?: () => Promise<"granted" | "denied">;
-  };
-  if (DOE && typeof DOE.requestPermission === "function") {
-    // iOS: precisa ser chamado dentro de um gesto do usuário.
-    const ask = () => {
-      DOE.requestPermission!()
+  const DOE = window.DeviceOrientationEvent as unknown as
+    | { requestPermission?: () => Promise<"granted" | "denied"> }
+    | undefined;
+  const needsPermission = !!DOE && typeof DOE.requestPermission === "function";
+
+  const activate = () => {
+    if (gotEvent) return;
+    setBtn("Ativando…");
+    if (needsPermission) {
+      DOE!.requestPermission!()
         .then((r) => {
           if (r === "granted") start();
+          else setBtn("Permissão negada", "err");
         })
-        .catch(() => {});
-      window.removeEventListener("touchend", ask);
-      window.removeEventListener("click", ask);
-    };
-    window.addEventListener("touchend", ask, { once: true });
-    window.addEventListener("click", ask, { once: true });
-  } else if (typeof window.DeviceOrientationEvent !== "undefined") {
-    start();
-  }
+        .catch(() => setBtn("Não suportado neste aparelho", "err"));
+    } else if (typeof window.DeviceOrientationEvent !== "undefined") {
+      start();
+    } else {
+      setBtn("Aparelho sem sensor de movimento", "err");
+      return;
+    }
+    // se em 2,5s nenhum dado chegou, o sensor não está respondendo → avisa
+    window.setTimeout(() => {
+      if (!gotEvent) setBtn("Sensor não respondeu neste aparelho", "err");
+    }, 2500);
+  };
+
+  btn?.addEventListener("click", activate);
+  // Android e afins não exigem permissão: já tenta ligar sozinho no carregamento.
+  if (!needsPermission) activate();
 }

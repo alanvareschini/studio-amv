@@ -2070,6 +2070,31 @@ ol {
   0%, 100% { box-shadow: 0 8px 30px rgba(34, 211, 238, 0.08); }
   50% { box-shadow: 0 12px 44px rgba(168, 85, 247, 0.18); }
 }
+/* botão "Ativar movimento 3D" — só em telas de toque */
+.gyro-btn { display: none; }
+@media (hover: none) {
+  .gyro-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 1rem auto 0;
+    padding: 0.55rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+  .gyro-btn.is-ok { color: #34d399; border-color: rgba(52, 211, 153, 0.5); }
+  .gyro-btn.is-err { color: #f8a; border-color: rgba(255, 136, 170, 0.5); }
+  .gyro-btn.is-gone { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+}
+
 /* balanço 3D automático dos cards no toque (sem cursor pra seguir) */
 @keyframes pkg-sway {
   0%, 100% { transform: rotateX(2.2deg) rotateY(-5deg) translateZ(0); }
