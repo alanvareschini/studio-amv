@@ -1044,6 +1044,10 @@ ol {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-dim);
+  /* pode encolher em tela estreita (min-width:0) pra NÃO empurrar o blob pra
+     fora da borda do painel — era o que cortava o ícone no celular */
+  flex: 1;
+  min-width: 0;
 }
 /* blob dentro do menu: caixa fixa de 64px que mantém o blob inteiro e
    centralizado (o truque antigo de margin negativa jogava metade pra fora
@@ -1053,6 +1057,10 @@ ol {
   width: 64px;
   height: 64px;
   flex: none;
+  /* blindagem: nada do blob (220px) pode vazar da caixa e aparecer cortado
+     por cima da página — pior caso, é recortado limpo dentro do círculo */
+  overflow: hidden;
+  border-radius: 50%;
 }
 .menu-theme__blob .hero-blob {
   position: absolute;
@@ -1060,7 +1068,7 @@ ol {
   left: 50%;
   width: 220px;
   height: 220px;
-  transform: translate(-50%, -50%) scale(0.29);
+  transform: translate(-50%, -50%) scale(0.27);
   transform-origin: center;
 }
 
