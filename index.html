@@ -115,6 +115,9 @@
           if (raf) cancelAnimationFrame(raf);
           window.removeEventListener("pointermove", onMove);
           window.removeEventListener("pointerup", onUp);
+          window.removeEventListener("pointercancel", onUp);
+          host.removeEventListener("lostpointercapture", onUp);
+          host.removeEventListener("pointerleave", onLeave);
           window.removeEventListener("resize", onResize);
           if (host && host.parentNode) host.remove();
           document.body.classList.remove("ci-lock");
@@ -134,7 +137,7 @@
         var GRAV = 0.2, DAMP = 0.992, ITERS = 5;
         var COMPRESS = 0.02, STRETCH = 1.1, H_COMPRESS = 0.6, H_STRETCH = 4;
         var HOME_FORCE = 0.0028, HOME_DEADZONE = 10;
-        var MOUSE_SIZE = 5000, MOUSE_STRENGTH = 4;
+        var MOUSE_STRENGTH = 0.78;
         var STEP_MS = 1000 / 60, MAX_STEPS = 2;
         var curtains = [], cord = [], handle = null, bandImg = [];
         var opening = false, openT = 0, started = performance.now(), lastT = started, acc = 0;
@@ -142,6 +145,9 @@
         var ptr = {
           x: -9999,
           y: -9999,
+          active: false,
+          vx: 0,
+          vy: 0,
           cordGrab: false,
           cordParticle: null,
           cordParticleWasPinned: false,
@@ -197,8 +203,9 @@
 
         function makeCurtain(x0, x1, dir) {
           var width = x1 - x0;
-          var cols = Math.max(12, Math.min(50, Math.floor(width / 10)));
-          var rows = Math.max(16, Math.min(50, Math.floor(W / 5)));
+          var gap = W < 640 ? 23 : W < 980 ? 22 : 21;
+          var cols = Math.max(10, Math.min(42, Math.round(width / gap) + 1));
+          var rows = Math.max(18, Math.min(46, Math.ceil(H / gap) + 1));
           var hrest = (x1 - x0) / (cols - 1);
           var vrest = H / (rows - 1);
           var P = [];
@@ -228,13 +235,13 @@
         function build() {
           W = window.innerWidth;
           H = window.innerHeight;
-          dpr = Math.min(W < 640 ? 1.25 : 1.5, window.devicePixelRatio || 1);
-          SP = W < 640 ? 34 : W < 980 ? 30 : 26;
+          dpr = Math.min(W < 640 ? 1 : 1.35, window.devicePixelRatio || 1);
+          SP = W < 640 ? 23 : W < 980 ? 22 : 21;
           canvas.width = Math.max(1, Math.round(W * dpr));
           canvas.height = Math.max(1, Math.round(H * dpr));
           canvas.style.width = W + "px";
           canvas.style.height = H + "px";
-          makeChars(Math.round(Math.max(12, (H / (Math.max(16, Math.min(50, Math.floor(W / 5))) - 1)) * 1.2) * dpr));
+          makeChars(Math.round(Math.max(13, SP * 0.95) * dpr));
           curtains = [makeCurtain(0, W / 2, -1), makeCurtain(W / 2, W, 1)];
 
           var segs = 13;
@@ -348,7 +355,10 @@
           return t * t * (3 - 2 * t);
         }
         function repel() {
-          if (ptr.x < -1000) return;
+          if (!ptr.active || ptr.x < -1000) return;
+          var radius = W < 640 ? 108 : 142;
+          var radius2 = radius * radius;
+          var speed = Math.min(22, Math.hypot(ptr.vx, ptr.vy));
           for (var k = 0; k < curtains.length; k++) {
             var P = curtains[k].P;
             for (var i = 0; i < P.length; i++) {
@@ -357,12 +367,15 @@
               var dx = ptr.x - p.x;
               var dy = ptr.y - p.y;
               var ls = dx * dx + dy * dy;
-              if (ls < MOUSE_SIZE && ls > 1) {
+              if (ls < radius2 && ls > 1) {
                 var a = Math.atan2(dy, dx) - Math.PI;
-                var strength = smoothstep(MOUSE_SIZE, -2000, ls) * MOUSE_STRENGTH / 300;
+                var falloff = smoothstep(radius2, 0, ls);
+                var strength = falloff * MOUSE_STRENGTH * (0.75 + speed * 0.025);
                 if (ptr.cordGrab || ptr.particle) strength *= 1.45;
                 p.ax += Math.cos(a) * strength;
                 p.ay += Math.sin(a) * strength;
+                p.ax += ptr.vx * falloff * 0.018;
+                p.ay += ptr.vy * falloff * 0.018;
               }
             }
           }
@@ -535,8 +548,13 @@
         }
 
         function onMove(e) {
+          if (ptr.x > -1000) {
+            ptr.vx = Math.max(-28, Math.min(28, e.clientX - ptr.x));
+            ptr.vy = Math.max(-28, Math.min(28, e.clientY - ptr.y));
+          }
           ptr.x = e.clientX;
           ptr.y = e.clientY;
+          ptr.active = true;
           armCordIfPulled();
         }
         function onUp() {
@@ -560,6 +578,12 @@
             ptr.particle.pin = ptr.particleWasPinned;
             ptr.particle = null;
           }
+        }
+        function onLeave() {
+          ptr.active = false;
+          ptr.vx = 0;
+          ptr.vy = 0;
+          onUp();
         }
         function onResize() {
           clearTimeout(resizeTimer);
@@ -604,6 +628,9 @@
         });
         window.addEventListener("pointermove", onMove, { passive: true });
         window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+        host.addEventListener("lostpointercapture", onUp);
+        host.addEventListener("pointerleave", onLeave);
         window.addEventListener("resize", onResize, { passive: true });
 
         function loop(now) {
@@ -635,6 +662,8 @@
         } catch (e) {}
 
         build();
+        draw();
+        lastT = performance.now();
         raf = requestAnimationFrame(loop);
         return true;
       };
