@@ -1,5 +1,6 @@
 // Menu estilo Lusion: botao fixo no canto que abre um menu compacto,
-// com links grandes e toggle de tema proprio para mobile.
+// com links grandes e o blob original de dia/noite dentro.
+import { HeroBlob } from "./HeroBlob";
 
 const LINKS: [string, string][] = [
   ["#servicos", "Servi&ccedil;os"],
@@ -25,14 +26,7 @@ export function Menu(): string {
       <nav class="menu-nav" aria-label="Navega&ccedil;&atilde;o">${links}</nav>
       <div class="menu-theme">
         <span class="menu-theme__label">Modo claro / escuro</span>
-        <button class="menu-theme-toggle" id="menuThemeToggle" type="button" aria-label="Alternar modo claro e escuro" aria-pressed="false">
-          <span class="menu-theme-toggle__orb" aria-hidden="true">
-            <span class="menu-theme-toggle__sun"></span>
-            <span class="menu-theme-toggle__moon"></span>
-            <span class="menu-theme-toggle__wave menu-theme-toggle__wave--one"></span>
-            <span class="menu-theme-toggle__wave menu-theme-toggle__wave--two"></span>
-          </span>
-        </button>
+        <div class="menu-theme__blob">${HeroBlob()}</div>
       </div>
     </div>`;
 }
@@ -41,25 +35,6 @@ export function initMenu(): void {
   const btn = document.getElementById("menuBtn");
   const overlay = document.getElementById("menuOverlay");
   if (!btn || !overlay) return;
-
-  const themeToggle = document.getElementById("menuThemeToggle");
-  const currentTheme = () => (document.documentElement.dataset.theme === "light" ? "light" : "dark");
-  const syncThemeToggle = () => {
-    if (!themeToggle) return;
-    const isLight = currentTheme() === "light";
-    themeToggle.classList.toggle("is-light", isLight);
-    themeToggle.setAttribute("aria-pressed", String(isLight));
-  };
-  const setTheme = (theme: "light" | "dark") => {
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem("theme", theme);
-    } catch (e) {
-      /* ignora */
-    }
-    syncThemeToggle();
-    window.dispatchEvent(new CustomEvent("themechange", { detail: theme }));
-  };
 
   const open = () => {
     overlay.classList.add("open");
@@ -82,12 +57,6 @@ export function initMenu(): void {
   overlay.querySelectorAll(".menu-link").forEach((link) =>
     link.addEventListener("click", close)
   );
-  themeToggle?.addEventListener("click", () => {
-    setTheme(currentTheme() === "dark" ? "light" : "dark");
-  });
-  window.addEventListener("themechange", syncThemeToggle as EventListener);
-  syncThemeToggle();
-
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && overlay.classList.contains("open")) close();
   });

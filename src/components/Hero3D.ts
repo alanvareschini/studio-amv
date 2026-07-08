@@ -26,6 +26,7 @@ class LetterScene {
   private raycaster = new THREE.Raycaster();
   private ndc = new THREE.Vector2(4, 4);
   private mouse = new THREE.Vector2(0, 0);
+  private gyroTilt = { rx: 0, ry: 0, active: false, last: 0 };
   private scrollT = 0;
   private isMobile: boolean;
   private clock = new THREE.Clock();
@@ -146,6 +147,7 @@ class LetterScene {
 
     window.addEventListener("pointermove", this.onPointer, { passive: true });
     window.addEventListener("pointerleave", () => (this.ptr.inside = false), { passive: true });
+    window.addEventListener("amv:gyrotilt", this.onGyroTilt as EventListener, { passive: true });
     window.addEventListener("resize", this.onResize, { passive: true });
     this.updateResolution();
 
@@ -267,6 +269,14 @@ class LetterScene {
     this.ptr.x = x;
     this.ptr.y = 1 - y; // flip para casar com gl_FragCoord
     this.ptr.inside = true;
+  };
+
+  private onGyroTilt = (e: CustomEvent<{ rx: number; ry: number; max: number }>): void => {
+    const max = e.detail.max || 12;
+    this.gyroTilt.rx = Math.max(-1, Math.min(1, e.detail.rx / max));
+    this.gyroTilt.ry = Math.max(-1, Math.min(1, e.detail.ry / max));
+    this.gyroTilt.active = true;
+    this.gyroTilt.last = performance.now();
   };
 
   // Redimensiona com "debounce" e ignora mudanças que não são reais.
@@ -402,8 +412,9 @@ class LetterScene {
     let tiltY = this.mouse.x * 0.38;
     let tiltX = -this.mouse.y * 0.3;
     if (this.isMobile) {
-      tiltY = Math.sin(elapsed * 0.55) * 0.34;
-      tiltX = Math.sin(elapsed * 0.4) * 0.16;
+      const gyroFresh = this.gyroTilt.active && performance.now() - this.gyroTilt.last < 900;
+      tiltY = gyroFresh ? this.gyroTilt.ry * 0.42 : Math.sin(elapsed * 0.55) * 0.34;
+      tiltX = gyroFresh ? this.gyroTilt.rx * 0.28 : Math.sin(elapsed * 0.4) * 0.16;
     }
     this.group.rotation.y += (tiltY - this.group.rotation.y) * 0.06;
     this.group.rotation.x += (tiltX - this.group.rotation.x) * 0.06;

@@ -248,7 +248,7 @@ function initTilt(): void {
   // No celular/tablet não há cursor: os cards inclinam com o GIRO do aparelho
   // (giroscópio). Não briga com a rolagem, ao contrário do "seguir o dedo".
   if (isTouch) {
-    initGyroTilt(MAX_ANGLE);
+    initGyroTiltV2(MAX_ANGLE);
     return;
   }
 
@@ -367,5 +367,101 @@ function initGyroTilt(MAX_ANGLE: number): void {
 
   btn?.addEventListener("click", activate);
   // Android e afins não exigem permissão: já tenta ligar sozinho no carregamento.
+  if (!needsPermission) activate();
+}
+
+void initGyroTilt;
+
+function initGyroTiltV2(MAX_ANGLE: number): void {
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".pkg"));
+  if (!cards.length) return;
+  const btn = document.getElementById("gyroBtn");
+
+  const SENS = 0.85;
+  const SMOOTH = 0.16;
+  const DEAD = 0.35;
+  const clamp = (v: number) => Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, v));
+  const deadzone = (v: number) => (Math.abs(v) < DEAD ? 0 : v);
+  let base: { beta: number; gamma: number } | null = null;
+  let raf = 0;
+  let ry = 0;
+  let rx = 0;
+  let targetRy = 0;
+  let targetRx = 0;
+  let gotEvent = false;
+  let started = false;
+
+  const setBtn = (txt: string, cls?: "ok" | "err") => {
+    if (!btn) return;
+    btn.textContent = txt;
+    btn.classList.remove("is-ok", "is-err");
+    if (cls === "ok") btn.classList.add("is-ok");
+    if (cls === "err") btn.classList.add("is-err");
+  };
+
+  const apply = () => {
+    raf = 0;
+    ry += (targetRy - ry) * SMOOTH;
+    rx += (targetRx - rx) * SMOOTH;
+    cards.forEach((card) => {
+      card.classList.add("is-touching");
+      card.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
+      card.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
+      card.style.setProperty("--hx", `${(50 + (ry / MAX_ANGLE) * 45).toFixed(1)}%`);
+      card.style.setProperty("--hy", `${(50 - (rx / MAX_ANGLE) * 45).toFixed(1)}%`);
+    });
+    window.dispatchEvent(
+      new CustomEvent("amv:gyrotilt", {
+        detail: { rx, ry, max: MAX_ANGLE },
+      })
+    );
+  };
+
+  const onOrient = (e: DeviceOrientationEvent) => {
+    if (e.beta == null || e.gamma == null) return;
+    if (!gotEvent) {
+      gotEvent = true;
+      setBtn("Movimento 3D ativo", "ok");
+      window.setTimeout(() => btn?.classList.add("is-gone"), 1800);
+    }
+    if (!base) base = { beta: e.beta, gamma: e.gamma };
+    targetRy = clamp(deadzone((e.gamma - base.gamma) * SENS));
+    targetRx = clamp(deadzone(-(e.beta - base.beta) * SENS));
+    if (!raf) raf = requestAnimationFrame(apply);
+  };
+
+  const start = () => {
+    if (started) return;
+    started = true;
+    window.addEventListener("deviceorientation", onOrient, { passive: true });
+  };
+
+  const DOE = window.DeviceOrientationEvent as unknown as
+    | { requestPermission?: () => Promise<"granted" | "denied"> }
+    | undefined;
+  const needsPermission = !!DOE && typeof DOE.requestPermission === "function";
+
+  const activate = () => {
+    if (started) return;
+    setBtn("Ativando...");
+    if (needsPermission) {
+      DOE!.requestPermission!()
+        .then((r) => {
+          if (r === "granted") start();
+          else setBtn("Permissao negada", "err");
+        })
+        .catch(() => setBtn("Nao suportado neste aparelho", "err"));
+    } else if (typeof window.DeviceOrientationEvent !== "undefined") {
+      start();
+    } else {
+      setBtn("Aparelho sem sensor de movimento", "err");
+      return;
+    }
+    window.setTimeout(() => {
+      if (!gotEvent) setBtn("Sensor nao respondeu neste aparelho", "err");
+    }, 2500);
+  };
+
+  btn?.addEventListener("click", activate);
   if (!needsPermission) activate();
 }
