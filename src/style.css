@@ -1054,21 +1054,20 @@ ol {
    da borda direita do painel, aparecendo só um "triângulo") */
 .menu-theme__blob {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 76px;
+  height: 76px;
   flex: none;
-  /* blindagem: nada do blob (220px) pode vazar da caixa e aparecer cortado
-     por cima da página — pior caso, é recortado limpo dentro do círculo */
-  overflow: hidden;
-  border-radius: 50%;
+  overflow: visible;
 }
 .menu-theme__blob .hero-blob {
   position: absolute;
+  inset: auto;
   top: 50%;
   left: 50%;
+  right: auto;
   width: 220px;
   height: 220px;
-  transform: translate(-50%, -50%) scale(0.27);
+  transform: translate(-50%, -50%) scale(0.31);
   transform-origin: center;
 }
 
