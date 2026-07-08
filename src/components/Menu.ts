@@ -26,7 +26,7 @@ export function Menu(): string {
       <nav class="menu-nav" aria-label="Navega&ccedil;&atilde;o">${links}</nav>
       <div class="menu-theme">
         <span class="menu-theme__label">Modo claro / escuro</span>
-        <div class="menu-theme__blob">${HeroBlob()}</div>
+        <div class="menu-theme__blob">${HeroBlob("hero-blob--menu")}</div>
       </div>
     </div>`;
 }

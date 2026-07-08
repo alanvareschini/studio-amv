@@ -1,8 +1,8 @@
 // Blob dia/noite interativo: sol e lua orbitam dentro do blob; o mar muda de
 // cor; clicar alterna tema com a mesma coreografia.
-export function HeroBlob(): string {
+export function HeroBlob(extraClass = ""): string {
   return /* html */ `
-    <div class="hero-blob" role="button" tabindex="0" aria-label="Alternar dia e noite">
+    <div class="hero-blob ${extraClass}" role="button" tabindex="0" aria-label="Alternar dia e noite">
       <div class="blobOuter">
         <div class="blobClip">
           <div class="blobFill"></div>

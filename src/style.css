@@ -1057,12 +1057,20 @@ ol {
   overflow: visible;
 }
 .menu-theme__blob .hero-blob {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  z-index: 1;
+  width: 82px;
+  height: 82px;
+  transform: none;
+  transform-origin: center;
+}
+.menu-theme__blob .blobOuter {
   position: absolute;
-  inset: auto;
   top: 50%;
   left: 50%;
-  right: auto;
-  z-index: 1;
   width: 220px;
   height: 220px;
   transform: translate(-50%, -50%) scale(0.32);
@@ -2119,6 +2127,38 @@ html.amv-touch .gyro-btn { display: inline-flex; }
 .pkg > .btn {
   position: relative;
   z-index: 1;
+}
+.pkg__name,
+.pkg__price,
+.pkg__audience,
+.pkg__features li {
+  transition: transform 0.55s cubic-bezier(0.18, 0.9, 0.16, 1), filter 0.55s ease, text-shadow 0.55s ease;
+  will-change: transform;
+}
+.pkg.is-gyro-spill .pkg__name {
+  transform: translate3d(calc(var(--spill-x, 0) * 1px), calc(var(--spill-y, 0) * 1px), 0) skewX(calc(var(--spill-x, 0) * -0.18deg));
+  text-shadow: calc(var(--spill-x, 0) * -0.22px) 0 12px rgba(34, 211, 238, 0.42);
+}
+.pkg.is-gyro-spill .pkg__price {
+  transform: translate3d(calc(var(--spill-x, 0) * 0.72px), calc(var(--spill-y, 0) * 0.8px), 0) skewX(calc(var(--spill-x, 0) * -0.12deg));
+  filter: drop-shadow(calc(var(--spill-x, 0) * -0.12px) 0 8px rgba(168, 85, 247, 0.32));
+}
+.pkg.is-gyro-spill .pkg__audience {
+  transform: translate3d(calc(var(--spill-x, 0) * 0.92px), calc(var(--spill-y, 0) * 1.1px), 0) skewX(calc(var(--spill-x, 0) * -0.1deg));
+}
+.pkg.is-gyro-spill .pkg__features li {
+  transform: translate3d(calc(var(--spill-x, 0) * 0.58px), calc(var(--spill-y, 0) * 0.65px), 0);
+  text-shadow: calc(var(--spill-x, 0) * -0.16px) 0 10px rgba(0, 255, 136, 0.2);
+}
+.pkg.is-gyro-spill .pkg__features li:nth-child(2n) {
+  transform: translate3d(calc(var(--spill-x, 0) * 0.78px), calc(var(--spill-y, 0) * 0.5px), 0);
+}
+.pkg.is-gyro-spill .pkg__features li:nth-child(3n) {
+  transform: translate3d(calc(var(--spill-x, 0) * 0.42px), calc(var(--spill-y, 0) * 0.9px), 0);
+}
+.pkg.is-gyro-spill .pkg__holo {
+  opacity: 0.5;
+  filter: blur(0.2px) saturate(1.25);
 }
 .pkg--featured::before {
   content: "";
