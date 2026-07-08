@@ -135,7 +135,8 @@
         var ctx = canvas.getContext("2d", { alpha: true });
         if (!ctx) { finishNow(); return true; }
 
-        var CHARS = "AMV WEB STUDIO SITES QUE VENDEM </> {} () => #01 ";
+        var CHARS = " AMV WEB STUDIO SITES QUE VENDEM ";
+        var CODE_CHARS = " </>  {}  ()  =>  #01 ";
         var BANDS = 5;
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
         var W = 0, H = 0, dpr = 1, SP = 26;
@@ -180,6 +181,12 @@
         }
         function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
+        function charAtGrid(row, x) {
+          var phrase = row % 4 === 2 ? CODE_CHARS : CHARS;
+          var offset = row % 3 === 0 ? 0 : row % 3 === 1 ? 4 : 8;
+          return phrase[(Math.round(x / Math.max(1, SP)) + offset) % phrase.length];
+        }
+
         function makeChars(fs) {
           bandImg = [];
           for (var bi = 0; bi < BANDS; bi++) {
@@ -208,11 +215,11 @@
 
         function makeCurtain(x0, x1, dir) {
           var width = x1 - x0;
-          var gap = W < 640 ? 23 : W < 980 ? 22 : 21;
-          var cols = Math.max(10, Math.min(42, Math.round(width / gap) + 1));
-          var rows = Math.max(18, Math.min(46, Math.ceil(H / gap) + 1));
-          var hrest = (x1 - x0) / (cols - 1);
-          var vrest = H / (rows - 1);
+          var gap = SP;
+          var cols = Math.max(12, Math.min(W < 640 ? 22 : 48, Math.floor(width / gap) + 1));
+          var rows = Math.max(22, Math.min(W < 640 ? 64 : 52, Math.ceil(H / gap) + 1));
+          var hrest = gap;
+          var vrest = gap;
           var P = [];
           var links = [];
 
@@ -221,7 +228,7 @@
               var x = x0 + c * hrest;
               var y = r * vrest;
               var band = Math.max(0, Math.min(BANDS - 1, Math.round((x / Math.max(1, W)) * (BANDS - 1))));
-              P.push({ x: x, y: y, ox: x, oy: y, ax: 0, ay: 0, hx: x, hy: y, pin: r === 0, ch: CHARS[(r * cols + c) % CHARS.length], band: band });
+              P.push({ x: x, y: y, ox: x, oy: y, ax: 0, ay: 0, hx: x, hy: y, pin: r === 0, ch: charAtGrid(r, x), band: band });
             }
           }
 
@@ -241,13 +248,14 @@
           W = window.innerWidth;
           H = window.innerHeight;
           dpr = Math.min(W < 640 ? 1 : 1.35, window.devicePixelRatio || 1);
-          SP = W < 640 ? 23 : W < 980 ? 22 : 21;
+          SP = W < 640 ? 12 : W < 980 ? 17 : 19;
           canvas.width = Math.max(1, Math.round(W * dpr));
           canvas.height = Math.max(1, Math.round(H * dpr));
           canvas.style.width = W + "px";
           canvas.style.height = H + "px";
-          makeChars(Math.round(Math.max(13, SP * 0.95) * dpr));
-          curtains = [makeCurtain(0, W / 2, -1), makeCurtain(W / 2, W, 1)];
+          makeChars(Math.round(Math.max(W < 640 ? 10 : 13, SP * 0.95) * dpr));
+          var seamPad = Math.max(2, SP * 0.28);
+          curtains = [makeCurtain(0, W / 2 - seamPad, -1), makeCurtain(W / 2 + seamPad, W, 1)];
 
           var segs = 13;
           var cx = W - Math.min(40, W * 0.09);
