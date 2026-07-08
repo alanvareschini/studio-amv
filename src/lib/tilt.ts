@@ -8,6 +8,7 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
   const hasHover = window.matchMedia("(hover: hover)").matches;
 
   document.querySelectorAll<HTMLElement>(selector).forEach((card) => {
+    let activePointerId: number | null = null;
     let raf = 0;
 
     const applyTilt = (e: PointerEvent, isTouch = false) => {
@@ -38,6 +39,7 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
     card.addEventListener(
       "pointermove",
       (e) => {
+        if (activePointerId != null && activePointerId !== e.pointerId) return;
         if (e.pointerType === "mouse" && !hasHover) return;
         applyTilt(e, e.pointerType !== "mouse");
       },
@@ -48,13 +50,38 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
       "pointerdown",
       (e) => {
         if (e.pointerType === "mouse") return;
+        activePointerId = e.pointerId;
+        try {
+          card.setPointerCapture(e.pointerId);
+        } catch {
+          // A captura pode falhar se o navegador transformar o gesto em scroll.
+        }
         applyTilt(e, true);
       },
       { passive: true }
     );
 
-    card.addEventListener("pointerleave", reset);
-    card.addEventListener("pointerup", reset, { passive: true });
-    card.addEventListener("pointercancel", reset, { passive: true });
+    card.addEventListener("pointerleave", (e) => {
+      if (e.pointerType !== "mouse") return;
+      reset();
+    });
+
+    window.addEventListener(
+      "pointermove",
+      (e) => {
+        if (activePointerId !== e.pointerId) return;
+        applyTilt(e, true);
+      },
+      { passive: true }
+    );
+
+    const endTouch = (e: PointerEvent) => {
+      if (activePointerId !== e.pointerId) return;
+      activePointerId = null;
+      reset();
+    };
+
+    window.addEventListener("pointerup", endTouch, { passive: true });
+    window.addEventListener("pointercancel", endTouch, { passive: true });
   });
 }
