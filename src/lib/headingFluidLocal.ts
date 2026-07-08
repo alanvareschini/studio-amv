@@ -444,8 +444,18 @@ export function initHeadingFluid(): void {
     },
     { passive: true }
   );
-  // ao trocar de tema, re-rasteriza os títulos com a cor nova (branco→preto no claro)
-  addEventListener("themechange", () => layers.forEach(rebuildLayer), { passive: true });
+  // Ao trocar de tema, re-rasteriza os títulos com a cor nova. A cor tem uma
+  // transição CSS de 0.5s (body), então rasterizar SÓ na hora captura a cor do
+  // tema ANTERIOR (preto no claro) e deixa o shader com "listras grandes" ao
+  // voltar pro escuro. Por isso refazemos também DEPOIS da transição terminar.
+  addEventListener(
+    "themechange",
+    () => {
+      layers.forEach(rebuildLayer);
+      window.setTimeout(() => layers.forEach(rebuildLayer), 560);
+    },
+    { passive: true }
+  );
   addEventListener("pointerdown", pointerDown, { passive: true });
   addEventListener("pointerup", pointerUp, { passive: true });
   addEventListener("pointercancel", pointerUp, { passive: true });
