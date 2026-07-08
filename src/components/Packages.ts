@@ -129,10 +129,58 @@ export function initPackages(): void {
   // (botão de giro, holo automático, balanço, borda animada etc.)
   if (isTouchDevice()) document.documentElement.classList.add("amv-touch");
 
+  initPackageFluidLetters();
   initTilt();
   initCheckFx();
   initPriceCount();
   initFeatStagger();
+}
+
+function initPackageFluidLetters(): void {
+  document.querySelectorAll<HTMLElement>(".pkg").forEach((card) => {
+    if (card.querySelector(".pkg-fluid")) return;
+
+    const pieces = [
+      card.querySelector(".pkg__name")?.textContent,
+      card.querySelector(".pkg__price")?.textContent,
+      card.querySelector(".pkg__audience")?.textContent,
+      ...Array.from(card.querySelectorAll(".pkg__feat")).map((el) => el.textContent),
+      card.querySelector(".btn")?.textContent,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const letters = Array.from(pieces.replace(/\s/g, ""));
+    if (!letters.length) return;
+
+    const layer = document.createElement("span");
+    layer.className = "pkg-fluid";
+    layer.setAttribute("aria-hidden", "true");
+
+    letters.slice(0, 170).forEach((letter, i) => {
+      const ch = document.createElement("span");
+      const hash = (i * 9301 + letter.charCodeAt(0) * 49297) % 233280;
+      const x = 8 + (hash % 84);
+      const y = 10 + ((hash >> 3) % 76);
+      const drift = 0.55 + ((hash % 41) / 100);
+      const rise = -0.4 + (((hash >> 5) % 81) / 100);
+      const rot = -18 + (hash % 36);
+
+      ch.className = "pkg-fluid__ch";
+      ch.textContent = letter;
+      ch.style.setProperty("--fx", `${x}%`);
+      ch.style.setProperty("--fy", `${y}%`);
+      ch.style.setProperty("--fd", drift.toFixed(2));
+      ch.style.setProperty("--fu", rise.toFixed(2));
+      ch.style.setProperty("--fr", `${rot}deg`);
+      ch.style.setProperty("--delay", `${(i % 11) * 0.012}s`);
+      layer.appendChild(ch);
+    });
+
+    card.appendChild(layer);
+  });
 }
 
 // preço "conta" de 0 até o valor quando o card entra na tela
@@ -407,8 +455,8 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
     ry += (targetRy - ry) * SMOOTH;
     rx += (targetRx - rx) * SMOOTH;
     const spilling = performance.now() < spillUntil;
-    const spillX = spilling ? (ry / MAX_ANGLE) * 34 : 0;
-    const spillY = spilling ? (-rx / MAX_ANGLE) * 10 : 0;
+    const spillX = spilling ? (ry / MAX_ANGLE) * 58 : 0;
+    const spillY = spilling ? (-rx / MAX_ANGLE) * 18 : 0;
     cards.forEach((card) => {
       card.classList.add("is-touching");
       card.classList.toggle("is-gyro-spill", spilling);
