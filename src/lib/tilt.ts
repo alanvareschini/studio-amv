@@ -8,6 +8,10 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
   const hasHover = window.matchMedia("(hover: hover)").matches;
   const cards = Array.from(document.querySelectorAll<HTMLElement>(selector));
   let activeTouchCard: HTMLElement | null = null;
+  let isTouchActive = false;
+  let touchX = 0;
+  let touchY = 0;
+  let loopRaf = 0;
   let raf = 0;
 
   const applyTilt = (card: HTMLElement, clientX: number, clientY: number, isTouch = false) => {
@@ -60,14 +64,35 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
 
   if (!cards.length) return;
 
-  const moveTouch = (touch: Touch) => {
-    const card = findCard(touch.clientX, touch.clientY);
+  const moveTouchAtPoint = () => {
+    const card = findCard(touchX, touchY);
     if (activeTouchCard && activeTouchCard !== card) reset(activeTouchCard);
     activeTouchCard = card;
-    if (card) applyTilt(card, touch.clientX, touch.clientY, true);
+    if (card) applyTilt(card, touchX, touchY, true);
+  };
+
+  const loopTouch = () => {
+    if (!isTouchActive) return;
+    moveTouchAtPoint();
+    loopRaf = requestAnimationFrame(loopTouch);
+  };
+
+  const startTouch = (touch: Touch) => {
+    touchX = touch.clientX;
+    touchY = touch.clientY;
+    isTouchActive = true;
+    if (!loopRaf) loopRaf = requestAnimationFrame(loopTouch);
+  };
+
+  const moveTouch = (touch: Touch) => {
+    touchX = touch.clientX;
+    touchY = touch.clientY;
   };
 
   const endTouch = () => {
+    isTouchActive = false;
+    cancelAnimationFrame(loopRaf);
+    loopRaf = 0;
     reset(activeTouchCard);
     activeTouchCard = null;
   };
@@ -76,7 +101,7 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
     "touchstart",
     (e) => {
       const touch = e.touches[0];
-      if (touch) moveTouch(touch);
+      if (touch) startTouch(touch);
     },
     { passive: true }
   );

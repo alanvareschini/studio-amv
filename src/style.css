@@ -1049,26 +1049,80 @@ ol {
   flex: 1;
   min-width: 0;
 }
-/* blob dentro do menu: caixa fixa de 64px que mantém o blob inteiro e
-   centralizado (o truque antigo de margin negativa jogava metade pra fora
-   da borda direita do painel, aparecendo só um "triângulo") */
-.menu-theme__blob {
-  position: relative;
-  width: 76px;
-  height: 76px;
+.menu-theme-toggle {
+  width: 58px;
+  height: 58px;
   flex: none;
-  overflow: visible;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.menu-theme__blob .hero-blob {
+.menu-theme-toggle__orb {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: block;
+  overflow: hidden;
+  border-radius: 18px 50% 45% 50%;
+  background: linear-gradient(145deg, #6d28d9 0%, #a855f7 48%, #1e3a5f 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 10px 24px rgba(124, 58, 237, 0.34);
+  transform: rotate(-8deg);
+  transition: background 0.45s var(--ease), box-shadow 0.45s var(--ease), transform 0.45s var(--ease);
+}
+.menu-theme-toggle__sun,
+.menu-theme-toggle__moon {
   position: absolute;
-  inset: auto;
-  top: 50%;
-  left: 50%;
-  right: auto;
-  width: 220px;
-  height: 220px;
-  transform: translate(-50%, -50%) scale(0.31);
-  transform-origin: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s var(--ease);
+}
+.menu-theme-toggle__sun {
+  top: 8px;
+  right: 8px;
+  background: #fff4a8;
+  box-shadow: 0 0 13px rgba(252, 206, 24, 0.72);
+  opacity: 0;
+  transform: translate(18px, -18px);
+}
+.menu-theme-toggle__moon {
+  top: 8px;
+  right: 8px;
+  background: #e8ecf7;
+  box-shadow: inset -4px -2px 0 rgba(30, 40, 70, 0.28), 0 0 10px rgba(232, 236, 247, 0.42);
+  opacity: 1;
+}
+.menu-theme-toggle__wave {
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  bottom: 4px;
+  height: 18px;
+  border-radius: 50% 50% 0 0;
+  background: rgba(34, 211, 238, 0.5);
+  transform: rotate(4deg);
+}
+.menu-theme-toggle__wave--two {
+  bottom: -2px;
+  background: rgba(20, 184, 166, 0.48);
+  transform: rotate(-5deg);
+}
+.menu-theme-toggle.is-light .menu-theme-toggle__orb {
+  background: linear-gradient(145deg, #fcce18 0%, #7dd3fc 52%, #a8dde8 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45), 0 10px 24px rgba(252, 206, 24, 0.28);
+  transform: rotate(8deg);
+}
+.menu-theme-toggle.is-light .menu-theme-toggle__sun {
+  opacity: 1;
+  transform: none;
+}
+.menu-theme-toggle.is-light .menu-theme-toggle__moon {
+  opacity: 0;
+  transform: translate(-18px, 18px);
 }
 
 /* ----------------------------------------------------------------- Hero */

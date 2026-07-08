@@ -9,6 +9,10 @@ export function initTextWave(selector: string): void {
   const touchHoldMs = 520;
   const items: HTMLElement[] = [];
   let activeTouchItem: HTMLElement | null = null;
+  let isTouchActive = false;
+  let touchX = 0;
+  let touchY = 0;
+  let loopRaf = 0;
   let touchTimer = 0;
 
   const updateFromPoint = (el: HTMLElement, clientX: number, clientY: number) => {
@@ -41,8 +45,8 @@ export function initTextWave(selector: string): void {
     return surface ? nearestItemIn(surface, clientX, clientY) : null;
   };
 
-  const activateTouch = (touch: Touch) => {
-    const item = findTouchItem(touch.clientX, touch.clientY);
+  const updateTouchTarget = () => {
+    const item = findTouchItem(touchX, touchY);
     if (!item) return;
 
     if (activeTouchItem && activeTouchItem !== item) {
@@ -51,11 +55,33 @@ export function initTextWave(selector: string): void {
 
     window.clearTimeout(touchTimer);
     activeTouchItem = item;
-    updateFromPoint(item, touch.clientX, touch.clientY);
+    updateFromPoint(item, touchX, touchY);
     item.classList.add("is-touching");
   };
 
+  const loopTouch = () => {
+    if (!isTouchActive) return;
+    updateTouchTarget();
+    loopRaf = requestAnimationFrame(loopTouch);
+  };
+
+  const startTouch = (touch: Touch) => {
+    touchX = touch.clientX;
+    touchY = touch.clientY;
+    isTouchActive = true;
+    window.clearTimeout(touchTimer);
+    if (!loopRaf) loopRaf = requestAnimationFrame(loopTouch);
+  };
+
+  const moveTouch = (touch: Touch) => {
+    touchX = touch.clientX;
+    touchY = touch.clientY;
+  };
+
   const settleTouch = () => {
+    isTouchActive = false;
+    cancelAnimationFrame(loopRaf);
+    loopRaf = 0;
     window.clearTimeout(touchTimer);
     touchTimer = window.setTimeout(() => {
       activeTouchItem?.classList.remove("is-touching");
@@ -88,7 +114,7 @@ export function initTextWave(selector: string): void {
     "touchstart",
     (e) => {
       const touch = e.touches[0];
-      if (touch) activateTouch(touch);
+      if (touch) startTouch(touch);
     },
     { passive: true }
   );
@@ -97,7 +123,7 @@ export function initTextWave(selector: string): void {
     "touchmove",
     (e) => {
       const touch = e.touches[0];
-      if (touch) activateTouch(touch);
+      if (touch) moveTouch(touch);
     },
     { passive: true }
   );
