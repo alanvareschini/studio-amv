@@ -1572,7 +1572,9 @@ ol {
   opacity: 0;
   transition: opacity 0.3s var(--ease);
 }
-.txt-wave:hover::after {
+.txt-wave:hover::after,
+.txt-wave:focus-visible::after,
+.txt-wave.is-touching::after {
   opacity: 1;
 }
 
