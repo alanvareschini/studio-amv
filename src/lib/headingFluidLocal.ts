@@ -489,6 +489,28 @@ export function initHeadingFluid(): void {
     animationFrame = requestAnimationFrame(render);
   });
 
+  // Perda de contexto WebGL (voltar de 2º plano no mobile, reset de driver):
+  // sem tratar, o canvas fica preto e o rAF chama render() sobre um contexto
+  // morto por quadro. Aqui pausamos e mostramos o TEXTO NORMAL (remove a classe
+  // "active", que reexibe o heading original); ao restaurar, refazemos tudo.
+  overlay.addEventListener(
+    "webglcontextlost",
+    (e) => {
+      e.preventDefault();
+      cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+      layers.forEach((layer) => {
+        layer.ready = false;
+        layer.element.classList.remove("heading-fluid-local-active");
+      });
+    },
+    false
+  );
+  overlay.addEventListener("webglcontextrestored", () => {
+    layers.forEach(rebuildLayer);
+    if (!animationFrame) animationFrame = requestAnimationFrame(render);
+  });
+
   addEventListener("pagehide", () => {
     cancelAnimationFrame(animationFrame);
     resizeObserver.disconnect();

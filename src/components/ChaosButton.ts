@@ -144,11 +144,31 @@ class ChaosButtonGL {
   private phase = 0;
   private last = performance.now() / 1000;
   private visible = true;
+  private contextLost = false;
   private light = document.documentElement.dataset.theme === "light" ? 1 : 0;
 
   constructor(button: HTMLElement) {
     this.button = button;
     this.canvas = button.querySelector(".chaos-canvas") as HTMLCanvasElement;
+
+    // Perda/restauração de contexto WebGL (2º plano no mobile, reset de driver):
+    // sem tratar, o render segue chamando gl.* sobre um contexto morto. Aqui
+    // pausamos e, ao restaurar, recriamos shaders/buffers.
+    this.canvas.addEventListener(
+      "webglcontextlost",
+      (e) => {
+        e.preventDefault();
+        this.contextLost = true;
+      },
+      false
+    );
+    this.canvas.addEventListener(
+      "webglcontextrestored",
+      () => {
+        if (this.setupWebGL()) this.contextLost = false;
+      },
+      false
+    );
 
     if (!this.setupWebGL()) {
       button.classList.add("is-static"); // fallback: vira botão gradiente
@@ -263,7 +283,7 @@ class ChaosButtonGL {
 
   private render = (): void => {
     requestAnimationFrame(this.render);
-    if (!this.gl || !this.visible) {
+    if (!this.gl || !this.visible || this.contextLost) {
       this.last = performance.now() / 1000;
       return;
     }
