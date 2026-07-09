@@ -37,6 +37,7 @@ class LetterScene {
   private resizeTimer = 0;
   private frostIdle = 999; // quadros sem interação (pula a simulação do rastro)
   private autoFrame = 0; // contador para dividir a simulação por 2 no mobile
+  private contextLost = false; // pausa o render enquanto o contexto WebGL está perdido
   // referência de zoom capturada no carregamento (por aparelho).
   private baseDPR = window.devicePixelRatio || 1;
 
@@ -149,6 +150,20 @@ class LetterScene {
     window.addEventListener("pointerleave", () => (this.ptr.inside = false), { passive: true });
     window.addEventListener("amv:gyrotilt", this.onGyroTilt as EventListener, { passive: true });
     window.addEventListener("resize", this.onResize, { passive: true });
+
+    // Perda/restauração de contexto WebGL (voltar de 2º plano no mobile, reset
+    // de driver): sem tratar, o "A" fica preto e o tick() renderiza sobre um
+    // contexto morto por quadro. preventDefault permite ao three restaurar.
+    canvas.addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      this.contextLost = true;
+    }, false);
+    canvas.addEventListener("webglcontextrestored", () => {
+      this.contextLost = false;
+      this.frostTexture.needsUpdate = true;
+      if (this.bgTex) this.bgTex.needsUpdate = true;
+    }, false);
+
     this.updateResolution();
 
     new FontLoader().load(
@@ -366,8 +381,8 @@ class LetterScene {
 
   private tick = (): void => {
     requestAnimationFrame(this.tick);
-    // pausa só quando a aba está oculta (o A continua se movendo ao rolar)
-    if (document.hidden) return;
+    // pausa quando a aba está oculta ou o contexto WebGL foi perdido
+    if (document.hidden || this.contextLost) return;
     const elapsed = this.clock.getElapsedTime();
     const s = this.scrollT;
 

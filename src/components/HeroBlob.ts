@@ -98,6 +98,12 @@ export function initHeroBlob(): void {
     };
 
     const loop = (ts: number) => {
+      // aba oculta: não anima (economiza CPU/bateria); ao voltar não dá salto
+      if (document.hidden) {
+        lastTs = null;
+        requestAnimationFrame(loop);
+        return;
+      }
       if (lastTs !== null) {
         const dt = Math.min(ts - lastTs, 50);
         angle += (targetAngle - angle) * (1 - Math.pow(0.986, dt));
