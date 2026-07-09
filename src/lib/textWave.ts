@@ -6,14 +6,12 @@ export function initTextWave(selector: string): void {
   }
 
   const hasHover = window.matchMedia("(hover: hover)").matches;
-  const touchHoldMs = 520;
   const items: HTMLElement[] = [];
   let activeTouchItem: HTMLElement | null = null;
   let isTouchActive = false;
   let touchX = 0;
   let touchY = 0;
   let loopRaf = 0;
-  let touchTimer = 0;
 
   const updateFromPoint = (el: HTMLElement, clientX: number, clientY: number) => {
     const r = el.getBoundingClientRect();
@@ -23,37 +21,31 @@ export function initTextWave(selector: string): void {
     el.style.setProperty("--my", `${my.toFixed(1)}%`);
   };
 
-  const nearestItemIn = (surface: HTMLElement, clientX: number, clientY: number) => {
-    const candidates = Array.from(surface.querySelectorAll<HTMLElement>(".txt-wave"));
-    if (!candidates.length) return null;
-
-    return candidates.reduce((best, item) => {
-      const r = item.getBoundingClientRect();
-      const cx = Math.max(r.left, Math.min(clientX, r.right));
-      const cy = Math.max(r.top, Math.min(clientY, r.bottom));
-      const d = (clientX - cx) ** 2 + (clientY - cy) ** 2;
-      return !best || d < best.d ? { item, d } : best;
-    }, null as { item: HTMLElement; d: number } | null)?.item ?? null;
-  };
-
   const findTouchItem = (clientX: number, clientY: number) => {
     const hit = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
     const direct = hit?.closest<HTMLElement>(selector);
     if (direct?.classList.contains("txt-wave")) return direct;
 
-    const surface = hit?.closest<HTMLElement>(".card, .pkg");
-    return surface ? nearestItemIn(surface, clientX, clientY) : null;
+    return (
+      items.find((item) => {
+        const r = item.getBoundingClientRect();
+        return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+      }) ?? null
+    );
   };
 
   const updateTouchTarget = () => {
     const item = findTouchItem(touchX, touchY);
-    if (!item) return;
+    if (!item) {
+      activeTouchItem?.classList.remove("is-touching");
+      activeTouchItem = null;
+      return;
+    }
 
     if (activeTouchItem && activeTouchItem !== item) {
       activeTouchItem.classList.remove("is-touching");
     }
 
-    window.clearTimeout(touchTimer);
     activeTouchItem = item;
     updateFromPoint(item, touchX, touchY);
     item.classList.add("is-touching");
@@ -69,7 +61,6 @@ export function initTextWave(selector: string): void {
     touchX = touch.clientX;
     touchY = touch.clientY;
     isTouchActive = true;
-    window.clearTimeout(touchTimer);
     if (!loopRaf) loopRaf = requestAnimationFrame(loopTouch);
   };
 
@@ -82,11 +73,8 @@ export function initTextWave(selector: string): void {
     isTouchActive = false;
     cancelAnimationFrame(loopRaf);
     loopRaf = 0;
-    window.clearTimeout(touchTimer);
-    touchTimer = window.setTimeout(() => {
-      activeTouchItem?.classList.remove("is-touching");
-      activeTouchItem = null;
-    }, touchHoldMs);
+    activeTouchItem?.classList.remove("is-touching");
+    activeTouchItem = null;
   };
 
   document.querySelectorAll<HTMLElement>(selector).forEach((el) => {
