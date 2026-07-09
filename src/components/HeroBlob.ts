@@ -69,11 +69,11 @@ export function initHeroBlob(): void {
       blobFill.style.background = mixColor("#7730ec", "#fcce18", cp);
 
       const compact = isCompactMenu();
-      const radius = compact ? 24 : 68;
+      const radius = compact ? 19 : 68;
       const sunOffset = compact ? 9 : 13;
       const moonOffset = compact ? 9 : 12;
-      const horizon = compact ? 7 : 20;
-      const fade = compact ? 16 : 22;
+      const horizon = compact ? 4 : 20;
+      const fade = compact ? 18 : 22;
       const sx = radius * Math.sin(a);
       const sy = -radius * Math.cos(a);
       sun.style.transform = `translate(${sx - sunOffset}px, ${sy - sunOffset}px)`;

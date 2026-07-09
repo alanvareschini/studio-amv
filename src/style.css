@@ -1111,7 +1111,7 @@ ol {
     transform: none;
   }
   .menu-theme__blob .blobClip {
-    inset: 6px;
+    inset: 8px;
     border-radius: 23px;
     clip-path: none;
     transform: none;
