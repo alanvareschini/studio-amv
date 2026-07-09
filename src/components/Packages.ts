@@ -175,6 +175,7 @@ let physicsRaf = 0;
 
 const LIQUID_TILT_MAX = 12;
 const clampValue = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+const gridKey = (x: number, y: number) => (x * 73856093) ^ (y * 19349663);
 
 function splitPackageLetters(card: HTMLElement): HTMLElement[] {
   if (card.dataset.lettersReady !== "1") {
@@ -183,6 +184,8 @@ function splitPackageLetters(card: HTMLElement): HTMLElement[] {
     );
 
     targets.forEach((target) => {
+      if (target.matches(".pkg__value") && target.dataset.priceCounting === "1") return;
+
       const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
       const textNodes: Text[] = [];
       while (walker.nextNode()) {
@@ -479,7 +482,7 @@ function tickLetterPhysics(ts: number): void {
       }
     });
 
-    const grid = new Map<string, LetterBody[]>();
+    const grid = new Map<number, LetterBody[]>();
     const cell = 28;
     for (let i = 0; i < state.bodies.length; i++) {
       const a = state.bodies[i];
@@ -490,7 +493,7 @@ function tickLetterPhysics(ts: number): void {
 
       for (let yy = gy - 1; yy <= gy + 1; yy++) {
         for (let xx = gx - 1; xx <= gx + 1; xx++) {
-          const bucket = grid.get(`${xx}:${yy}`);
+          const bucket = grid.get(gridKey(xx, yy));
           if (!bucket) continue;
           bucket.forEach((b) => {
             const bx = b.baseX + b.x + b.w * 0.5;
@@ -518,7 +521,7 @@ function tickLetterPhysics(ts: number): void {
         }
       }
 
-      const key = `${gx}:${gy}`;
+      const key = gridKey(gx, gy);
       const bucket = grid.get(key);
       if (bucket) bucket.push(a);
       else grid.set(key, [a]);
@@ -543,14 +546,24 @@ function initPriceCount(): void {
         const el = e.target as HTMLElement;
         io.unobserve(el);
         const target = parseInt((el.textContent || "").replace(/\D/g, ""), 10);
-        if (!target) return;
+        if (!target) {
+          delete el.dataset.priceCounting;
+          return;
+        }
         const obj = { v: 0 };
+        el.dataset.priceCounting = "1";
         gsap.to(obj, {
           v: target,
           duration: 1.2,
           ease: "power2.out",
           onUpdate: () => {
             el.textContent = "R$ " + Math.round(obj.v).toLocaleString("pt-BR");
+          },
+          onComplete: () => {
+            delete el.dataset.priceCounting;
+          },
+          onInterrupt: () => {
+            delete el.dataset.priceCounting;
           },
         });
       });
@@ -798,6 +811,7 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   let physicsCooldownUntil = 0;
   let gotEvent = false;
   let started = false;
+  let packagesVisible = true;
 
   const setBtn = (txt: string, cls?: "ok" | "err") => {
     if (!btn) return;
@@ -807,7 +821,22 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
     if (cls === "err") btn.classList.add("is-err");
   };
 
+  const shouldAnimate = () => started && gotEvent && packagesVisible && !document.hidden;
+  const stopLoop = () => {
+    if (!raf) return;
+    cancelAnimationFrame(raf);
+    raf = 0;
+  };
+  const startLoop = () => {
+    if (!raf && shouldAnimate()) raf = requestAnimationFrame(apply);
+  };
+
   const apply = () => {
+    if (!shouldAnimate()) {
+      raf = 0;
+      return;
+    }
+
     ry += (targetRy - ry) * SMOOTH;
     rx += (targetRx - rx) * SMOOTH;
     cards.forEach((card) => {
@@ -825,6 +854,24 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
     raf = requestAnimationFrame(apply);
   };
 
+  const section = document.getElementById("pacotes");
+  if (section) {
+    const sectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        packagesVisible = !!entry?.isIntersecting;
+        if (packagesVisible) startLoop();
+        else stopLoop();
+      },
+      { rootMargin: "160px 0px", threshold: 0.01 }
+    );
+    sectionObserver.observe(section);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopLoop();
+    else startLoop();
+  });
+
   const onOrient = (e: DeviceOrientationEvent) => {
     if (e.beta == null || e.gamma == null) return;
     const now = performance.now();
@@ -841,6 +888,7 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
         gotEvent = true;
         setBtn("Movimento 3D ativo", "ok");
         window.setTimeout(() => btn?.classList.add("is-gone"), 1800);
+        startLoop();
       }
       return;
     }
@@ -876,13 +924,13 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
     lastGammaTs = now;
     targetRy = clamp(deadzone(rawGamma * SENS));
     targetRx = clamp(deadzone(-rawBeta * SENS));
+    startLoop();
   };
 
   const start = () => {
     if (started) return;
     started = true;
     window.addEventListener("deviceorientation", onOrient, { passive: true });
-    if (!raf) raf = requestAnimationFrame(apply);
   };
 
   const DOE = window.DeviceOrientationEvent as unknown as
