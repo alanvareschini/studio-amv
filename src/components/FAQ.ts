@@ -15,7 +15,7 @@ export function FAQ(): string {
               (item, i) => /* html */ `
             <div class="faq__item">
               <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-a-${i}" id="faq-q-${i}">
-                <span>${item.question}</span>
+                <span class="faq__q-text">${item.question}</span>
                 <span class="faq__icon" aria-hidden="true">+</span>
               </button>
               <div class="faq__a" id="faq-a-${i}" role="region" aria-labelledby="faq-q-${i}" hidden>

@@ -2425,6 +2425,10 @@ html.amv-touch .gyro-btn { display: inline-flex; }
   font-weight: 600;
   text-align: left;
 }
+.faq__q-text {
+  display: inline-block;
+  min-width: 0;
+}
 .faq__icon {
   font-size: 1.4rem;
   color: var(--cyan);
