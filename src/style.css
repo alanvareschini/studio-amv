@@ -1091,6 +1091,67 @@ ol {
   width: 25px;
   height: 25px;
 }
+@media (max-width: 720px) {
+  .menu-theme {
+    gap: 0.7rem;
+  }
+  .menu-theme__blob {
+    width: 74px;
+    height: 74px;
+  }
+  .menu-theme__blob .hero-blob {
+    width: 74px;
+    height: 74px;
+  }
+  .menu-theme__blob .blobOuter {
+    top: 0;
+    left: 0;
+    width: 74px;
+    height: 74px;
+    transform: none;
+  }
+  .menu-theme__blob .blobClip {
+    inset: 6px;
+    border-radius: 23px;
+    clip-path: none;
+    transform: none;
+    animation: menu-toggle-breathe 4.5s ease-in-out infinite;
+  }
+  .menu-theme__blob .blobFill {
+    border-radius: inherit;
+  }
+  .menu-theme__blob .wave {
+    left: -18px;
+    bottom: -10px;
+    width: 112px;
+    height: 56px;
+  }
+  .menu-theme__blob .cel {
+    top: 37px;
+    left: 37px;
+  }
+  .menu-theme__blob .sun,
+  .menu-theme__blob .moon {
+    width: 18px;
+    height: 18px;
+  }
+  .menu-theme__blob .sun {
+    box-shadow: 0 0 8px 3px rgba(255, 255, 255, 0.34);
+  }
+  .menu-theme__blob .moon {
+    box-shadow: inset -5px -2px 0 -1px rgba(30, 40, 70, 0.28);
+  }
+}
+@keyframes menu-toggle-breathe {
+  0%, 100% {
+    border-radius: 23px 26px 22px 25px;
+    transform: scale(0.98);
+  }
+  50% {
+    border-radius: 27px 22px 26px 23px;
+    transform: scale(1.03);
+  }
+}
 
 /* ----------------------------------------------------------------- Hero */
 .hero {

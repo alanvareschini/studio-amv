@@ -43,7 +43,9 @@ export function initHeroBlob(): void {
       { night: "#3a6490", day: "#a8dde8" },
     ];
 
-    const radius = 68;
+    const isCompactMenu = () =>
+      wrap.classList.contains("hero-blob--menu") &&
+      window.matchMedia("(max-width: 720px)").matches;
     let theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
     let targetAngle = theme === "light" ? 0 : Math.PI;
     let angle = targetAngle;
@@ -66,13 +68,17 @@ export function initHeroBlob(): void {
       const cp = (1 + Math.cos(a)) / 2; // 1 = dia, 0 = noite
       blobFill.style.background = mixColor("#7730ec", "#fcce18", cp);
 
+      const compact = isCompactMenu();
+      const radius = compact ? 24 : 68;
+      const sunOffset = compact ? 9 : 13;
+      const moonOffset = compact ? 9 : 12;
+      const horizon = compact ? 7 : 20;
+      const fade = compact ? 16 : 22;
       const sx = radius * Math.sin(a);
       const sy = -radius * Math.cos(a);
-      sun.style.transform = `translate(${sx - 13}px, ${sy - 13}px)`;
-      moon.style.transform = `translate(${-sx - 12}px, ${-sy - 12}px)`;
+      sun.style.transform = `translate(${sx - sunOffset}px, ${sy - sunOffset}px)`;
+      moon.style.transform = `translate(${-sx - moonOffset}px, ${-sy - moonOffset}px)`;
 
-      const horizon = 20;
-      const fade = 22;
       sun.style.opacity = String(Math.max(0, Math.min(1, (horizon + fade - sy) / fade)));
       moon.style.opacity = String(Math.max(0, Math.min(1, (horizon + fade + sy) / fade)));
 
