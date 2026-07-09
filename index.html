@@ -87,9 +87,24 @@
          Puxe a corda no canto → as cortinas abrem e revelam o site. -->
     <style>
       body.ci-lock { overflow: hidden; }
-      #clothintro { position: fixed; inset: 0; z-index: 9999; background: transparent; }
-      :root[data-theme="light"] #clothintro { background: transparent; }
-      #clothintro canvas { position: absolute; inset: 0; display: block; touch-action: none; }
+      #clothintro {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: transparent;
+        transition: background 0.28s ease;
+      }
+      #clothintro.ci-boot { background: #070a12; }
+      :root[data-theme="light"] #clothintro.ci-boot { background: #eef1f8; }
+      #clothintro canvas {
+        position: absolute;
+        inset: 0;
+        display: block;
+        touch-action: none;
+        opacity: 1;
+        transition: opacity 0.18s ease;
+      }
+      #clothintro.ci-boot canvas { opacity: 0; }
       body.ci-site-hidden #app,
       body.ci-site-hidden .skip-link {
         opacity: 0;
@@ -98,7 +113,7 @@
     </style>
   </head>
   <body class="ci-lock ci-site-hidden is-intro-pending">
-    <div id="clothintro" role="button" tabindex="0" aria-label="Puxe a corda para entrar">
+    <div id="clothintro" class="ci-boot" role="button" tabindex="0" aria-label="Puxe a corda para entrar">
       <canvas id="ci-canvas"></canvas>
     </div>
     <script>
@@ -116,8 +131,10 @@
           window.removeEventListener("pointermove", onMove);
           window.removeEventListener("pointerup", onUp);
           window.removeEventListener("pointercancel", onUp);
-          host.removeEventListener("lostpointercapture", onUp);
-          host.removeEventListener("pointerleave", onLeave);
+          if (host) {
+            host.removeEventListener("lostpointercapture", onUp);
+            host.removeEventListener("pointerleave", onLeave);
+          }
           window.removeEventListener("resize", onResize);
           if (host && host.parentNode) host.remove();
           document.body.classList.remove("ci-lock");
@@ -583,6 +600,12 @@
           ptr.cordArmed = false;
           ptr.cordPeakY = 0;
           if (ptr.particle) {
+            if (ptr.particleWasPinned) {
+              ptr.particle.x = ptr.particle.hx;
+              ptr.particle.y = ptr.particle.hy;
+              ptr.particle.ox = ptr.particle.hx;
+              ptr.particle.oy = ptr.particle.hy;
+            }
             ptr.particle.pin = ptr.particleWasPinned;
             ptr.particle = null;
           }
@@ -671,6 +694,9 @@
 
         build();
         draw();
+        window.setTimeout(function () {
+          if (host && !finished) host.classList.remove("ci-boot");
+        }, 160);
         lastT = performance.now();
         raf = requestAnimationFrame(loop);
         return true;
