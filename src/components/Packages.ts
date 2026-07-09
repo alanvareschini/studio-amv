@@ -141,6 +141,7 @@ type LetterBody = {
   baseY: number;
   w: number;
   h: number;
+  r: number;
   x: number;
   y: number;
   vx: number;
@@ -154,6 +155,7 @@ type PhysicsCard = {
   bodies: LetterBody[];
   width: number;
   height: number;
+  floor: number;
   startedAt: number;
   lastTs: number;
 };
@@ -206,11 +208,26 @@ function splitPackageLetters(card: HTMLElement): HTMLElement[] {
   return Array.from(card.querySelectorAll<HTMLElement>(".pkg-phys-char"));
 }
 
+function restorePackageLetters(card: HTMLElement): void {
+  card.querySelectorAll<HTMLElement>(".pkg-phys-word").forEach((word) => {
+    word.replaceWith(document.createTextNode(word.textContent || ""));
+  });
+  delete card.dataset.lettersReady;
+}
+
 function visiblePackageCards(cards: HTMLElement[]): HTMLElement[] {
-  return cards.filter((card) => {
+  const visible = cards.filter((card) => {
     const r = card.getBoundingClientRect();
     return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
   });
+  const viewportCenter = window.innerHeight * 0.5;
+  return visible
+    .sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return Math.abs((ar.top + ar.bottom) * 0.5 - viewportCenter) - Math.abs((br.top + br.bottom) * 0.5 - viewportCenter);
+    })
+    .slice(0, 1);
 }
 
 function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
@@ -221,6 +238,10 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
     if (physicsCards.has(card)) return;
 
     const cardRect = card.getBoundingClientRect();
+    const buttonRect = card.querySelector<HTMLElement>(".btn")?.getBoundingClientRect();
+    const floor = buttonRect
+      ? Math.max(cardRect.height * 0.48, Math.min(cardRect.height - 24, buttonRect.top - cardRect.top - 12))
+      : cardRect.height - 24;
     const letters = splitPackageLetters(card);
     const bodies = letters.map((el, i) => {
       const r = el.getBoundingClientRect();
@@ -233,12 +254,13 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
         baseY: r.top - cardRect.top,
         w: Math.max(3, r.width),
         h: Math.max(8, r.height),
+        r: Math.max(5, Math.min(11, Math.max(r.width, r.height) * 0.48)),
         x: 0,
         y: 0,
-        vx: impulse * (260 + seed * 240) + (seed - 0.5) * 90,
-        vy: -40 - seed * 110,
+        vx: impulse * (190 + seed * 170) + (seed - 0.5) * 55,
+        vy: -20 - seed * 75,
         rot: 0,
-        vr: impulse * (90 + seed * 160),
+        vr: impulse * (55 + seed * 110),
       };
     });
 
@@ -248,6 +270,7 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
       bodies,
       width: cardRect.width,
       height: cardRect.height,
+      floor,
       startedAt: now,
       lastTs: now,
     });
@@ -266,6 +289,7 @@ function finishLetterPhysics(state: PhysicsCard): void {
       body.el.style.transition = "";
     }, 950);
   });
+  window.setTimeout(() => restorePackageLetters(state.card), 980);
   physicsCards.delete(state.card);
 }
 
@@ -276,22 +300,22 @@ function tickLetterPhysics(ts: number): void {
     state.lastTs = ts;
 
     const alive = ts - state.startedAt < 10000;
-    const pull = alive ? 0 : 16;
-    const gravity = 1350;
-    const wall = 12;
-    const floor = state.height - 22;
+    const pull = alive ? 0 : 22;
+    const gravity = 980;
+    const wall = 14;
+    const floor = state.floor;
 
     state.bodies.forEach((body) => {
       body.vy += gravity * dt;
-      body.vx += (-body.x * pull - body.vx * 0.6) * dt;
-      body.vy += (-body.y * pull - body.vy * 0.12) * dt;
+      body.vx += (-body.x * pull - body.vx * 0.78) * dt;
+      body.vy += (-body.y * pull - body.vy * 0.18) * dt;
 
       body.x += body.vx * dt;
       body.y += body.vy * dt;
       body.rot += body.vr * dt;
-      body.vx *= 0.992;
-      body.vy *= 0.996;
-      body.vr *= 0.99;
+      body.vx *= 0.986;
+      body.vy *= 0.992;
+      body.vr *= 0.986;
 
       const left = body.baseX + body.x;
       const right = left + body.w;
@@ -300,24 +324,56 @@ function tickLetterPhysics(ts: number): void {
 
       if (left < wall) {
         body.x += wall - left;
-        body.vx = Math.abs(body.vx) * 0.52;
+        body.vx = Math.abs(body.vx) * 0.42;
         body.vr += body.vx * 0.04;
       } else if (right > state.width - wall) {
         body.x -= right - (state.width - wall);
-        body.vx = -Math.abs(body.vx) * 0.52;
+        body.vx = -Math.abs(body.vx) * 0.42;
         body.vr += body.vx * 0.04;
       }
 
       if (bottom > floor) {
         body.y -= bottom - floor;
-        body.vy = -Math.abs(body.vy) * 0.36;
-        body.vx *= 0.88;
-        body.vr *= 0.82;
+        body.vy = -Math.abs(body.vy) * 0.24;
+        body.vx *= 0.76;
+        body.vr *= 0.74;
       } else if (top < wall) {
         body.y += wall - top;
-        body.vy = Math.abs(body.vy) * 0.35;
+        body.vy = Math.abs(body.vy) * 0.28;
       }
+    });
 
+    for (let i = 0; i < state.bodies.length; i++) {
+      const a = state.bodies[i];
+      const ax = a.baseX + a.x + a.w * 0.5;
+      const ay = a.baseY + a.y + a.h * 0.5;
+      for (let j = i + 1; j < state.bodies.length; j++) {
+        const b = state.bodies[j];
+        const bx = b.baseX + b.x + b.w * 0.5;
+        const by = b.baseY + b.y + b.h * 0.5;
+        const dx = bx - ax;
+        const dy = by - ay;
+        if (Math.abs(dx) > 18 || Math.abs(dy) > 18) continue;
+        const dist = Math.hypot(dx, dy) || 1;
+        const min = Math.min(14, a.r + b.r);
+        if (dist >= min) continue;
+        const push = (min - dist) * 0.22;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        a.x -= nx * push;
+        a.y -= ny * push;
+        b.x += nx * push;
+        b.y += ny * push;
+        const avx = a.vx;
+        const avy = a.vy;
+        a.vx = a.vx * 0.92 - nx * 9;
+        a.vy = a.vy * 0.92 - ny * 7;
+        b.vx = b.vx * 0.92 + nx * 9 + avx * 0.015;
+        b.vy = b.vy * 0.92 + ny * 7 + avy * 0.015;
+      }
+    }
+
+    state.bodies.forEach((body) => {
       body.el.style.transform = `translate3d(${body.x.toFixed(2)}px, ${body.y.toFixed(2)}px, 0) rotate(${body.rot.toFixed(2)}deg)`;
     });
 
@@ -569,9 +625,9 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   if (!cards.length) return;
   const btn = document.getElementById("gyroBtn");
 
-  const SENS = 0.85;
-  const SMOOTH = 0.16;
-  const DEAD = 0.35;
+  const SENS = 0.62;
+  const SMOOTH = 0.12;
+  const DEAD = 0.85;
   const clamp = (v: number) => Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, v));
   const deadzone = (v: number) => (Math.abs(v) < DEAD ? 0 : v);
   let base: { beta: number; gamma: number } | null = null;
@@ -627,14 +683,14 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
       const dt = Math.max(16, now - lastGammaTs) / 1000;
       const velocity = (e.gamma - lastGamma) / dt;
       const sign = Math.sign(velocity);
-      const strongLateralSnap = Math.abs(velocity) > 155 && Math.abs(e.gamma - base.gamma) > 5;
+      const strongLateralSnap = Math.abs(velocity) > 360 && Math.abs(e.gamma - base.gamma) > 12;
 
       if (strongLateralSnap && sign !== 0) {
-        const reversedFast = lastBurstSign !== 0 && sign !== lastBurstSign && now - lastBurstAt < 620;
+        const reversedFast = lastBurstSign !== 0 && sign !== lastBurstSign && now - lastBurstAt < 520;
         if (reversedFast && now > physicsCooldownUntil) {
-          const impulse = Math.max(-1.15, Math.min(1.15, velocity / 260));
+          const impulse = Math.max(-1, Math.min(1, velocity / 520));
           startLetterPhysics(cards, impulse);
-          physicsCooldownUntil = now + 12000;
+          physicsCooldownUntil = now + 14000;
           lastBurstSign = 0;
         } else {
           lastBurstSign = sign;
