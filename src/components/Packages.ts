@@ -164,12 +164,17 @@ type PhysicsCard = {
   height: number;
   floor: number;
   button?: RectCollider;
+  flowX: number;
+  flowY: number;
   startedAt: number;
   lastTs: number;
 };
 
 const physicsCards = new Map<HTMLElement, PhysicsCard>();
 let physicsRaf = 0;
+
+const LIQUID_TILT_MAX = 12;
+const clampValue = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 function splitPackageLetters(card: HTMLElement): HTMLElement[] {
   if (card.dataset.lettersReady !== "1") {
@@ -287,6 +292,8 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
       height: cardRect.height,
       floor,
       button,
+      flowX: 0,
+      flowY: 0,
       startedAt: now,
       lastTs: now,
     });
@@ -319,16 +326,22 @@ function tickLetterPhysics(ts: number): void {
     const pull = alive ? 0 : 24;
     const ry = parseFloat(state.card.style.getPropertyValue("--ry")) || 0;
     const rx = parseFloat(state.card.style.getPropertyValue("--rx")) || 0;
-    const tiltX = Math.max(-260, Math.min(260, ry * 24));
-    const tiltY = Math.max(-120, Math.min(120, -rx * 10));
-    const gravity = 900 + tiltY;
+    const targetFlowX = clampValue(ry / LIQUID_TILT_MAX, -1, 1);
+    const targetFlowY = clampValue(-rx / LIQUID_TILT_MAX, -1, 1);
+    const flowEase = Math.min(1, dt * 7.5);
+    state.flowX += (targetFlowX - state.flowX) * flowEase;
+    state.flowY += (targetFlowY - state.flowY) * flowEase;
+    const liquidAx = state.flowX * 820;
+    const liquidAy = 420 + state.flowY * 900;
     const wall = 14;
     const floor = state.floor;
 
     state.bodies.forEach((body) => {
-      body.vy += gravity * dt;
-      body.vx += (tiltX - body.x * pull - body.vx * 0.82) * dt;
-      body.vy += (-body.y * pull - body.vy * 0.18) * dt;
+      const depth = clampValue((body.baseY + body.y) / state.height, 0, 1);
+      const edgePressureX = state.flowX * depth * 140;
+      const edgePressureY = state.flowY * (0.5 + depth) * 120;
+      body.vx += (liquidAx + edgePressureX - body.x * pull - body.vx * 0.52) * dt;
+      body.vy += (liquidAy + edgePressureY - body.y * pull - body.vy * 0.2) * dt;
 
       body.x += body.vx * dt;
       body.y += body.vy * dt;
