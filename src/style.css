@@ -2145,6 +2145,22 @@ html.amv-touch .gyro-btn { display: inline-flex; }
     0 0 18px rgba(168, 85, 247, 0.16);
   will-change: transform;
 }
+.pkg-check__piece.is-phys {
+  fill: none;
+  stroke: url(#pkgCheckGrad);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.36));
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+}
+.pkg-check__mark.is-phys-hidden,
+.pkg-check__draw.is-phys-hidden {
+  opacity: 0;
+}
 .pkg--physics-active .pkg__holo {
   opacity: 0.52;
   filter: saturate(1.18);

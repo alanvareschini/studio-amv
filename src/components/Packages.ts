@@ -136,7 +136,7 @@ export function initPackages(): void {
 }
 
 type LetterBody = {
-  el: HTMLElement;
+  el: HTMLElement | SVGPathElement;
   baseX: number;
   baseY: number;
   w: number;
@@ -228,6 +228,71 @@ function restorePackageLetters(card: HTMLElement): void {
   delete card.dataset.lettersReady;
 }
 
+function restorePackageChecks(card: HTMLElement): void {
+  card.querySelectorAll<SVGPathElement>(".pkg-check__piece").forEach((piece) => piece.remove());
+  card.querySelectorAll<SVGPathElement>(".pkg-check__mark, .pkg-check__draw").forEach((path) => {
+    path.classList.remove("is-phys-hidden");
+  });
+}
+
+function splitPackageChecks(card: HTMLElement, cardRect: DOMRect, impulse: number, startIndex: number): LetterBody[] {
+  const pieces: LetterBody[] = [];
+  const svgNS = "http://www.w3.org/2000/svg";
+
+  card.querySelectorAll<SVGSVGElement>(".pkg-check").forEach((svg, svgIndex) => {
+    const mark = svg.querySelector<SVGPathElement>(".pkg-check__mark");
+    const draw = svg.querySelector<SVGPathElement>(".pkg-check__draw");
+    if (!mark) return;
+
+    const total = mark.getTotalLength();
+    const svgRect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
+    const scaleX = svgRect.width / (viewBox.width || 24);
+    const scaleY = svgRect.height / (viewBox.height || 24);
+    const cuts = [
+      [0, 0.38],
+      [0.33, 0.67],
+      [0.62, 1],
+    ];
+
+    mark.classList.add("is-phys-hidden");
+    draw?.classList.add("is-phys-hidden");
+
+    cuts.forEach(([from, to], pieceIndex) => {
+      const piece = document.createElementNS(svgNS, "path");
+      const len = Math.max(1, total * (to - from));
+      const mid = mark.getPointAtLength(total * ((from + to) * 0.5));
+      const seedIndex = startIndex + svgIndex * cuts.length + pieceIndex;
+      const seed = ((seedIndex * 1103515245 + 12345) >>> 0) / 4294967295;
+      const side = pieceIndex === 1 ? -Math.sign(impulse || 1) : Math.sign(impulse || 1);
+
+      piece.setAttribute("d", mark.getAttribute("d") || "");
+      piece.classList.add("pkg-check__piece", "is-phys");
+      piece.style.strokeDasharray = `${len} ${total + 2}`;
+      piece.style.strokeDashoffset = `${-(total * from)}`;
+      piece.style.transition = "none";
+      svg.appendChild(piece);
+
+      pieces.push({
+        el: piece,
+        baseX: svgRect.left - cardRect.left + (mid.x - viewBox.x) * scaleX - 4,
+        baseY: svgRect.top - cardRect.top + (mid.y - viewBox.y) * scaleY - 4,
+        w: 8,
+        h: 8,
+        r: 9,
+        x: side * seed * 3,
+        y: -seed * 2,
+        vx: impulse * (150 + seed * 120) + side * (32 + seed * 42),
+        vy: -35 - seed * 80,
+        rot: 0,
+        vr: impulse * (90 + seed * 110) + side * 35,
+      });
+    });
+  });
+
+  return pieces;
+}
+
 function visiblePackageCards(cards: HTMLElement[]): HTMLElement[] {
   const visible = cards.filter((card) => {
     const r = card.getBoundingClientRect();
@@ -262,7 +327,7 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
       : undefined;
     const floor = cardRect.height - 18;
     const letters = splitPackageLetters(card);
-    const bodies = letters.map((el, i) => {
+    const bodies: LetterBody[] = letters.map((el, i) => {
       const r = el.getBoundingClientRect();
       const seed = ((i * 1103515245 + 12345) >>> 0) / 4294967295;
       const side = i % 2 === 0 ? -1 : 1;
@@ -283,6 +348,7 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
         vr: impulse * (45 + seed * 90) + side * seed * 14,
       };
     });
+    bodies.push(...splitPackageChecks(card, cardRect, impulse, bodies.length));
 
     card.classList.add("pkg--physics-active");
     physicsCards.set(card, {
@@ -312,7 +378,10 @@ function finishLetterPhysics(state: PhysicsCard): void {
       body.el.style.transition = "";
     }, 950);
   });
-  window.setTimeout(() => restorePackageLetters(state.card), 980);
+  window.setTimeout(() => {
+    restorePackageLetters(state.card);
+    restorePackageChecks(state.card);
+  }, 980);
   physicsCards.delete(state.card);
 }
 
