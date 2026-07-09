@@ -7,7 +7,7 @@ export function FAQ(): string {
       <div class="container container--narrow">
         <header class="section__head" data-reveal>
           <span class="eyebrow">Dúvidas</span>
-          <h2 class="section__title">Perguntas <span class="text-gradient">frequentes</span></h2>
+          <h2 class="section__title faq__title-text txt-wave--igloo">Perguntas <span class="text-gradient">frequentes</span></h2>
         </header>
         <div class="faq" data-reveal>
           ${faq
@@ -15,11 +15,11 @@ export function FAQ(): string {
               (item, i) => /* html */ `
             <div class="faq__item">
               <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-a-${i}" id="faq-q-${i}">
-                <span class="faq__q-text">${item.question}</span>
+                <span class="faq__q-text txt-wave--igloo">${item.question}</span>
                 <span class="faq__icon" aria-hidden="true">+</span>
               </button>
               <div class="faq__a" id="faq-a-${i}" role="region" aria-labelledby="faq-q-${i}" hidden>
-                <p>${item.answer}</p>
+                <p class="faq__a-text txt-wave--igloo">${item.answer}</p>
               </div>
             </div>`
             )

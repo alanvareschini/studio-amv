@@ -1658,6 +1658,31 @@ ol {
 .txt-wave.is-touching::after {
   opacity: 1;
 }
+.txt-wave--igloo::after {
+  background: radial-gradient(
+    ellipse 145px 80px at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.78) 28%,
+    rgba(226, 235, 247, 0.36) 53%,
+    rgba(226, 235, 247, 0) 76%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: blur(0.16px) brightness(1.14);
+  mix-blend-mode: screen;
+  text-shadow: 0 0 10px rgba(226, 235, 247, 0.28);
+}
+:root[data-theme="light"] .txt-wave--igloo::after {
+  background: radial-gradient(
+    ellipse 145px 80px at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(231, 237, 247, 0.74) 30%,
+    rgba(8, 18, 34, 0.22) 58%,
+    rgba(8, 18, 34, 0) 78%
+  );
+  mix-blend-mode: soft-light;
+  text-shadow: 0 0 8px rgba(8, 18, 34, 0.12);
+}
 .pkg--physics-active .txt-wave::after {
   opacity: 0 !important;
 }
