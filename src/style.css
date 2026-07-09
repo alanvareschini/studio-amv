@@ -1051,8 +1051,8 @@ ol {
 }
 .menu-theme__blob {
   position: relative;
-  width: 94px;
-  height: 94px;
+  width: 64px;
+  height: 64px;
   flex: none;
   overflow: visible;
 }
@@ -1060,8 +1060,8 @@ ol {
   position: absolute;
   inset: 0;
   z-index: 1;
-  width: 94px;
-  height: 94px;
+  width: 64px;
+  height: 64px;
   transform: none;
   transform-origin: center;
   overflow: visible;
@@ -1073,7 +1073,7 @@ ol {
   left: 50%;
   width: 220px;
   height: 220px;
-  transform: translate(-50%, -50%) scale(0.36);
+  transform: translate(-50%, -50%) scale(0.27);
   transform-origin: center;
   overflow: visible;
 }
