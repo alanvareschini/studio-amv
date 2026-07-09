@@ -6,7 +6,11 @@ const COOKIE = "amv_dash";
 const MAX_AGE = 60 * 60 * 12; // 12h
 
 function secret(): string {
-  return (process.env.SESSION_SECRET || process.env.DASHBOARD_PASSWORD || "dev-insecure-secret").trim();
+  // Sem fallback inseguro: se faltar segredo, aborta (500) em vez de assinar
+  // tokens com um valor público e conhecido. Em produção há DASHBOARD_PASSWORD.
+  const s = (process.env.SESSION_SECRET || process.env.DASHBOARD_PASSWORD || "").trim();
+  if (!s) throw new Error("SESSION_SECRET/DASHBOARD_PASSWORD ausente");
+  return s;
 }
 
 export function makeToken(): string {

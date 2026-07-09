@@ -2,6 +2,7 @@
 // GET → informa se a sessão atual é válida (para o front decidir o que mostrar).
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { checkPassword, makeToken, setCookie, clearCookie, isAuthed } from "./_auth.js";
+import { clientIp, rateLimit } from "./_ratelimit.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -27,7 +28,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(500).json({ error: "config", hint: "DASHBOARD_PASSWORD não configurada no Vercel" });
         return;
       }
-      // pequena proteção anti-força-bruta: atraso fixo
+      // Anti-força-bruta: no máx. 10 tentativas de login por IP a cada 10 min.
+      if (!rateLimit("auth:" + clientIp(req), 10, 10 * 60_000)) {
+        res.status(429).json({ error: "muitas tentativas, tente mais tarde" });
+        return;
+      }
+      // atraso fixo pra encarecer cada tentativa
       await new Promise((r) => setTimeout(r, 350));
       if (!checkPassword(body.password)) {
         res.status(401).json({ error: "senha" });
