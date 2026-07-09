@@ -150,12 +150,20 @@ type LetterBody = {
   vr: number;
 };
 
+type RectCollider = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+};
+
 type PhysicsCard = {
   card: HTMLElement;
   bodies: LetterBody[];
   width: number;
   height: number;
   floor: number;
+  button?: RectCollider;
   startedAt: number;
   lastTs: number;
 };
@@ -239,13 +247,20 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
 
     const cardRect = card.getBoundingClientRect();
     const buttonRect = card.querySelector<HTMLElement>(".btn")?.getBoundingClientRect();
-    const floor = buttonRect
-      ? Math.max(cardRect.height * 0.48, Math.min(cardRect.height - 24, buttonRect.top - cardRect.top - 12))
-      : cardRect.height - 24;
+    const button = buttonRect
+      ? {
+          left: buttonRect.left - cardRect.left - 6,
+          right: buttonRect.right - cardRect.left + 6,
+          top: buttonRect.top - cardRect.top - 6,
+          bottom: buttonRect.bottom - cardRect.top + 6,
+        }
+      : undefined;
+    const floor = cardRect.height - 18;
     const letters = splitPackageLetters(card);
     const bodies = letters.map((el, i) => {
       const r = el.getBoundingClientRect();
       const seed = ((i * 1103515245 + 12345) >>> 0) / 4294967295;
+      const side = i % 2 === 0 ? -1 : 1;
       el.classList.add("is-phys");
       el.style.transition = "none";
       return {
@@ -254,13 +269,13 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
         baseY: r.top - cardRect.top,
         w: Math.max(3, r.width),
         h: Math.max(8, r.height),
-        r: Math.max(5, Math.min(11, Math.max(r.width, r.height) * 0.48)),
-        x: 0,
+        r: Math.max(7, Math.min(13, Math.max(r.width, r.height) * 0.58)),
+        x: side * (seed * 2.4),
         y: 0,
-        vx: impulse * (190 + seed * 170) + (seed - 0.5) * 55,
-        vy: -20 - seed * 75,
+        vx: impulse * (170 + seed * 135) + side * (18 + seed * 24),
+        vy: -18 - seed * 58,
         rot: 0,
-        vr: impulse * (55 + seed * 110),
+        vr: impulse * (45 + seed * 90) + side * seed * 14,
       };
     });
 
@@ -271,6 +286,7 @@ function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
       width: cardRect.width,
       height: cardRect.height,
       floor,
+      button,
       startedAt: now,
       lastTs: now,
     });
@@ -300,14 +316,18 @@ function tickLetterPhysics(ts: number): void {
     state.lastTs = ts;
 
     const alive = ts - state.startedAt < 10000;
-    const pull = alive ? 0 : 22;
-    const gravity = 980;
+    const pull = alive ? 0 : 24;
+    const ry = parseFloat(state.card.style.getPropertyValue("--ry")) || 0;
+    const rx = parseFloat(state.card.style.getPropertyValue("--rx")) || 0;
+    const tiltX = Math.max(-260, Math.min(260, ry * 24));
+    const tiltY = Math.max(-120, Math.min(120, -rx * 10));
+    const gravity = 900 + tiltY;
     const wall = 14;
     const floor = state.floor;
 
     state.bodies.forEach((body) => {
       body.vy += gravity * dt;
-      body.vx += (-body.x * pull - body.vx * 0.78) * dt;
+      body.vx += (tiltX - body.x * pull - body.vx * 0.82) * dt;
       body.vy += (-body.y * pull - body.vy * 0.18) * dt;
 
       body.x += body.vx * dt;
@@ -341,36 +361,85 @@ function tickLetterPhysics(ts: number): void {
         body.y += wall - top;
         body.vy = Math.abs(body.vy) * 0.28;
       }
+
+      if (state.button) {
+        const l = body.baseX + body.x;
+        const r = l + body.w;
+        const t = body.baseY + body.y;
+        const b = t + body.h;
+        const c = state.button;
+        if (r > c.left && l < c.right && b > c.top && t < c.bottom) {
+          const pushLeft = r - c.left;
+          const pushRight = c.right - l;
+          const pushTop = b - c.top;
+          const pushBottom = c.bottom - t;
+          const pushX = Math.min(pushLeft, pushRight);
+          const pushY = Math.min(pushTop, pushBottom);
+
+          if (pushY <= pushX || b <= c.top + body.h * 1.4) {
+            if (pushTop < pushBottom) {
+              body.y -= pushTop;
+              body.vy = -Math.abs(body.vy) * 0.28;
+            } else {
+              body.y += pushBottom;
+              body.vy = Math.abs(body.vy) * 0.18;
+            }
+            body.vx *= 0.72;
+            body.vr += body.vx * 0.035;
+          } else if (pushLeft < pushRight) {
+            body.x -= pushLeft;
+            body.vx = -Math.abs(body.vx) * 0.34;
+          } else {
+            body.x += pushRight;
+            body.vx = Math.abs(body.vx) * 0.34;
+          }
+        }
+      }
     });
 
+    const grid = new Map<string, LetterBody[]>();
+    const cell = 28;
     for (let i = 0; i < state.bodies.length; i++) {
       const a = state.bodies[i];
       const ax = a.baseX + a.x + a.w * 0.5;
       const ay = a.baseY + a.y + a.h * 0.5;
-      for (let j = i + 1; j < state.bodies.length; j++) {
-        const b = state.bodies[j];
-        const bx = b.baseX + b.x + b.w * 0.5;
-        const by = b.baseY + b.y + b.h * 0.5;
-        const dx = bx - ax;
-        const dy = by - ay;
-        if (Math.abs(dx) > 18 || Math.abs(dy) > 18) continue;
-        const dist = Math.hypot(dx, dy) || 1;
-        const min = Math.min(14, a.r + b.r);
-        if (dist >= min) continue;
-        const push = (min - dist) * 0.22;
-        const nx = dx / dist;
-        const ny = dy / dist;
-        a.x -= nx * push;
-        a.y -= ny * push;
-        b.x += nx * push;
-        b.y += ny * push;
-        const avx = a.vx;
-        const avy = a.vy;
-        a.vx = a.vx * 0.92 - nx * 9;
-        a.vy = a.vy * 0.92 - ny * 7;
-        b.vx = b.vx * 0.92 + nx * 9 + avx * 0.015;
-        b.vy = b.vy * 0.92 + ny * 7 + avy * 0.015;
+      const gx = Math.floor(ax / cell);
+      const gy = Math.floor(ay / cell);
+
+      for (let yy = gy - 1; yy <= gy + 1; yy++) {
+        for (let xx = gx - 1; xx <= gx + 1; xx++) {
+          const bucket = grid.get(`${xx}:${yy}`);
+          if (!bucket) continue;
+          bucket.forEach((b) => {
+            const bx = b.baseX + b.x + b.w * 0.5;
+            const by = b.baseY + b.y + b.h * 0.5;
+            const dx = bx - ax;
+            const dy = by - ay;
+            if (Math.abs(dx) > cell || Math.abs(dy) > cell) return;
+            const dist = Math.hypot(dx, dy) || 1;
+            const min = Math.min(22, a.r + b.r + 4);
+            if (dist >= min) return;
+            const push = (min - dist) * 0.34;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            a.x -= nx * push;
+            a.y -= ny * push;
+            b.x += nx * push;
+            b.y += ny * push;
+            const avx = a.vx;
+            const avy = a.vy;
+            a.vx = a.vx * 0.9 - nx * 12;
+            a.vy = a.vy * 0.9 - ny * 8;
+            b.vx = b.vx * 0.9 + nx * 12 + avx * 0.012;
+            b.vy = b.vy * 0.9 + ny * 8 + avy * 0.012;
+          });
+        }
       }
+
+      const key = `${gx}:${gy}`;
+      const bucket = grid.get(key);
+      if (bucket) bucket.push(a);
+      else grid.set(key, [a]);
     }
 
     state.bodies.forEach((body) => {
