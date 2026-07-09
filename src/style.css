@@ -1036,7 +1036,7 @@ ol {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.6rem;
+  gap: 0.8rem;
   margin-top: 0.8rem;
 }
 .menu-theme__label {
@@ -1051,21 +1051,21 @@ ol {
 }
 .menu-theme__blob {
   position: relative;
-  width: 82px;
-  height: 82px;
+  width: 94px;
+  height: 94px;
   flex: none;
   overflow: visible;
 }
 .menu-theme__blob .hero-blob {
-  position: relative;
-  top: auto;
-  right: auto;
-  left: auto;
+  position: absolute;
+  inset: 0;
   z-index: 1;
-  width: 82px;
-  height: 82px;
+  width: 94px;
+  height: 94px;
   transform: none;
   transform-origin: center;
+  overflow: visible;
+  touch-action: manipulation;
 }
 .menu-theme__blob .blobOuter {
   position: absolute;
@@ -1073,8 +1073,23 @@ ol {
   left: 50%;
   width: 220px;
   height: 220px;
-  transform: translate(-50%, -50%) scale(0.32);
+  transform: translate(-50%, -50%) scale(0.36);
   transform-origin: center;
+  overflow: visible;
+}
+.menu-theme__blob .blobClip {
+  transform: scale(0.88);
+}
+.menu-theme__blob .cel {
+  z-index: 2;
+}
+.menu-theme__blob .sun {
+  width: 25px;
+  height: 25px;
+}
+.menu-theme__blob .moon {
+  width: 25px;
+  height: 25px;
 }
 
 /* ----------------------------------------------------------------- Hero */
