@@ -707,9 +707,10 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   if (!cards.length) return;
   const btn = document.getElementById("gyroBtn");
 
-  const SENS = 0.62;
-  const SMOOTH = 0.12;
+  const SENS = 0.58;
+  const SMOOTH = 0.16;
   const DEAD = 0.85;
+  const BASE_SAMPLES = 10;
   const clamp = (v: number) => Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, v));
   const deadzone = (v: number) => (Math.abs(v) < DEAD ? 0 : v);
   let base: { beta: number; gamma: number } | null = null;
@@ -718,6 +719,9 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   let rx = 0;
   let targetRy = 0;
   let targetRx = 0;
+  let baseBetaSum = 0;
+  let baseGammaSum = 0;
+  let baseCount = 0;
   let lastGamma: number | null = null;
   let lastGammaTs = 0;
   let lastBurstSign = 0;
@@ -735,7 +739,6 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   };
 
   const apply = () => {
-    raf = 0;
     ry += (targetRy - ry) * SMOOTH;
     rx += (targetRx - rx) * SMOOTH;
     cards.forEach((card) => {
@@ -750,22 +753,42 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
         detail: { rx, ry, max: MAX_ANGLE },
       })
     );
+    raf = requestAnimationFrame(apply);
   };
 
   const onOrient = (e: DeviceOrientationEvent) => {
     if (e.beta == null || e.gamma == null) return;
-    if (!gotEvent) {
-      gotEvent = true;
-      setBtn("Movimento 3D ativo", "ok");
-      window.setTimeout(() => btn?.classList.add("is-gone"), 1800);
-    }
-    if (!base) base = { beta: e.beta, gamma: e.gamma };
     const now = performance.now();
+    if (!base) {
+      baseBetaSum += e.beta;
+      baseGammaSum += e.gamma;
+      baseCount += 1;
+      setBtn("Calibrando movimento...");
+      if (baseCount < BASE_SAMPLES) return;
+      base = { beta: baseBetaSum / baseCount, gamma: baseGammaSum / baseCount };
+      lastGamma = e.gamma;
+      lastGammaTs = now;
+      if (!gotEvent) {
+        gotEvent = true;
+        setBtn("Movimento 3D ativo", "ok");
+        window.setTimeout(() => btn?.classList.add("is-gone"), 1800);
+      }
+      return;
+    }
+
+    const rawGamma = e.gamma - base.gamma;
+    const rawBeta = e.beta - base.beta;
+    const nearCenter = Math.abs(rawGamma) < 3.2 && Math.abs(rawBeta) < 3.2;
+    if (nearCenter) {
+      base.gamma += rawGamma * 0.012;
+      base.beta += rawBeta * 0.012;
+    }
+
     if (lastGamma !== null && lastGammaTs) {
       const dt = Math.max(16, now - lastGammaTs) / 1000;
       const velocity = (e.gamma - lastGamma) / dt;
       const sign = Math.sign(velocity);
-      const strongLateralSnap = Math.abs(velocity) > 360 && Math.abs(e.gamma - base.gamma) > 12;
+      const strongLateralSnap = Math.abs(velocity) > 360 && Math.abs(rawGamma) > 12;
 
       if (strongLateralSnap && sign !== 0) {
         const reversedFast = lastBurstSign !== 0 && sign !== lastBurstSign && now - lastBurstAt < 520;
@@ -782,15 +805,15 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
     }
     lastGamma = e.gamma;
     lastGammaTs = now;
-    targetRy = clamp(deadzone((e.gamma - base.gamma) * SENS));
-    targetRx = clamp(deadzone(-(e.beta - base.beta) * SENS));
-    if (!raf) raf = requestAnimationFrame(apply);
+    targetRy = clamp(deadzone(rawGamma * SENS));
+    targetRx = clamp(deadzone(-rawBeta * SENS));
   };
 
   const start = () => {
     if (started) return;
     started = true;
     window.addEventListener("deviceorientation", onOrient, { passive: true });
+    if (!raf) raf = requestAnimationFrame(apply);
   };
 
   const DOE = window.DeviceOrientationEvent as unknown as
