@@ -21,13 +21,16 @@ export function initTextWave(selector: string): void {
     el.style.setProperty("--my", `${my.toFixed(1)}%`);
   };
 
+  const isBlocked = (el: HTMLElement) => Boolean(el.closest(".pkg--physics-active"));
+
   const findTouchItem = (clientX: number, clientY: number) => {
     const hit = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
     const direct = hit?.closest<HTMLElement>(selector);
-    if (direct?.classList.contains("txt-wave")) return direct;
+    if (direct?.classList.contains("txt-wave") && !isBlocked(direct)) return direct;
 
     return (
       items.find((item) => {
+        if (isBlocked(item)) return false;
         const r = item.getBoundingClientRect();
         return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
       }) ?? null
@@ -90,6 +93,10 @@ export function initTextWave(selector: string): void {
       "pointermove",
       (e) => {
         if (e.pointerType !== "mouse" && !hasHover) return;
+        if (isBlocked(el)) {
+          el.classList.remove("is-touching");
+          return;
+        }
         updateFromPoint(el, e.clientX, e.clientY);
       },
       { passive: true }
