@@ -95,7 +95,7 @@ if (app) {
   safe("cardTilt", () => initCardTilt(".card", 12));
   // tilt (segue o cursor) no chaos e nos botões do CTA — NÃO nos botões dos pacotes
   safe("btnTilt", () => initCardTilt(".chaos-button, .cta-final .btn", 16, 0, 420));
-  safe("textWave", () => initTextWave(".card__text, .pkg__audience"));
+  safe("textWave", () => initTextWave(".card__text, .pkg__audience, .faq__q-text"));
   safe("emojiMotion", initEmojiMotion);
   safe("flowLines", initFlowLines);
 

@@ -13,7 +13,7 @@ import {
 } from "three";
 
 const TARGET_SELECTOR =
-  "h1.hero__brand, h2.section__title, h2.cta-final__title, .faq__q-text";
+  "h1.hero__brand, h2.section__title, h2.cta-final__title";
 const EXCLUDED_SELECTOR =
   ".card, .pkg, .pkg-modal, .timeline, .faq, [role='dialog']";
 const MAX_PIXEL_RATIO = 2;
@@ -132,7 +132,7 @@ export function initHeadingFluid(): void {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const targets = [...document.querySelectorAll<HTMLElement>(TARGET_SELECTOR)]
-    .filter((element) => element.matches(".faq__q-text") || !element.closest(EXCLUDED_SELECTOR));
+    .filter((element) => !element.closest(EXCLUDED_SELECTOR));
   if (!targets.length) return;
   targets.forEach(wrapHeadingSource);
 
