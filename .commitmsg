@@ -1,7 +1,0 @@
-﻿Corrige WebGL (fluido/A/botoes) que morria ao voltar do dashboard
-
-- Recarrega ao restaurar do bfcache (pageshow persisted) - o WebGL volta
-  a funcionar em vez de ficar 'morto' ao usar o botao voltar
-- Intro toca so uma vez por sessao da aba (nao repete no recarregamento)
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
