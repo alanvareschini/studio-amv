@@ -1,7 +1,9 @@
 type IglooGlyph = {
   el: HTMLElement;
   energy: number;
+  heat: number;
   target: number;
+  heatTarget: number;
   seed: number;
 };
 
@@ -51,16 +53,28 @@ export function initTextWave(selector: string): void {
 
       glyphs.forEach((glyph) => {
         glyph.energy += (glyph.target - glyph.energy) * IGLOO_RAF_ALPHA;
+        glyph.heat += (glyph.heatTarget - glyph.heat) * 0.22;
         glyph.target *= IGLOO_TARGET_DECAY;
+        glyph.heatTarget *= 0.86;
 
         const flicker = 0.9 + Math.sin(performance.now() * 0.016 + glyph.seed * 9.7) * 0.1;
         const energy = Math.max(0, Math.min(1, glyph.energy * flicker));
+        const heat = Math.max(0, Math.min(1, glyph.heat));
+        const shimmer = Math.sin(performance.now() * 0.011 + glyph.seed * 18.4);
 
         glyph.el.style.setProperty("--igloo-a", energy.toFixed(3));
         glyph.el.style.setProperty("--igloo-glow", (energy * 18).toFixed(2));
         glyph.el.style.setProperty("--igloo-blur", (energy * 0.46).toFixed(2));
+        glyph.el.style.setProperty("--igloo-heat", heat.toFixed(3));
+        glyph.el.style.setProperty("--igloo-shift-x", (shimmer * heat * 1.8).toFixed(2));
+        glyph.el.style.setProperty("--igloo-shift-y", ((1 - Math.abs(shimmer)) * heat * -1.1).toFixed(2));
 
-        if (glyph.energy > IGLOO_IDLE_CUTOFF || glyph.target > IGLOO_IDLE_CUTOFF) {
+        if (
+          glyph.energy > IGLOO_IDLE_CUTOFF ||
+          glyph.target > IGLOO_IDLE_CUTOFF ||
+          glyph.heat > IGLOO_IDLE_CUTOFF ||
+          glyph.heatTarget > IGLOO_IDLE_CUTOFF
+        ) {
           keepAlive = true;
         }
       });
@@ -88,7 +102,9 @@ export function initTextWave(selector: string): void {
 
       if (amount > 0) {
         const rim = Math.pow(amount, 2.4);
+        const heatRing = Math.max(0, 1 - Math.abs(distance - 42) / 78);
         glyph.target = Math.max(glyph.target, rim);
+        glyph.heatTarget = Math.max(glyph.heatTarget, Math.pow(heatRing, 1.35) * 0.9);
       }
     });
 
@@ -118,9 +134,17 @@ export function initTextWave(selector: string): void {
         glyph.textContent = char;
         glyph.dataset.char = char;
         glyph.style.setProperty("--igloo-a", "0");
+        glyph.style.setProperty("--igloo-heat", "0");
         glyph.style.setProperty("--igloo-seed", seededValue(index).toFixed(4));
         word.append(glyph);
-        glyphs.push({ el: glyph, energy: 0, target: 0, seed: seededValue(index) });
+        glyphs.push({
+          el: glyph,
+          energy: 0,
+          heat: 0,
+          target: 0,
+          heatTarget: 0,
+          seed: seededValue(index),
+        });
         index += 1;
       });
 
