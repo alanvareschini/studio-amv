@@ -1668,9 +1668,23 @@ ol {
   --igloo-heat: 0;
   --igloo-shift-x: 0;
   --igloo-shift-y: 0;
+  isolation: isolate;
   text-rendering: geometricPrecision;
 }
+.igloo-heat-canvas {
+  position: absolute;
+  inset: -0.2em -0.32em;
+  z-index: 0;
+  width: calc(100% + 0.64em);
+  height: calc(100% + 0.4em);
+  opacity: 0.72;
+  filter: blur(0.8px) saturate(1.08);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
 .igloo-word {
+  position: relative;
+  z-index: 1;
   display: inline-block;
   white-space: nowrap;
 }
