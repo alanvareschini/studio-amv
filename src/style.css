@@ -1690,6 +1690,12 @@ ol {
     0 0 0.58em rgba(174, 221, 235, 0.34);
   pointer-events: none;
 }
+:root[data-theme="light"] .igloo-glyph::before {
+  color: rgba(72, 86, 105, 0.84);
+  text-shadow:
+    0 0 0.16em rgba(72, 92, 112, 0.46),
+    0 0 0.52em rgba(76, 105, 132, 0.24);
+}
 .igloo-atlas-enabled .igloo-glyph::before {
   content: none;
 }
@@ -1718,6 +1724,9 @@ ol {
   color: #cccccc;
   opacity: var(--igloo-light);
   pointer-events: none;
+}
+:root[data-theme="light"] .igloo-glyph::after {
+  color: #65758a;
 }
 .pkg--physics-active .txt-wave::after {
   opacity: 0 !important;

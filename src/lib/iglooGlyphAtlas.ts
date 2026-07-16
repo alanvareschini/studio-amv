@@ -142,8 +142,9 @@ export function createIglooGlyphAtlas(host: HTMLElement): IglooGlyphAtlas | null
     context.clearRect(0, 0, width, height);
     let activeGlyphs = 0;
     const lightTheme = document.documentElement.dataset.theme === "light";
-    const fill = lightTheme ? "rgb(118 128 141)" : "rgb(214 222 226)";
-    const shadow = lightTheme ? "rgb(112 132 150 / 0.22)" : "rgb(178 224 238 / 0.34)";
+    const fill = lightTheme ? "rgb(72 86 105)" : "rgb(214 222 226)";
+    const shadow = lightTheme ? "rgb(54 78 103 / 0.32)" : "rgb(178 224 238 / 0.34)";
+    const alphaMultiplier = lightTheme ? 1.18 : 1;
 
     for (let index = 0; index < glyphs.length; index += 1) {
       const glyph = glyphs[index];
@@ -178,7 +179,7 @@ export function createIglooGlyphAtlas(host: HTMLElement): IglooGlyphAtlas | null
           glyph.atlasHeight * sliceHeight + 2,
         );
         context.clip();
-        context.globalAlpha = Math.min(0.9, glyph.atlasAmount * alpha);
+        context.globalAlpha = Math.min(0.9, glyph.atlasAmount * alpha * alphaMultiplier);
         context.fillText(glyph.character, textX, baseline);
         context.restore();
       }
