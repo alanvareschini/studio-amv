@@ -1,6 +1,7 @@
 type IglooGlyph = {
   el: HTMLElement;
   light: number;
+  translucency: number;
 };
 
 type IglooSimulation = {
@@ -8,6 +9,9 @@ type IglooSimulation = {
   height: number;
   field: Float32Array;
   nextField: Float32Array;
+  rim: Float32Array;
+  rimTrail: Float32Array;
+  nextRimTrail: Float32Array;
   flowX: Float32Array;
   flowY: Float32Array;
   x: number;
@@ -96,6 +100,9 @@ function initIglooWave(elements: HTMLElement[]): void {
     height: 2,
     field: new Float32Array(4),
     nextField: new Float32Array(4),
+    rim: new Float32Array(4),
+    rimTrail: new Float32Array(4),
+    nextRimTrail: new Float32Array(4),
     flowX: new Float32Array(4),
     flowY: new Float32Array(4),
     x: 0.5,
@@ -128,8 +135,9 @@ function initIglooWave(elements: HTMLElement[]): void {
         glyph.textContent = character;
         glyph.dataset.char = character;
         glyph.style.setProperty("--igloo-light", "0");
+        glyph.style.setProperty("--igloo-translucency", "0");
         word.append(glyph);
-        glyphs.push({ el: glyph, light: 0 });
+        glyphs.push({ el: glyph, light: 0, translucency: 0 });
       });
       fragment.append(word);
     });
@@ -164,6 +172,9 @@ function initIglooWave(elements: HTMLElement[]): void {
     simulation.height = height;
     simulation.field = new Float32Array(width * height);
     simulation.nextField = new Float32Array(width * height);
+    simulation.rim = new Float32Array(width * height);
+    simulation.rimTrail = new Float32Array(width * height);
+    simulation.nextRimTrail = new Float32Array(width * height);
     simulation.flowX = new Float32Array(width * height);
     simulation.flowY = new Float32Array(width * height);
 
@@ -184,7 +195,8 @@ function initIglooWave(elements: HTMLElement[]): void {
   };
 
   const updateSimulation = (time: number) => {
-    const { width, height, field, nextField, flowX, flowY } = simulation;
+    const { width, height, field, nextField, rim, rimTrail, nextRimTrail, flowX, flowY } =
+      simulation;
     let pointerDistance = Math.hypot(
       simulation.x - simulation.previousX,
       simulation.y - simulation.previousY,
@@ -234,24 +246,33 @@ function initIglooWave(elements: HTMLElement[]): void {
         }
 
         nextValue = Math.min(1, Math.max(previous * 0.12, nextValue) * FIELD_DAMPING);
+        const rimValue = nextValue - previous;
+        const previousTrail = sampleField(rimTrail, width, height, advectedX, advectedY);
+        const nextTrail = (previousTrail + rimValue) * 0.9;
         nextField[index] = nextValue;
-        maximum = Math.max(maximum, nextValue);
+        rim[index] = rimValue;
+        nextRimTrail[index] = nextTrail;
+        maximum = Math.max(maximum, nextValue, Math.abs(nextTrail));
       }
     }
 
     simulation.field = nextField;
     simulation.nextField = field;
     simulation.nextField.fill(0);
+    simulation.rimTrail = nextRimTrail;
+    simulation.nextRimTrail = rimTrail;
+    simulation.nextRimTrail.fill(0);
     simulation.previousX = simulation.x;
     simulation.previousY = simulation.y;
     return maximum;
   };
 
   const updateGlyphs = () => {
-    const { width, height, field } = simulation;
+    const { width, height, field, rim, rimTrail } = simulation;
     glyphs.forEach((glyph) => {
       const bounds = glyph.el.getBoundingClientRect();
       let light = 0;
+      let translucency = 0;
 
       if (
         bounds.bottom >= 0 &&
@@ -262,12 +283,25 @@ function initIglooWave(elements: HTMLElement[]): void {
         const x = ((bounds.left + bounds.width * 0.5) / window.innerWidth) * (width - 1);
         const y = ((bounds.top + bounds.height * 0.5) / window.innerHeight) * (height - 1);
         const intensity = sampleField(field, width, height, x, y);
+        const rimValue = Math.max(0, sampleField(rim, width, height, x, y));
+        const trailValue = Math.max(0, sampleField(rimTrail, width, height, x, y));
         light = clamp((intensity - LIGHT_START) / (LIGHT_END - LIGHT_START));
+        // O canal de borda reproduz a pelicula translucida da frente da onda,
+        // sem usar os frames de atlas que deformavam os caracteres no original.
+        translucency = clamp(Math.max(rimValue * 4.6, trailValue * 2.15));
       }
 
       if (Math.abs(light - glyph.light) > 0.004 || (light === 0 && glyph.light !== 0)) {
         glyph.el.style.setProperty("--igloo-light", light.toFixed(3));
         glyph.light = light;
+      }
+
+      if (
+        Math.abs(translucency - glyph.translucency) > 0.004 ||
+        (translucency === 0 && glyph.translucency !== 0)
+      ) {
+        glyph.el.style.setProperty("--igloo-translucency", translucency.toFixed(3));
+        glyph.translucency = translucency;
       }
     });
   };

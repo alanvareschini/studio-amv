@@ -1671,13 +1671,27 @@ ol {
 }
 .igloo-glyph {
   --igloo-light: 0;
+  --igloo-translucency: 0;
   position: relative;
   display: inline-block;
+}
+.igloo-glyph::before {
+  content: attr(data-char);
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  color: rgba(238, 246, 250, 0.76);
+  opacity: calc(var(--igloo-translucency) * 0.48);
+  filter: blur(calc(var(--igloo-translucency) * 0.42px));
+  text-shadow: 0 0 calc(var(--igloo-translucency) * 0.34em)
+    rgba(224, 240, 248, 0.34);
+  pointer-events: none;
 }
 .igloo-glyph::after {
   content: attr(data-char);
   position: absolute;
   inset: 0;
+  z-index: 1;
   color: #cccccc;
   opacity: var(--igloo-light);
   pointer-events: none;
