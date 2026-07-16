@@ -15,7 +15,7 @@ import {
 const TARGET_SELECTOR =
   "h1.hero__brand, h2.section__title, h2.cta-final__title";
 const EXCLUDED_SELECTOR =
-  ".card, .pkg, .pkg-modal, .timeline, .faq, [role='dialog']";
+  ".card, .pkg, .pkg-modal, .timeline, #faq, [role='dialog']";
 const MAX_PIXEL_RATIO = 2;
 
 interface HeadingLayer {

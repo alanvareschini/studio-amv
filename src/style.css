@@ -1662,83 +1662,25 @@ ol {
   content: none;
 }
 .txt-wave--igloo {
-  --igloo-a: 0;
-  --igloo-glow: 0;
-  --igloo-blur: 0;
-  --igloo-heat: 0;
-  --igloo-shift-x: 0;
-  --igloo-shift-y: 0;
   isolation: isolate;
   text-rendering: geometricPrecision;
 }
-.igloo-heat-canvas {
-  position: absolute;
-  inset: -0.2em -0.32em;
-  z-index: 0;
-  width: calc(100% + 0.64em);
-  height: calc(100% + 0.4em);
-  opacity: 0.72;
-  filter: blur(0.8px) saturate(1.08);
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
 .igloo-word {
-  position: relative;
-  z-index: 1;
   display: inline-block;
   white-space: nowrap;
 }
 .igloo-glyph {
+  --igloo-light: 0;
   position: relative;
   display: inline-block;
-}
-.igloo-glyph::before {
-  content: attr(data-char);
-  position: absolute;
-  inset: -0.12em -0.05em;
-  color: rgba(255, 255, 255, calc(var(--igloo-heat) * 0.2));
-  filter: blur(calc((var(--igloo-heat) * 1.5 + 0.16) * 1px)) contrast(1.18);
-  opacity: min(1, calc(var(--igloo-heat) * 1.45));
-  transform:
-    translate3d(
-      calc(var(--igloo-shift-x) * 1px),
-      calc(var(--igloo-shift-y) * 1px),
-      0
-    )
-    skewX(calc(var(--igloo-shift-x) * 1.2deg));
-  text-shadow:
-    0 0 calc(var(--igloo-heat) * 14px) rgba(255, 255, 255, calc(var(--igloo-heat) * 0.34)),
-    0 0 calc(var(--igloo-heat) * 24px) rgba(190, 211, 236, calc(var(--igloo-heat) * 0.18));
-  pointer-events: none;
-  mix-blend-mode: screen;
 }
 .igloo-glyph::after {
   content: attr(data-char);
   position: absolute;
   inset: 0;
-  color: rgba(255, 255, 255, var(--igloo-a));
-  filter: blur(calc(var(--igloo-blur) * 1px)) brightness(1.22);
-  opacity: min(1, calc(var(--igloo-a) * 1.35));
-  text-shadow:
-    0 0 calc(var(--igloo-glow) * 0.42px) rgba(255, 255, 255, calc(var(--igloo-a) * 0.82)),
-    0 0 calc(var(--igloo-glow) * 0.95px) rgba(190, 211, 236, calc(var(--igloo-a) * 0.48)),
-    0 0 calc(var(--igloo-glow) * 1.8px) rgba(255, 255, 255, calc(var(--igloo-a) * 0.22));
+  color: #cccccc;
+  opacity: var(--igloo-light);
   pointer-events: none;
-  mix-blend-mode: screen;
-}
-:root[data-theme="light"] .igloo-glyph::after {
-  color: rgba(255, 255, 255, calc(var(--igloo-a) * 0.9));
-  mix-blend-mode: plus-lighter;
-  text-shadow:
-    0 0 calc(var(--igloo-glow) * 0.32px) rgba(255, 255, 255, calc(var(--igloo-a) * 0.68)),
-    0 0 calc(var(--igloo-glow) * 0.9px) rgba(8, 18, 34, calc(var(--igloo-a) * 0.18));
-}
-:root[data-theme="light"] .igloo-glyph::before {
-  color: rgba(255, 255, 255, calc(var(--igloo-heat) * 0.24));
-  mix-blend-mode: plus-lighter;
-  text-shadow:
-    0 0 calc(var(--igloo-heat) * 12px) rgba(255, 255, 255, calc(var(--igloo-heat) * 0.28)),
-    0 0 calc(var(--igloo-heat) * 20px) rgba(8, 18, 34, calc(var(--igloo-heat) * 0.1));
 }
 .pkg--physics-active .txt-wave::after {
   opacity: 0 !important;
