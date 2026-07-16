@@ -1,7 +1,18 @@
-type IglooGlyph = {
+import {
+  createIglooGlyphAtlas,
+  type IglooAtlasGlyph,
+} from "./iglooGlyphAtlas";
+
+type IglooOwner = {
   el: HTMLElement;
+  visible: boolean;
+};
+
+type IglooGlyph = IglooAtlasGlyph & {
   light: number;
   translucency: number;
+  faceOpacity: number;
+  owner: IglooOwner;
 };
 
 type IglooSimulation = {
@@ -95,6 +106,9 @@ function initIglooWave(elements: HTMLElement[]): void {
   if (!elements.length) return;
 
   const glyphs: IglooGlyph[] = [];
+  const owners: IglooOwner[] = elements.map((el) => ({ el, visible: false }));
+  const atlasHost = elements[0].closest<HTMLElement>("#faq") ?? elements[0].parentElement;
+  const atlas = atlasHost ? createIglooGlyphAtlas(atlasHost) : null;
   const simulation: IglooSimulation = {
     width: 2,
     height: 2,
@@ -116,7 +130,7 @@ function initIglooWave(elements: HTMLElement[]): void {
   };
   let raf = 0;
 
-  const wrapTextNode = (node: Text) => {
+  const wrapTextNode = (node: Text, owner: IglooOwner) => {
     const text = node.textContent ?? "";
     const fragment = document.createDocumentFragment();
 
@@ -138,7 +152,25 @@ function initIglooWave(elements: HTMLElement[]): void {
         glyph.style.setProperty("--igloo-translucency", "0");
         glyph.style.setProperty("--igloo-face-opacity", "1");
         word.append(glyph);
-        glyphs.push({ el: glyph, light: 0, translucency: 0 });
+        glyphs.push({
+          el: glyph,
+          character,
+          light: 0,
+          translucency: 0,
+          faceOpacity: 1,
+          owner,
+          atlasAmount: 0,
+          atlasFrame: 0,
+          atlasFont: "",
+          atlasAdvance: 0,
+          atlasAscent: 0,
+          atlasDescent: 0,
+          atlasVisible: false,
+          atlasLeft: 0,
+          atlasTop: 0,
+          atlasWidth: 0,
+          atlasHeight: 0,
+        });
       });
       fragment.append(word);
     });
@@ -146,7 +178,7 @@ function initIglooWave(elements: HTMLElement[]): void {
     node.replaceWith(fragment);
   };
 
-  elements.forEach((element) => {
+  elements.forEach((element, elementIndex) => {
     if (element.dataset.iglooGlyphs === "1") return;
     const originalText = (element.textContent ?? "").trim();
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -157,7 +189,7 @@ function initIglooWave(elements: HTMLElement[]): void {
       if ((current.textContent ?? "").trim()) textNodes.push(current);
     }
 
-    textNodes.forEach(wrapTextNode);
+    textNodes.forEach((node) => wrapTextNode(node, owners[elementIndex]));
     if (originalText && !element.hasAttribute("aria-label")) {
       element.setAttribute("aria-label", originalText);
     }
@@ -165,6 +197,8 @@ function initIglooWave(elements: HTMLElement[]): void {
   });
 
   const resize = () => {
+    atlas?.resize();
+    atlas?.measure(glyphs);
     const width = Math.max(2, Math.floor(window.innerWidth / FIELD_SCALE));
     const height = Math.max(2, Math.floor(window.innerHeight / FIELD_SCALE));
     if (width === simulation.width && height === simulation.height) return;
@@ -270,27 +304,48 @@ function initIglooWave(elements: HTMLElement[]): void {
 
   const updateGlyphs = () => {
     const { width, height, field, rim, rimTrail } = simulation;
-    glyphs.forEach((glyph) => {
-      const bounds = glyph.el.getBoundingClientRect();
-      let light = 0;
-      let translucency = 0;
 
-      if (
+    owners.forEach((owner) => {
+      if (owner.el.closest("[hidden]")) {
+        owner.visible = false;
+        return;
+      }
+      const bounds = owner.el.getBoundingClientRect();
+      owner.visible =
+        bounds.width > 0 &&
+        bounds.height > 0 &&
         bounds.bottom >= 0 &&
         bounds.top <= window.innerHeight &&
         bounds.right >= 0 &&
-        bounds.left <= window.innerWidth
-      ) {
+        bounds.left <= window.innerWidth;
+    });
+
+    glyphs.forEach((glyph) => {
+      let light = 0;
+      let translucency = 0;
+      let atlasAmount = 0;
+
+      if (glyph.owner.visible) {
+        const bounds = glyph.el.getBoundingClientRect();
+        glyph.atlasVisible = true;
+        glyph.atlasLeft = bounds.left;
+        glyph.atlasTop = bounds.top;
+        glyph.atlasWidth = bounds.width;
+        glyph.atlasHeight = bounds.height;
         const x = ((bounds.left + bounds.width * 0.5) / window.innerWidth) * (width - 1);
         const y = ((bounds.top + bounds.height * 0.5) / window.innerHeight) * (height - 1);
         const intensity = sampleField(field, width, height, x, y);
         const rimValue = Math.max(0, sampleField(rim, width, height, x, y));
         const trailValue = Math.max(0, sampleField(rimTrail, width, height, x, y));
         light = clamp((intensity - LIGHT_START) / (LIGHT_END - LIGHT_START));
-        // O canal de borda reproduz a pelicula translucida da frente da onda,
-        // sem usar os frames de atlas que deformavam os caracteres no original.
-        translucency = clamp(Math.max(rimValue * 4.6, trailValue * 2.15));
+        atlasAmount = clamp(rimValue * 4.6);
+        translucency = Math.max(atlasAmount, clamp(trailValue * 2.15));
+      } else {
+        glyph.atlasVisible = false;
       }
+
+      glyph.atlasAmount = atlasAmount;
+      glyph.atlasFrame = Math.floor(atlasAmount * 5 * 5.654) % 8;
 
       if (Math.abs(light - glyph.light) > 0.004 || (light === 0 && glyph.light !== 0)) {
         glyph.el.style.setProperty("--igloo-light", light.toFixed(3));
@@ -302,17 +357,29 @@ function initIglooWave(elements: HTMLElement[]): void {
         (translucency === 0 && glyph.translucency !== 0)
       ) {
         const veilOpacity = translucency * 0.84;
-        const faceOpacity = 1 - translucency * 0.58;
         glyph.el.style.setProperty("--igloo-translucency", veilOpacity.toFixed(3));
-        glyph.el.style.setProperty("--igloo-face-opacity", faceOpacity.toFixed(3));
         glyph.translucency = translucency;
       }
+
+      const faceOpacity = atlas
+        ? Math.max(0.08, 1 - atlasAmount * 1.12)
+        : 1 - translucency * 0.58;
+      if (
+        Math.abs(faceOpacity - glyph.faceOpacity) > 0.004 ||
+        (faceOpacity === 1 && glyph.faceOpacity !== 1)
+      ) {
+        glyph.el.style.setProperty("--igloo-face-opacity", faceOpacity.toFixed(3));
+        glyph.faceOpacity = faceOpacity;
+      }
     });
+
+    atlas?.render(glyphs);
   };
 
   const frame = (time: number) => {
     if (document.hidden) {
-      raf = requestAnimationFrame(frame);
+      atlas?.clear();
+      raf = 0;
       return;
     }
 
@@ -342,6 +409,9 @@ function initIglooWave(elements: HTMLElement[]): void {
   };
 
   resize();
+  document.fonts?.ready.then(() => {
+    atlas?.measure(glyphs);
+  });
   window.addEventListener("resize", resize, { passive: true });
   window.addEventListener(
     "pointermove",
