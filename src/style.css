@@ -1672,19 +1672,22 @@ ol {
 .igloo-glyph {
   --igloo-light: 0;
   --igloo-translucency: 0;
+  --igloo-face-opacity: 1;
   position: relative;
   display: inline-block;
+  opacity: var(--igloo-face-opacity);
 }
 .igloo-glyph::before {
   content: attr(data-char);
   position: absolute;
   inset: 0;
   z-index: 2;
-  color: rgba(238, 246, 250, 0.76);
-  opacity: calc(var(--igloo-translucency) * 0.48);
-  filter: blur(calc(var(--igloo-translucency) * 0.42px));
-  text-shadow: 0 0 calc(var(--igloo-translucency) * 0.34em)
-    rgba(224, 240, 248, 0.34);
+  color: rgba(235, 244, 248, 0.82);
+  opacity: var(--igloo-translucency);
+  filter: blur(0.35px);
+  text-shadow:
+    0 0 0.18em rgba(235, 246, 250, 0.68),
+    0 0 0.58em rgba(174, 221, 235, 0.34);
   pointer-events: none;
 }
 .igloo-glyph::after {

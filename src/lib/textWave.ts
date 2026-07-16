@@ -136,6 +136,7 @@ function initIglooWave(elements: HTMLElement[]): void {
         glyph.dataset.char = character;
         glyph.style.setProperty("--igloo-light", "0");
         glyph.style.setProperty("--igloo-translucency", "0");
+        glyph.style.setProperty("--igloo-face-opacity", "1");
         word.append(glyph);
         glyphs.push({ el: glyph, light: 0, translucency: 0 });
       });
@@ -300,7 +301,10 @@ function initIglooWave(elements: HTMLElement[]): void {
         Math.abs(translucency - glyph.translucency) > 0.004 ||
         (translucency === 0 && glyph.translucency !== 0)
       ) {
-        glyph.el.style.setProperty("--igloo-translucency", translucency.toFixed(3));
+        const veilOpacity = translucency * 0.84;
+        const faceOpacity = 1 - translucency * 0.58;
+        glyph.el.style.setProperty("--igloo-translucency", veilOpacity.toFixed(3));
+        glyph.el.style.setProperty("--igloo-face-opacity", faceOpacity.toFixed(3));
         glyph.translucency = translucency;
       }
     });
