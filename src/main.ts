@@ -3,6 +3,7 @@
 import "./style.css";
 import "./emoji-motion.css";
 import "./restaurant-menu.css";
+import "./storefront-demo.css";
 
 import { Hero } from "./components/Hero";
 import {
@@ -29,6 +30,7 @@ import { initHeroBlob } from "./components/HeroBlob";
 import { FlowLines, initFlowLines } from "./components/FlowLines";
 import { ModalShell, initModal } from "./components/Modal";
 import { RestaurantMenu, initRestaurantMenu } from "./components/RestaurantMenu";
+import { StorefrontDemo, initStorefrontDemo } from "./components/StorefrontDemo";
 import { Menu, initMenu } from "./components/Menu";
 import { WhatsAppFab } from "./components/WhatsAppFab";
 import { initAnalytics } from "./lib/analytics";
@@ -64,6 +66,7 @@ if (app) {
     Footer(),
     ModalShell(),
     RestaurantMenu(),
+    StorefrontDemo(),
     Menu(),
     WhatsAppFab(),
   ].join("");
@@ -89,6 +92,7 @@ if (app) {
   safe("heroBlob", initHeroBlob);
   safe("modal", initModal);
   safe("restaurantMenu", initRestaurantMenu);
+  safe("storefrontDemo", initStorefrontDemo);
   safe("packages", initPackages);
   safe("faq", initFAQ);
   safe("contact", initContact);

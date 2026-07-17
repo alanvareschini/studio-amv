@@ -27,6 +27,10 @@ const problemMotions = ["scan", "buzz", "worry", "tick"] as const;
 const solutionMotions = ["orbit", "check", "picture", "pin", "talk", "buzz"] as const;
 const trustMotions = ["unlock", "spark", "access", "puzzle"] as const;
 const portfolioMotions = ["barber", "sparkle", "serve", "flex", "shop", "chart"] as const;
+const portfolioDemos: Record<string, { scene: string; action: string }> = {
+  Restaurante: { scene: "restaurant-menu", action: "Abrir cardápio" },
+  "Loja local": { scene: "storefront-demo", action: "Abrir vitrine" },
+};
 
 // Prova de valor rápida (faixa logo abaixo da hero)
 export function Proof(): string {
@@ -160,18 +164,17 @@ export function Portfolio(): string {
         <div class="grid grid--cards">
           ${portfolio
             .map(
-              (item, i) => /* html */ `
-            <article class="card card--demo card--accent-${item.accent}" data-icon-motion="${portfolioMotions[i]}" ${item.segment === "Restaurante" ? 'data-demo-scene="restaurant-menu"' : ""} data-reveal data-reveal-delay="${(i % 3) * 60}">
+              (item, i) => {
+                const demo = portfolioDemos[item.segment];
+                return /* html */ `
+            <article class="card card--demo card--accent-${item.accent}" data-icon-motion="${portfolioMotions[i]}" ${demo ? `data-demo-scene="${demo.scene}"` : ""} data-reveal data-reveal-delay="${(i % 3) * 60}">
               <div class="card--demo__thumb" aria-hidden="true">${renderMotionIcon(portfolioMotions[i], item.icon)}</div>
               <span class="tag">${item.segment}</span>
               <h3 class="card__title">${item.title}</h3>
               <p class="card__text">${item.description}</p>
-              ${
-                item.segment === "Restaurante"
-                  ? `<span class="card-demo__action">Abrir cardápio <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13m-4-4 4 4-4 4"/></svg></span>`
-                  : ""
-              }
-            </article>`
+              ${demo ? `<span class="card-demo__action">${demo.action} <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13m-4-4 4 4-4 4"/></svg></span>` : ""}
+            </article>`;
+              },
             )
             .join("")}
         </div>
