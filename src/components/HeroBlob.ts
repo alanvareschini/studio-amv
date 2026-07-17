@@ -51,6 +51,7 @@ export function initHeroBlob(): void {
     let angle = targetAngle;
     let lastTs: number | null = null;
     let lastShadowIsDaytime = theme === "light";
+    let raf = 0;
 
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
     const hexRgb = (h: string): [number, number, number] => [
@@ -104,19 +105,30 @@ export function initHeroBlob(): void {
     };
 
     const loop = (ts: number) => {
+      raf = 0;
       // aba oculta: não anima (economiza CPU/bateria); ao voltar não dá salto
       if (document.hidden) {
         lastTs = null;
-        requestAnimationFrame(loop);
         return;
       }
-      if (lastTs !== null) {
-        const dt = Math.min(ts - lastTs, 50);
-        angle += (targetAngle - angle) * (1 - Math.pow(0.986, dt));
-        apply(angle);
-      }
+      if (lastTs === null) lastTs = ts;
+      const dt = Math.min(ts - lastTs, 50);
       lastTs = ts;
-      requestAnimationFrame(loop);
+      angle += (targetAngle - angle) * (1 - Math.pow(0.986, dt));
+      if (Math.abs(targetAngle - angle) < 0.0005) {
+        angle = targetAngle;
+        apply(angle);
+        lastTs = null;
+        return;
+      }
+      apply(angle);
+      raf = requestAnimationFrame(loop);
+    };
+
+    const startLoop = () => {
+      if (raf || document.hidden) return;
+      lastTs = null;
+      raf = requestAnimationFrame(loop);
     };
 
     const toggle = () => {
@@ -128,6 +140,7 @@ export function initHeroBlob(): void {
         /* ignora */
       }
       syncTheme(nextTheme);
+      startLoop();
       window.dispatchEvent(new CustomEvent("themechange", { detail: nextTheme }));
     };
 
@@ -140,9 +153,13 @@ export function initHeroBlob(): void {
     });
     window.addEventListener("themechange", ((e: CustomEvent<"light" | "dark">) => {
       syncTheme(e.detail === "light" ? "light" : "dark");
+      startLoop();
     }) as EventListener);
+    window.addEventListener("resize", () => apply(angle), { passive: true });
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && Math.abs(targetAngle - angle) >= 0.0005) startLoop();
+    });
 
     apply(angle);
-    requestAnimationFrame(loop);
   });
 }

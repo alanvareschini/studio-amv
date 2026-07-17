@@ -146,6 +146,7 @@ class ChaosButtonGL {
   private visible = true;
   private contextLost = false;
   private light = document.documentElement.dataset.theme === "light" ? 1 : 0;
+  private raf = 0;
 
   constructor(button: HTMLElement) {
     this.button = button;
@@ -159,13 +160,18 @@ class ChaosButtonGL {
       (e) => {
         e.preventDefault();
         this.contextLost = true;
+        if (this.raf) cancelAnimationFrame(this.raf);
+        this.raf = 0;
       },
       false
     );
     this.canvas.addEventListener(
       "webglcontextrestored",
       () => {
-        if (this.setupWebGL()) this.contextLost = false;
+        if (this.setupWebGL()) {
+          this.contextLost = false;
+          this.scheduleRender();
+        }
       },
       false
     );
@@ -179,7 +185,7 @@ class ChaosButtonGL {
     });
     this.setupEvents();
     this.observeVisibility();
-    requestAnimationFrame(this.render);
+    this.scheduleRender();
   }
 
   private setupWebGL(): boolean {
@@ -272,18 +278,41 @@ class ChaosButtonGL {
       },
       { passive: true }
     );
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        if (this.raf) cancelAnimationFrame(this.raf);
+        this.raf = 0;
+        return;
+      }
+      this.last = performance.now() / 1000;
+      this.scheduleRender();
+    });
   }
 
   private observeVisibility(): void {
     if (!("IntersectionObserver" in window)) return;
     new IntersectionObserver((entries) => {
-      this.visible = entries[0].isIntersecting;
+      const visible = entries[0].isIntersecting;
+      if (visible === this.visible) return;
+      this.visible = visible;
+      if (visible) {
+        this.last = performance.now() / 1000;
+        this.scheduleRender();
+      } else {
+        if (this.raf) cancelAnimationFrame(this.raf);
+        this.raf = 0;
+      }
     }).observe(this.button);
   }
 
+  private scheduleRender(): void {
+    if (this.raf || !this.gl || !this.visible || this.contextLost || document.hidden) return;
+    this.raf = requestAnimationFrame(this.render);
+  }
+
   private render = (): void => {
-    requestAnimationFrame(this.render);
-    if (!this.gl || !this.visible || this.contextLost) {
+    this.raf = 0;
+    if (!this.gl || !this.visible || this.contextLost || document.hidden) {
       this.last = performance.now() / 1000;
       return;
     }
@@ -312,6 +341,7 @@ class ChaosButtonGL {
     gl.uniform1f(this.uniforms.noiseType, 1.0); // trig
     gl.uniform1f(this.uniforms.light, this.light);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    this.scheduleRender();
   };
 }
 

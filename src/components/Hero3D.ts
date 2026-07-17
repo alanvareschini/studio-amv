@@ -14,6 +14,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 const SIM = 128;
+const fontUrl = new URL("../assets/font.json", import.meta.url).href;
 
 class LetterScene {
   private renderer: THREE.WebGLRenderer;
@@ -176,7 +177,7 @@ class LetterScene {
     this.updateResolution();
 
     new FontLoader().load(
-      "/font.json",
+      fontUrl,
       (font) => {
         this.build(font);
         requestAnimationFrame(onReady);
