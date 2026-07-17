@@ -210,31 +210,30 @@ export function initRestaurantMenu(): void {
   let brochureOpened = false;
   let isUnfolding = false;
   let activeCoverPointer: number | null = null;
-  let coverMotionFrame = 0;
   let coverPointerStartX = 0;
   let coverPointerStartY = 0;
   let suppressCoverClick = false;
   let afterClose: (() => void) | null = null;
   let previousFocus: HTMLElement | null = null;
 
+  const coverRotateX = gsap.quickTo(cover, "rotationX", { duration: 0.16, ease: "power2.out" });
+  const coverRotateY = gsap.quickTo(cover, "rotationY", { duration: 0.16, ease: "power2.out" });
+
   const resetCoverMotion = (immediate = false) => {
-    cancelAnimationFrame(coverMotionFrame);
-    coverMotionFrame = 0;
     activeCoverPointer = null;
     cover.classList.remove("is-following");
     cover.style.removeProperty("--rm-light-x");
     cover.style.removeProperty("--rm-light-y");
     if (immediate) {
+      gsap.killTweensOf(cover, "x,y,rotationX,rotationY");
       gsap.set(cover, { x: 0, y: 0, rotationX: 0, rotationY: 0 });
       return;
     }
     gsap.to(cover, {
-      x: 0,
-      y: 0,
       rotationX: 0,
       rotationY: 0,
-      duration: 0.32,
-      ease: "power3.out",
+      duration: 0.38,
+      ease: "back.out(1.35)",
       overwrite: "auto",
     });
   };
@@ -249,17 +248,8 @@ export function initRestaurantMenu(): void {
     cover.classList.add("is-following");
     cover.style.setProperty("--rm-light-x", `${((px + 1) * 50).toFixed(1)}%`);
     cover.style.setProperty("--rm-light-y", `${((py + 1) * 50).toFixed(1)}%`);
-    cancelAnimationFrame(coverMotionFrame);
-    coverMotionFrame = requestAnimationFrame(() => {
-      coverMotionFrame = 0;
-      gsap.set(cover, {
-        rotationX: -py * 5.5 * touchFactor,
-        rotationY: px * 6.5 * touchFactor,
-        x: px * 7 * touchFactor,
-        y: py * 5 * touchFactor,
-        overwrite: "auto",
-      });
-    });
+    coverRotateX(-py * 5.5 * touchFactor);
+    coverRotateY(px * 6.5 * touchFactor);
   };
 
   const cardTransform = (element: HTMLElement) => {
@@ -298,8 +288,6 @@ export function initRestaurantMenu(): void {
     brochureOpened = false;
     isUnfolding = false;
     activeCoverPointer = null;
-    cancelAnimationFrame(coverMotionFrame);
-    coverMotionFrame = 0;
     suppressCoverClick = false;
     releaseDemoScene(SCENE_ID);
     const focusTarget = previousFocus;
