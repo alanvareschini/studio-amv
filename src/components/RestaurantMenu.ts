@@ -51,7 +51,8 @@ const BAR_SECTIONS: MenuSection[] = [
 const wave = () => /* html */ `
   <svg class="rm-wave" viewBox="0 0 84 8" preserveAspectRatio="none" aria-hidden="true">
     <g class="rm-wave__track">
-      <path d="M-84 4Q-81 0-78 4T-72 4T-66 4T-60 4T-54 4T-48 4T-42 4T-36 4T-30 4T-24 4T-18 4T-12 4T-6 4T0 4T6 4T12 4T18 4T24 4T30 4T36 4T42 4T48 4T54 4T60 4T66 4T72 4T78 4T84 4T90 4" />
+      <path d="M0 4Q3 0 6 4T12 4T18 4T24 4T30 4T36 4T42 4T48 4T54 4T60 4T66 4T72 4T78 4T84 4" />
+      <path d="M0 4Q3 0 6 4T12 4T18 4T24 4T30 4T36 4T42 4T48 4T54 4T60 4T66 4T72 4T78 4T84 4" transform="translate(84 0)" />
     </g>
   </svg>`;
 
@@ -209,18 +210,16 @@ export function initRestaurantMenu(): void {
   let brochureOpened = false;
   let isUnfolding = false;
   let activeCoverPointer: number | null = null;
+  let coverMotionFrame = 0;
   let coverPointerStartX = 0;
   let coverPointerStartY = 0;
   let suppressCoverClick = false;
   let afterClose: (() => void) | null = null;
   let previousFocus: HTMLElement | null = null;
 
-  const coverRotateX = gsap.quickTo(cover, "rotationX", { duration: 0.42, ease: "power3.out" });
-  const coverRotateY = gsap.quickTo(cover, "rotationY", { duration: 0.42, ease: "power3.out" });
-  const coverX = gsap.quickTo(cover, "x", { duration: 0.42, ease: "power3.out" });
-  const coverY = gsap.quickTo(cover, "y", { duration: 0.42, ease: "power3.out" });
-
   const resetCoverMotion = (immediate = false) => {
+    cancelAnimationFrame(coverMotionFrame);
+    coverMotionFrame = 0;
     activeCoverPointer = null;
     cover.classList.remove("is-following");
     cover.style.removeProperty("--rm-light-x");
@@ -229,10 +228,15 @@ export function initRestaurantMenu(): void {
       gsap.set(cover, { x: 0, y: 0, rotationX: 0, rotationY: 0 });
       return;
     }
-    coverRotateX(0);
-    coverRotateY(0);
-    coverX(0);
-    coverY(0);
+    gsap.to(cover, {
+      x: 0,
+      y: 0,
+      rotationX: 0,
+      rotationY: 0,
+      duration: 0.32,
+      ease: "power3.out",
+      overwrite: "auto",
+    });
   };
 
   const moveCover = (clientX: number, clientY: number, pointerType: string) => {
@@ -245,10 +249,17 @@ export function initRestaurantMenu(): void {
     cover.classList.add("is-following");
     cover.style.setProperty("--rm-light-x", `${((px + 1) * 50).toFixed(1)}%`);
     cover.style.setProperty("--rm-light-y", `${((py + 1) * 50).toFixed(1)}%`);
-    coverRotateX(-py * 5.5 * touchFactor);
-    coverRotateY(px * 6.5 * touchFactor);
-    coverX(px * 7 * touchFactor);
-    coverY(py * 5 * touchFactor);
+    cancelAnimationFrame(coverMotionFrame);
+    coverMotionFrame = requestAnimationFrame(() => {
+      coverMotionFrame = 0;
+      gsap.set(cover, {
+        rotationX: -py * 5.5 * touchFactor,
+        rotationY: px * 6.5 * touchFactor,
+        x: px * 7 * touchFactor,
+        y: py * 5 * touchFactor,
+        overwrite: "auto",
+      });
+    });
   };
 
   const cardTransform = (element: HTMLElement) => {
@@ -287,6 +298,8 @@ export function initRestaurantMenu(): void {
     brochureOpened = false;
     isUnfolding = false;
     activeCoverPointer = null;
+    cancelAnimationFrame(coverMotionFrame);
+    coverMotionFrame = 0;
     suppressCoverClick = false;
     releaseDemoScene(SCENE_ID);
     const focusTarget = previousFocus;

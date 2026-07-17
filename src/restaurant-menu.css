@@ -444,7 +444,7 @@ body.demo-scene-open {
 }
 
 .rm-wave__track {
-  animation: rm-wave-flow 0.78s linear infinite paused;
+  animation: rm-wave-flow 8.4s linear infinite paused;
   transform-box: fill-box;
   will-change: transform;
 }
@@ -739,7 +739,7 @@ body.demo-scene-open {
 
 @keyframes rm-wave-flow {
   to {
-    transform: translateX(-6px);
+    transform: translateX(-50%);
   }
 }
 
