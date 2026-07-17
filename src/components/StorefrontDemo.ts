@@ -3,68 +3,42 @@ import { claimDemoScene, releaseDemoScene } from "../lib/demoSceneManager";
 
 const SCENE_ID = "storefront-demo";
 
-type ProductKind = "lamp" | "vase" | "bag" | "set";
-
 interface StoreProduct {
   name: string;
   category: string;
   price: string;
-  kind: ProductKind;
+  slug: string;
 }
 
 const PRODUCTS: StoreProduct[] = [
-  { name: "Luz Horizonte", category: "Iluminação", price: "R$ 289", kind: "lamp" },
-  { name: "Vaso Maré", category: "Cerâmica local", price: "R$ 148", kind: "vase" },
-  { name: "Bolsa Traço", category: "Feito à mão", price: "R$ 176", kind: "bag" },
-  { name: "Ritual da Casa", category: "Bem-estar", price: "R$ 124", kind: "set" },
+  { name: "Arandela Horizonte", category: "Iluminação artesanal", price: "R$ 289", slug: "arandela-horizonte" },
+  { name: "Lanterna Nômade", category: "Luz portátil", price: "R$ 239", slug: "lanterna-nomade" },
+  { name: "Vaso Maré", category: "Cerâmica iluminada", price: "R$ 198", slug: "vaso-mare" },
+  { name: "Ritual da Casa", category: "Bem-estar", price: "R$ 164", slug: "ritual-da-casa" },
 ];
 
-const productArtwork = (kind: ProductKind) => {
-  if (kind === "lamp") {
-    return /* html */ `
-      <svg viewBox="0 0 320 360" aria-hidden="true">
-        <path class="sf-art__line" d="M160 22v91"/>
-        <path class="sf-art__solid" d="M94 161c5-48 26-75 66-75s61 27 66 75H94Z"/>
-        <circle class="sf-art__light" cx="160" cy="161" r="14"/>
-        <path class="sf-art__beam" d="m105 174-33 131h176l-33-131Z"/>
-        <ellipse class="sf-art__shadow" cx="160" cy="316" rx="92" ry="15"/>
-      </svg>`;
-  }
-  if (kind === "vase") {
-    return /* html */ `
-      <svg viewBox="0 0 320 360" aria-hidden="true">
-        <path class="sf-art__stem" d="M160 177c-4-65 14-104 54-132M164 125c-39-9-62-34-67-74 39 6 62 30 67 74Zm14-30c14-30 37-45 70-44-10 34-34 49-70 44Z"/>
-        <path class="sf-art__solid" d="M101 163h118l-12 139c-2 22-20 39-42 39h-10c-22 0-40-17-42-39l-12-139Z"/>
-        <path class="sf-art__detail" d="M112 214c34 15 66 15 96 0M109 261c37 15 71 15 102 0"/>
-        <ellipse class="sf-art__shadow" cx="160" cy="337" rx="78" ry="12"/>
-      </svg>`;
-  }
-  if (kind === "bag") {
-    return /* html */ `
-      <svg viewBox="0 0 320 360" aria-hidden="true">
-        <path class="sf-art__handle" d="M113 150v-35c0-35 18-57 47-57s47 22 47 57v35"/>
-        <path class="sf-art__solid" d="m83 139 17 187h120l17-187H83Z"/>
-        <path class="sf-art__detail" d="M92 194h136M97 244h126"/>
-        <path class="sf-art__mark" d="m143 281 17-18 17 18-17 17-17-17Z"/>
-        <ellipse class="sf-art__shadow" cx="160" cy="334" rx="82" ry="11"/>
-      </svg>`;
-  }
-  return /* html */ `
-    <svg viewBox="0 0 320 360" aria-hidden="true">
-      <ellipse class="sf-art__shadow" cx="160" cy="327" rx="95" ry="14"/>
-      <rect class="sf-art__solid" x="74" y="222" width="172" height="96" rx="13"/>
-      <rect class="sf-art__solid sf-art__solid--alt" x="94" y="150" width="132" height="78" rx="11"/>
-      <path class="sf-art__detail" d="M94 183h132M74 265h172"/>
-      <path class="sf-art__flame" d="M159 146c-19-21 11-31 0-57 30 22 33 42 0 57Z"/>
-      <path class="sf-art__line" d="M160 90V48m-28 51-16-30m72 30 16-30"/>
-    </svg>`;
-};
-
 const renderProduct = (product: StoreProduct, index: number) => /* html */ `
-  <article class="sf-product" data-sf-product="${index}">
+  <article class="sf-product" data-sf-product="${index}" data-sf-product-kind="${product.slug}">
     <figure class="sf-product__visual">
       <span class="sf-product__number">0${index + 1}</span>
-      ${productArtwork(product.kind)}
+      <img
+        class="sf-product__image sf-product__image--off"
+        data-sf-image
+        data-sf-src="/storefront/${product.slug}-off.webp"
+        width="1122"
+        height="1402"
+        alt=""
+        decoding="async"
+      >
+      <img
+        class="sf-product__image sf-product__image--on"
+        data-sf-image
+        data-sf-src="/storefront/${product.slug}-on.webp"
+        width="1122"
+        height="1402"
+        alt=""
+        decoding="async"
+      >
       <span class="sf-product__availability">Peça disponível</span>
     </figure>
     <div class="sf-product__meta">
@@ -151,14 +125,37 @@ export function initStorefrontDemo(): void {
   document.body.appendChild(scene);
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const products = Array.from(scene.querySelectorAll<HTMLElement>(".sf-product"));
+  const productImages = Array.from(scene.querySelectorAll<HTMLImageElement>("[data-sf-image]"));
   const toggles = Array.from(scene.querySelectorAll<HTMLButtonElement>("[data-sf-toggle]"));
   const count = scene.querySelector<HTMLElement>("[data-sf-count]");
   let timeline: gsap.core.Timeline | null = null;
+  let imageLoadPromise: Promise<void> | null = null;
   let isOpen = false;
   let isClosing = false;
   let selected = 0;
   let previousFocus: HTMLElement | null = null;
   let afterClose: (() => void) | null = null;
+
+  const loadProductImages = () => {
+    if (imageLoadPromise) return imageLoadPromise;
+    scene.classList.add("is-images-loading");
+    imageLoadPromise = Promise.allSettled(
+      productImages.map(async (image) => {
+        const source = image.dataset.sfSrc;
+        if (!source) return;
+        image.src = source;
+        try {
+          await image.decode();
+        } catch {
+          // A failed decode still lets the browser render a successfully loaded image.
+        }
+      }),
+    ).then(() => {
+      scene.classList.remove("is-images-loading");
+      scene.classList.add("is-images-ready");
+    });
+    return imageLoadPromise;
+  };
 
   const cardTransform = () => {
     const cardRect = trigger.getBoundingClientRect();
@@ -214,6 +211,7 @@ export function initStorefrontDemo(): void {
 
   const openScene = () => {
     if (isOpen || isClosing) return;
+    void loadProductImages();
     previousFocus = trigger;
     claimDemoScene({ id: SCENE_ID, deactivate: closeScene });
     isOpen = true;
@@ -267,6 +265,8 @@ export function initStorefrontDemo(): void {
   trigger.setAttribute("aria-haspopup", "dialog");
   trigger.setAttribute("aria-controls", "storefrontDemoScene");
   trigger.setAttribute("aria-label", "Abrir modelo de vitrine para loja local");
+  trigger.addEventListener("pointerenter", () => void loadProductImages(), { passive: true });
+  trigger.addEventListener("focus", () => void loadProductImages());
   trigger.addEventListener("click", openScene);
   trigger.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
