@@ -161,11 +161,16 @@ export function Portfolio(): string {
           ${portfolio
             .map(
               (item, i) => /* html */ `
-            <article class="card card--demo card--accent-${item.accent}" data-icon-motion="${portfolioMotions[i]}" data-reveal data-reveal-delay="${(i % 3) * 60}">
+            <article class="card card--demo card--accent-${item.accent}" data-icon-motion="${portfolioMotions[i]}" ${item.segment === "Restaurante" ? 'data-demo-scene="restaurant-menu"' : ""} data-reveal data-reveal-delay="${(i % 3) * 60}">
               <div class="card--demo__thumb" aria-hidden="true">${renderMotionIcon(portfolioMotions[i], item.icon)}</div>
               <span class="tag">${item.segment}</span>
               <h3 class="card__title">${item.title}</h3>
               <p class="card__text">${item.description}</p>
+              ${
+                item.segment === "Restaurante"
+                  ? `<span class="card-demo__action">Abrir cardápio <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13m-4-4 4 4-4 4"/></svg></span>`
+                  : ""
+              }
             </article>`
             )
             .join("")}

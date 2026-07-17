@@ -2,6 +2,7 @@
 // as interações (menu, accordion, formulário, animações).
 import "./style.css";
 import "./emoji-motion.css";
+import "./restaurant-menu.css";
 
 import { Hero } from "./components/Hero";
 import {
@@ -27,6 +28,7 @@ import { initHeroScroll } from "./lib/heroScroll";
 import { initHeroBlob } from "./components/HeroBlob";
 import { FlowLines, initFlowLines } from "./components/FlowLines";
 import { ModalShell, initModal } from "./components/Modal";
+import { RestaurantMenu, initRestaurantMenu } from "./components/RestaurantMenu";
 import { Menu, initMenu } from "./components/Menu";
 import { WhatsAppFab } from "./components/WhatsAppFab";
 import { initAnalytics } from "./lib/analytics";
@@ -61,6 +63,7 @@ if (app) {
     `</main>`,
     Footer(),
     ModalShell(),
+    RestaurantMenu(),
     Menu(),
     WhatsAppFab(),
   ].join("");
@@ -85,6 +88,7 @@ if (app) {
   safe("menu", initMenu);
   safe("heroBlob", initHeroBlob);
   safe("modal", initModal);
+  safe("restaurantMenu", initRestaurantMenu);
   safe("packages", initPackages);
   safe("faq", initFAQ);
   safe("contact", initContact);
