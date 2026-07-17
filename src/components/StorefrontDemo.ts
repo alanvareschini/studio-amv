@@ -254,6 +254,10 @@ export function initStorefrontDemo(): void {
       else scene.dataset.storeLights = next;
       button.setAttribute("aria-pressed", String(next === "dark" || next === "on"));
     };
+    if (kind === "lights") {
+      update();
+      return;
+    }
     const documentWithTransition = document as Document & { startViewTransition?: (callback: () => void) => void };
     if (!reducedMotion.matches && documentWithTransition.startViewTransition) {
       documentWithTransition.startViewTransition(update);
