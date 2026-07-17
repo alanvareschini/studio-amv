@@ -50,7 +50,9 @@ const BAR_SECTIONS: MenuSection[] = [
 
 const wave = () => /* html */ `
   <svg class="rm-wave" viewBox="0 0 84 8" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0 4Q3 0 6 4T12 4T18 4T24 4T30 4T36 4T42 4T48 4T54 4T60 4T66 4T72 4T78 4T84 4" />
+    <g class="rm-wave__track">
+      <path d="M-84 4Q-81 0-78 4T-72 4T-66 4T-60 4T-54 4T-48 4T-42 4T-36 4T-30 4T-24 4T-18 4T-12 4T-6 4T0 4T6 4T12 4T18 4T24 4T30 4T36 4T42 4T48 4T54 4T60 4T66 4T72 4T78 4T84 4T90 4" />
+    </g>
   </svg>`;
 
 const renderSection = (section: MenuSection) => /* html */ `
@@ -86,14 +88,14 @@ const brandArtwork = () => /* html */ `
       </linearGradient>
     </defs>
     <rect width="360" height="230" fill="url(#rm-art-grad)"/>
-    <path d="M0 181c78-24 126 7 196-20 61-24 105-13 164 5v64H0Z" fill="#173247" opacity=".9"/>
-    <ellipse cx="183" cy="142" rx="88" ry="34" fill="#f7f1e5" stroke="#244a63" stroke-width="3"/>
-    <ellipse cx="183" cy="137" rx="55" ry="19" fill="#dce9e5"/>
-    <path d="M142 132c18-14 55-15 82 1-17 13-60 17-82-1Z" fill="#2c6c67"/>
+    <path class="rm-art-table" d="M0 181c78-24 126 7 196-20 61-24 105-13 164 5v64H0Z" fill="#173247" opacity=".9"/>
+    <ellipse class="rm-art-plate" cx="183" cy="142" rx="88" ry="34" fill="#f7f1e5" stroke="#244a63" stroke-width="3"/>
+    <ellipse class="rm-art-plate rm-art-plate--inner" cx="183" cy="137" rx="55" ry="19" fill="#dce9e5"/>
+    <path class="rm-art-food" d="M142 132c18-14 55-15 82 1-17 13-60 17-82-1Z" fill="#2c6c67"/>
     <path d="M163 127c10 8 24 12 40 9M176 122c-2 9 2 16 9 20" fill="none" stroke="#d5b66f" stroke-width="3" stroke-linecap="round"/>
-    <path d="M80 74c22 20 33 49 30 88M91 96c-19-4-28-14-32-29 18 1 29 10 32 29Zm15 24c17-10 31-9 42-1-11 14-25 14-42 1Z" fill="none" stroke="#2c6c67" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M278 87v72M262 87h32l-7 25h-18Z" fill="none" stroke="#244a63" stroke-width="4" stroke-linejoin="round"/>
-    <circle cx="278" cy="99" r="7" fill="#d5b66f"/>
+    <path class="rm-art-plant" d="M80 74c22 20 33 49 30 88M91 96c-19-4-28-14-32-29 18 1 29 10 32 29Zm15 24c17-10 31-9 42-1-11 14-25 14-42 1Z" fill="none" stroke="#2c6c67" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path class="rm-art-glass" d="M278 87v72M262 87h32l-7 25h-18Z" fill="none" stroke="#244a63" stroke-width="4" stroke-linejoin="round"/>
+    <circle class="rm-art-drink" cx="278" cy="99" r="7" fill="#d5b66f"/>
   </svg>`;
 
 export function RestaurantMenu(): string {
@@ -206,8 +208,48 @@ export function initRestaurantMenu(): void {
   let isClosing = false;
   let brochureOpened = false;
   let isUnfolding = false;
+  let activeCoverPointer: number | null = null;
+  let coverPointerStartX = 0;
+  let coverPointerStartY = 0;
+  let suppressCoverClick = false;
   let afterClose: (() => void) | null = null;
   let previousFocus: HTMLElement | null = null;
+
+  const coverRotateX = gsap.quickTo(cover, "rotationX", { duration: 0.42, ease: "power3.out" });
+  const coverRotateY = gsap.quickTo(cover, "rotationY", { duration: 0.42, ease: "power3.out" });
+  const coverX = gsap.quickTo(cover, "x", { duration: 0.42, ease: "power3.out" });
+  const coverY = gsap.quickTo(cover, "y", { duration: 0.42, ease: "power3.out" });
+
+  const resetCoverMotion = (immediate = false) => {
+    activeCoverPointer = null;
+    cover.classList.remove("is-following");
+    cover.style.removeProperty("--rm-light-x");
+    cover.style.removeProperty("--rm-light-y");
+    if (immediate) {
+      gsap.set(cover, { x: 0, y: 0, rotationX: 0, rotationY: 0 });
+      return;
+    }
+    coverRotateX(0);
+    coverRotateY(0);
+    coverX(0);
+    coverY(0);
+  };
+
+  const moveCover = (clientX: number, clientY: number, pointerType: string) => {
+    if (!isOpen || brochureOpened || isClosing || isUnfolding || reducedMotion.matches) return;
+    const rect = cover.getBoundingClientRect();
+    const px = Math.max(-1, Math.min(1, ((clientX - rect.left) / rect.width) * 2 - 1));
+    const py = Math.max(-1, Math.min(1, ((clientY - rect.top) / rect.height) * 2 - 1));
+    const touchFactor = pointerType === "touch" ? 0.68 : 1;
+
+    cover.classList.add("is-following");
+    cover.style.setProperty("--rm-light-x", `${((px + 1) * 50).toFixed(1)}%`);
+    cover.style.setProperty("--rm-light-y", `${((py + 1) * 50).toFixed(1)}%`);
+    coverRotateX(-py * 5.5 * touchFactor);
+    coverRotateY(px * 6.5 * touchFactor);
+    coverX(px * 7 * touchFactor);
+    coverY(py * 5 * touchFactor);
+  };
 
   const cardTransform = (element: HTMLElement) => {
     const cardRect = trigger.getBoundingClientRect();
@@ -244,6 +286,8 @@ export function initRestaurantMenu(): void {
     isClosing = false;
     brochureOpened = false;
     isUnfolding = false;
+    activeCoverPointer = null;
+    suppressCoverClick = false;
     releaseDemoScene(SCENE_ID);
     const focusTarget = previousFocus;
     previousFocus = null;
@@ -265,6 +309,7 @@ export function initRestaurantMenu(): void {
     }
 
     isClosing = true;
+    resetCoverMotion(true);
     const targetElement = brochureOpened ? brochure : cover;
     const target = cardTransform(targetElement);
     timeline = gsap.timeline({ defaults: { overwrite: "auto" }, onComplete: finishClose });
@@ -295,6 +340,7 @@ export function initRestaurantMenu(): void {
     if (!isOpen || isClosing || brochureOpened || isUnfolding) return;
     timeline?.kill();
     timeline = null;
+    resetCoverMotion(true);
     brochureOpened = true;
     isUnfolding = true;
     scene.classList.add("is-brochure-open");
@@ -389,7 +435,46 @@ export function initRestaurantMenu(): void {
       openScene();
     }
   });
-  cover.addEventListener("click", openBrochure);
+  cover.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "mouse") return;
+    activeCoverPointer = event.pointerId;
+    coverPointerStartX = event.clientX;
+    coverPointerStartY = event.clientY;
+    suppressCoverClick = false;
+    cover.setPointerCapture(event.pointerId);
+    moveCover(event.clientX, event.clientY, event.pointerType);
+  });
+  cover.addEventListener(
+    "pointermove",
+    (event) => {
+      if (event.pointerType !== "mouse" && activeCoverPointer !== event.pointerId) return;
+      if (event.pointerType !== "mouse") {
+        const distance = Math.hypot(event.clientX - coverPointerStartX, event.clientY - coverPointerStartY);
+        if (distance > 9) suppressCoverClick = true;
+      }
+      moveCover(event.clientX, event.clientY, event.pointerType);
+    },
+    { passive: true },
+  );
+  cover.addEventListener("pointerleave", (event) => {
+    if (event.pointerType === "mouse") resetCoverMotion();
+  });
+  const finishCoverPointer = (event: PointerEvent) => {
+    if (event.pointerType === "mouse" || activeCoverPointer !== event.pointerId) return;
+    if (cover.hasPointerCapture(event.pointerId)) cover.releasePointerCapture(event.pointerId);
+    resetCoverMotion();
+    if (suppressCoverClick) window.setTimeout(() => (suppressCoverClick = false), 350);
+  };
+  cover.addEventListener("pointerup", finishCoverPointer);
+  cover.addEventListener("pointercancel", finishCoverPointer);
+  cover.addEventListener("click", (event) => {
+    if (suppressCoverClick) {
+      event.preventDefault();
+      suppressCoverClick = false;
+      return;
+    }
+    openBrochure();
+  });
 
   scene.querySelectorAll<HTMLElement>("[data-rm-close]").forEach((button) => {
     button.addEventListener("click", () => closeScene());

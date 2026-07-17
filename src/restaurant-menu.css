@@ -148,6 +148,8 @@ body.demo-scene-open {
 }
 
 .rm-cover {
+  --rm-light-x: 50%;
+  --rm-light-y: 50%;
   position: relative;
   z-index: 5;
   place-self: center;
@@ -167,7 +169,28 @@ body.demo-scene-open {
   color: var(--rm-ink);
   box-shadow: 0 34px 70px -25px rgba(0, 0, 0, 0.58), inset 0 1px rgba(255, 255, 255, 0.7);
   transform-style: preserve-3d;
+  touch-action: none;
   will-change: transform, opacity;
+}
+
+.rm-cover::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -1px;
+  background: radial-gradient(
+    circle at var(--rm-light-x) var(--rm-light-y),
+    rgba(255, 255, 255, 0.7),
+    rgba(255, 255, 255, 0.12) 22%,
+    transparent 48%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.rm-cover.is-following::before {
+  opacity: 0.55;
 }
 
 .rm-cover::after {
@@ -181,6 +204,18 @@ body.demo-scene-open {
 .rm-cover > * {
   position: relative;
   z-index: 1;
+}
+
+.rm-cover__title,
+.rm-cover__sub,
+.rm-cover__divider,
+.rm-cover__hint {
+  transform: translateZ(18px);
+}
+
+.rm-cover__art,
+.rm-cover__tagline {
+  transform: translateZ(10px);
 }
 
 .rm-cover > .rm-wave {
@@ -235,6 +270,24 @@ body.demo-scene-open {
 
 .rm-cover__art path:first-child {
   stroke: var(--rm-accent);
+}
+
+.rm-scene.is-open:not(.is-brochure-open) .rm-cover__art > * {
+  stroke-dasharray: 620;
+  stroke-dashoffset: 620;
+  animation: rm-cover-draw 1.35s 0.32s var(--ease) forwards;
+}
+
+.rm-scene.is-open:not(.is-brochure-open) .rm-cover__art > :nth-child(2) {
+  animation-delay: 0.48s;
+}
+
+.rm-scene.is-open:not(.is-brochure-open) .rm-cover__art > :nth-child(3) {
+  animation-delay: 0.58s;
+}
+
+.rm-scene.is-open:not(.is-brochure-open) .rm-cover__art > :last-child {
+  animation-delay: 0.66s;
 }
 
 .rm-cover__tagline {
@@ -387,6 +440,18 @@ body.demo-scene-open {
   stroke: currentColor;
   stroke-width: 1;
   opacity: 0.58;
+  overflow: hidden;
+}
+
+.rm-wave__track {
+  animation: rm-wave-flow 0.78s linear infinite paused;
+  transform-box: fill-box;
+  will-change: transform;
+}
+
+.rm-scene.is-open:not(.is-brochure-open) .rm-cover .rm-wave__track,
+.rm-scene.is-brochure-open .rm-brochure .rm-wave__track {
+  animation-play-state: running;
 }
 
 .rm-brand__head > .rm-wave {
@@ -513,7 +578,17 @@ body.demo-scene-open {
   transition: transform 0.45s var(--ease);
 }
 
+.rm-scene.is-brochure-open .rm-menu-section__head > svg:last-child {
+  animation: rm-leaf-breathe 3.6s ease-in-out infinite;
+  transform-origin: 50% 85%;
+}
+
+.rm-menu-section:nth-child(even) .rm-menu-section__head > svg:last-child {
+  animation-delay: -1.8s;
+}
+
 .rm-menu-section:hover .rm-menu-section__head > svg:last-child {
+  animation: none;
   transform: rotate(-8deg) scale(1.12);
 }
 
@@ -579,6 +654,35 @@ body.demo-scene-open {
   opacity: 0.43;
 }
 
+.rm-botanical path {
+  stroke-dasharray: 520;
+  stroke-dashoffset: 520;
+}
+
+.rm-scene.is-brochure-open .rm-botanical path {
+  animation:
+    rm-botanical-draw 1.55s 0.78s var(--ease) forwards,
+    rm-botanical-breathe 5s 2.35s ease-in-out infinite;
+  transform-origin: 50% 70%;
+}
+
+.rm-scene.is-brochure-open .rm-art-plant {
+  animation: rm-plant-sway 4.2s ease-in-out infinite;
+  transform-origin: 108px 162px;
+}
+
+.rm-scene.is-brochure-open .rm-art-drink {
+  animation: rm-drink-glint 3.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.rm-scene.is-brochure-open .rm-art-food {
+  animation: rm-dish-breathe 4.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 .rm-bar-note {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -631,6 +735,77 @@ body.demo-scene-open {
 
 .rm-cta svg {
   transition: transform 0.35s var(--ease);
+}
+
+@keyframes rm-wave-flow {
+  to {
+    transform: translateX(-6px);
+  }
+}
+
+@keyframes rm-cover-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes rm-leaf-breathe {
+  0%,
+  100% {
+    transform: rotate(-2deg) scale(1);
+  }
+  50% {
+    transform: rotate(5deg) scale(1.06);
+  }
+}
+
+@keyframes rm-botanical-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes rm-botanical-breathe {
+  0%,
+  100% {
+    transform: translateX(0) scaleX(1);
+  }
+  50% {
+    transform: translateX(3px) scaleX(1.012);
+  }
+}
+
+@keyframes rm-plant-sway {
+  0%,
+  100% {
+    transform: rotate(-1deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+
+@keyframes rm-drink-glint {
+  0%,
+  68%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  78% {
+    opacity: 0.72;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes rm-dish-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
 }
 
 @media (max-width: 1040px) and (min-width: 781px) {
