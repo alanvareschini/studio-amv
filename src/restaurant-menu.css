@@ -155,6 +155,20 @@ body.demo-scene-open {
   place-self: center;
   width: min(360px, 34vw);
   height: min(620px, calc(100dvh - 7rem));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--rm-ink);
+  perspective: 1100px;
+  touch-action: none;
+  will-change: transform, opacity;
+}
+
+.rm-cover__surface {
+  --rm-cover-rx: 0deg;
+  --rm-cover-ry: 0deg;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -168,12 +182,18 @@ body.demo-scene-open {
     var(--rm-paper);
   color: var(--rm-ink);
   box-shadow: 0 34px 70px -25px rgba(0, 0, 0, 0.58), inset 0 1px rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+  transform: rotateX(var(--rm-cover-rx)) rotateY(var(--rm-cover-ry));
   transform-style: preserve-3d;
-  touch-action: none;
-  will-change: transform, opacity;
+  transition: transform 0.18s ease-out;
+  will-change: transform;
 }
 
-.rm-cover::before {
+.rm-cover.is-resetting .rm-cover__surface {
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.rm-cover__surface::before {
   content: "";
   position: absolute;
   z-index: 0;
@@ -189,11 +209,11 @@ body.demo-scene-open {
   transition: opacity 0.3s ease;
 }
 
-.rm-cover.is-following::before {
+.rm-cover.is-following .rm-cover__surface::before {
   opacity: 0.55;
 }
 
-.rm-cover::after {
+.rm-cover__surface::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -201,7 +221,7 @@ body.demo-scene-open {
   box-shadow: inset 0 0 70px rgba(20, 37, 54, 0.055);
 }
 
-.rm-cover > * {
+.rm-cover__surface > * {
   position: relative;
   z-index: 1;
 }
@@ -218,7 +238,7 @@ body.demo-scene-open {
   transform: translateZ(10px);
 }
 
-.rm-cover > .rm-wave {
+.rm-cover__surface > .rm-wave {
   flex: none;
   margin-top: 0.8rem;
   color: var(--rm-accent);
@@ -894,6 +914,9 @@ body.demo-scene-open {
   .rm-cover {
     width: min(84vw, 350px);
     height: min(70dvh, 590px);
+  }
+
+  .rm-cover__surface {
     padding: clamp(1.7rem, 6vw, 2.35rem) clamp(1.2rem, 5vw, 1.8rem);
   }
 

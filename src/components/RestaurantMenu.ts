@@ -118,22 +118,24 @@ export function RestaurantMenu(): string {
         </div>
 
         <button class="rm-cover" type="button" data-rm-unfold aria-label="Abrir o cardápio demonstrativo">
-          <span class="rm-corner rm-corner--tl">Modelo demonstrativo</span>
-          <span class="rm-corner rm-corner--br">AMV Web Studio</span>
-          ${wave()}
-          <span class="rm-cover__title"><span>Seu</span><span>Restaurante</span></span>
-          <span class="rm-cover__sub">Cardápio digital personalizado</span>
-          <span class="rm-cover__divider" aria-hidden="true"></span>
-          <svg class="rm-cover__art" viewBox="0 0 260 210" aria-hidden="true">
-            <path d="M34 174c48-24 91-5 125-21 31-15 53-17 75-10"/>
-            <ellipse cx="132" cy="129" rx="72" ry="27"/>
-            <ellipse cx="132" cy="125" rx="45" ry="15"/>
-            <path d="M101 121c17-12 45-12 63 1-16 11-46 12-63-1Zm-38-61c20 20 28 47 25 77M72 80C54 77 45 68 41 54c16 1 27 10 31 26Zm14 25c16-9 29-8 39 0-10 12-23 13-39 0ZM211 67v67m-14-67h28l-6 23h-16Z"/>
-          </svg>
-          <span class="rm-cover__tagline">Uma apresentação feita para abrir o apetite.</span>
-          <span class="rm-cover__hint">
-            Clique para abrir
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+          <span class="rm-cover__surface">
+            <span class="rm-corner rm-corner--tl">Modelo demonstrativo</span>
+            <span class="rm-corner rm-corner--br">AMV Web Studio</span>
+            ${wave()}
+            <span class="rm-cover__title"><span>Seu</span><span>Restaurante</span></span>
+            <span class="rm-cover__sub">Cardápio digital personalizado</span>
+            <span class="rm-cover__divider" aria-hidden="true"></span>
+            <svg class="rm-cover__art" viewBox="0 0 260 210" aria-hidden="true">
+              <path d="M34 174c48-24 91-5 125-21 31-15 53-17 75-10"/>
+              <ellipse cx="132" cy="129" rx="72" ry="27"/>
+              <ellipse cx="132" cy="125" rx="45" ry="15"/>
+              <path d="M101 121c17-12 45-12 63 1-16 11-46 12-63-1Zm-38-61c20 20 28 47 25 77M72 80C54 77 45 68 41 54c16 1 27 10 31 26Zm14 25c16-9 29-8 39 0-10 12-23 13-39 0ZM211 67v67m-14-67h28l-6 23h-16Z"/>
+            </svg>
+            <span class="rm-cover__tagline">Uma apresentação feita para abrir o apetite.</span>
+            <span class="rm-cover__hint">
+              Clique para abrir
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+            </span>
           </span>
         </button>
 
@@ -193,9 +195,10 @@ export function initRestaurantMenu(): void {
   const scene = document.getElementById("restaurantMenuScene");
   const dialog = scene?.querySelector<HTMLElement>(".rm-dialog");
   const cover = scene?.querySelector<HTMLButtonElement>(".rm-cover");
+  const coverSurface = cover?.querySelector<HTMLElement>(".rm-cover__surface");
   const brochure = scene?.querySelector<HTMLElement>(".rm-brochure");
   const app = document.getElementById("app");
-  if (!trigger || !scene || !dialog || !cover || !brochure || !app) return;
+  if (!trigger || !scene || !dialog || !cover || !coverSurface || !brochure || !app) return;
 
   document.body.appendChild(scene);
 
@@ -210,32 +213,29 @@ export function initRestaurantMenu(): void {
   let brochureOpened = false;
   let isUnfolding = false;
   let activeCoverPointer: number | null = null;
+  let coverMotionFrame = 0;
   let coverPointerStartX = 0;
   let coverPointerStartY = 0;
   let suppressCoverClick = false;
   let afterClose: (() => void) | null = null;
   let previousFocus: HTMLElement | null = null;
 
-  const coverRotateX = gsap.quickTo(cover, "rotationX", { duration: 0.16, ease: "power2.out" });
-  const coverRotateY = gsap.quickTo(cover, "rotationY", { duration: 0.16, ease: "power2.out" });
-
   const resetCoverMotion = (immediate = false) => {
+    cancelAnimationFrame(coverMotionFrame);
+    coverMotionFrame = 0;
     activeCoverPointer = null;
     cover.classList.remove("is-following");
     cover.style.removeProperty("--rm-light-x");
     cover.style.removeProperty("--rm-light-y");
+    coverSurface.style.setProperty("--rm-cover-rx", "0deg");
+    coverSurface.style.setProperty("--rm-cover-ry", "0deg");
     if (immediate) {
       gsap.killTweensOf(cover, "x,y,rotationX,rotationY");
       gsap.set(cover, { x: 0, y: 0, rotationX: 0, rotationY: 0 });
+      cover.classList.remove("is-resetting");
       return;
     }
-    gsap.to(cover, {
-      rotationX: 0,
-      rotationY: 0,
-      duration: 0.38,
-      ease: "back.out(1.35)",
-      overwrite: "auto",
-    });
+    cover.classList.add("is-resetting");
   };
 
   const moveCover = (clientX: number, clientY: number, pointerType: string) => {
@@ -245,11 +245,16 @@ export function initRestaurantMenu(): void {
     const py = Math.max(-1, Math.min(1, ((clientY - rect.top) / rect.height) * 2 - 1));
     const touchFactor = pointerType === "touch" ? 0.68 : 1;
 
+    cover.classList.remove("is-resetting");
     cover.classList.add("is-following");
     cover.style.setProperty("--rm-light-x", `${((px + 1) * 50).toFixed(1)}%`);
     cover.style.setProperty("--rm-light-y", `${((py + 1) * 50).toFixed(1)}%`);
-    coverRotateX(-py * 5.5 * touchFactor);
-    coverRotateY(px * 6.5 * touchFactor);
+    cancelAnimationFrame(coverMotionFrame);
+    coverMotionFrame = requestAnimationFrame(() => {
+      coverMotionFrame = 0;
+      coverSurface.style.setProperty("--rm-cover-rx", `${(-py * 5.5 * touchFactor).toFixed(2)}deg`);
+      coverSurface.style.setProperty("--rm-cover-ry", `${(px * 6.5 * touchFactor).toFixed(2)}deg`);
+    });
   };
 
   const cardTransform = (element: HTMLElement) => {
@@ -288,6 +293,8 @@ export function initRestaurantMenu(): void {
     brochureOpened = false;
     isUnfolding = false;
     activeCoverPointer = null;
+    cancelAnimationFrame(coverMotionFrame);
+    coverMotionFrame = 0;
     suppressCoverClick = false;
     releaseDemoScene(SCENE_ID);
     const focusTarget = previousFocus;
