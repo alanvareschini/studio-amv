@@ -33,7 +33,7 @@ const BAR_SECTIONS: MenuSection[] = [
   {
     title: "Da casa",
     items: [
-      ["Orla tônica", "R$ 32", "Gin, cambuci, tônica e alecrim"],
+      ["Tônica da casa", "R$ 32", "Gin, cambuci, tônica e alecrim"],
       ["Caju alto", "R$ 29", "Cachaça, caju, limão e espuma de gengibre"],
       ["Brisa zero", "R$ 22", "Uva branca, manjericão e água com gás"],
     ],
@@ -114,15 +114,35 @@ export function RestaurantMenu(): string {
           <button type="button" role="tab" data-rm-tab="bar" aria-selected="false">Bebidas</button>
         </div>
 
+        <button class="rm-cover" type="button" data-rm-unfold aria-label="Abrir o cardápio demonstrativo">
+          <span class="rm-corner rm-corner--tl">Modelo demonstrativo</span>
+          <span class="rm-corner rm-corner--br">AMV Web Studio</span>
+          ${wave()}
+          <span class="rm-cover__title"><span>Seu</span><span>Restaurante</span></span>
+          <span class="rm-cover__sub">Cardápio digital personalizado</span>
+          <span class="rm-cover__divider" aria-hidden="true"></span>
+          <svg class="rm-cover__art" viewBox="0 0 260 210" aria-hidden="true">
+            <path d="M34 174c48-24 91-5 125-21 31-15 53-17 75-10"/>
+            <ellipse cx="132" cy="129" rx="72" ry="27"/>
+            <ellipse cx="132" cy="125" rx="45" ry="15"/>
+            <path d="M101 121c17-12 45-12 63 1-16 11-46 12-63-1Zm-38-61c20 20 28 47 25 77M72 80C54 77 45 68 41 54c16 1 27 10 31 26Zm14 25c16-9 29-8 39 0-10 12-23 13-39 0ZM211 67v67m-14-67h28l-6 23h-16Z"/>
+          </svg>
+          <span class="rm-cover__tagline">Uma apresentação feita para abrir o apetite.</span>
+          <span class="rm-cover__hint">
+            Clique para abrir
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+          </span>
+        </button>
+
         <div class="rm-brochure">
           <article class="rm-panel rm-panel--brand" data-rm-panel="brand">
-            <span class="rm-corner rm-corner--tl">Casa Orla</span>
-            <span class="rm-corner rm-corner--br">São Paulo · 2026</span>
+            <span class="rm-corner rm-corner--tl">Sua marca</span>
+            <span class="rm-corner rm-corner--br">Sua cidade · 2026</span>
             <div class="rm-panel__inner rm-brand">
               <header class="rm-brand__head">
                 ${wave()}
-                <h2 id="restaurantMenuTitle"><span>Casa</span><span>Orla</span></h2>
-                <p>Cozinha brasileira contemporânea</p>
+                <h2 id="restaurantMenuTitle"><span>Seu</span><span>Restaurante</span></h2>
+                <p>Identidade e cozinha personalizadas</p>
               </header>
               <blockquote>Ingredientes próximos, fogo aceso e uma mesa feita para ficar.</blockquote>
               <div class="rm-info-strip">
@@ -169,9 +189,10 @@ export function initRestaurantMenu(): void {
   const trigger = document.querySelector<HTMLElement>(`[data-demo-scene="${SCENE_ID}"]`);
   const scene = document.getElementById("restaurantMenuScene");
   const dialog = scene?.querySelector<HTMLElement>(".rm-dialog");
+  const cover = scene?.querySelector<HTMLButtonElement>(".rm-cover");
   const brochure = scene?.querySelector<HTMLElement>(".rm-brochure");
   const app = document.getElementById("app");
-  if (!trigger || !scene || !dialog || !brochure || !app) return;
+  if (!trigger || !scene || !dialog || !cover || !brochure || !app) return;
 
   document.body.appendChild(scene);
 
@@ -183,17 +204,19 @@ export function initRestaurantMenu(): void {
   let timeline: gsap.core.Timeline | null = null;
   let isOpen = false;
   let isClosing = false;
+  let brochureOpened = false;
+  let isUnfolding = false;
   let afterClose: (() => void) | null = null;
   let previousFocus: HTMLElement | null = null;
 
-  const cardTransform = () => {
+  const cardTransform = (element: HTMLElement) => {
     const cardRect = trigger.getBoundingClientRect();
-    const dialogRect = dialog.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
     return {
-      x: cardRect.left + cardRect.width / 2 - (dialogRect.left + dialogRect.width / 2),
-      y: cardRect.top + cardRect.height / 2 - (dialogRect.top + dialogRect.height / 2),
-      scaleX: Math.max(0.08, cardRect.width / dialogRect.width),
-      scaleY: Math.max(0.08, cardRect.height / dialogRect.height),
+      x: cardRect.left + cardRect.width / 2 - (elementRect.left + elementRect.width / 2),
+      y: cardRect.top + cardRect.height / 2 - (elementRect.top + elementRect.height / 2),
+      scaleX: Math.max(0.08, cardRect.width / elementRect.width),
+      scaleY: Math.max(0.08, cardRect.height / elementRect.height),
     };
   };
 
@@ -209,16 +232,18 @@ export function initRestaurantMenu(): void {
   const finishClose = () => {
     timeline?.kill();
     timeline = null;
-    gsap.killTweensOf([scene, dialog, brochure, panels, panelContent]);
-    gsap.set([scene, dialog, brochure, panels, panelContent], { clearProps: "all" });
+    gsap.killTweensOf([scene, dialog, cover, brochure, panels, panelContent]);
+    gsap.set([scene, dialog, cover, brochure, panels, panelContent], { clearProps: "all" });
     scene.hidden = true;
-    scene.classList.remove("is-open");
+    scene.classList.remove("is-open", "is-brochure-open");
     scene.setAttribute("aria-hidden", "true");
     document.body.classList.remove("demo-scene-open");
     app.inert = false;
     app.removeAttribute("aria-hidden");
     isOpen = false;
     isClosing = false;
+    brochureOpened = false;
+    isUnfolding = false;
     releaseDemoScene(SCENE_ID);
     const focusTarget = previousFocus;
     previousFocus = null;
@@ -233,29 +258,85 @@ export function initRestaurantMenu(): void {
     afterClose = callback ?? null;
     timeline?.kill();
     timeline = null;
-    gsap.killTweensOf([scene, dialog, brochure, panels, panelContent]);
+    gsap.killTweensOf([scene, dialog, cover, brochure, panels, panelContent]);
     if (immediate || reducedMotion.matches) {
       finishClose();
       return;
     }
 
     isClosing = true;
-    const target = cardTransform();
-    timeline = gsap
-      .timeline({ defaults: { overwrite: "auto" }, onComplete: finishClose })
-      .to(panelContent, { autoAlpha: 0, y: 10, duration: 0.18, stagger: 0.01 }, 0)
-      .to(
-        panels[0],
-        { rotationY: -82, transformOrigin: "right center", duration: 0.38, ease: "power3.in" },
-        0.05,
-      )
-      .to(
-        panels[2],
-        { rotationY: 82, transformOrigin: "left center", duration: 0.38, ease: "power3.in" },
-        0.05,
-      )
-      .to(dialog, { ...target, autoAlpha: 0, duration: 0.48, ease: "power3.inOut" }, 0.23)
-      .to(scene, { autoAlpha: 0, duration: 0.32 }, 0.3);
+    const targetElement = brochureOpened ? brochure : cover;
+    const target = cardTransform(targetElement);
+    timeline = gsap.timeline({ defaults: { overwrite: "auto" }, onComplete: finishClose });
+
+    if (brochureOpened) {
+      timeline.to(panelContent, { autoAlpha: 0, y: 10, duration: 0.18, stagger: 0.01 }, 0);
+      if (desktop.matches) {
+        timeline
+          .to(
+            panels[0],
+            { rotationY: -82, transformOrigin: "right center", duration: 0.38, ease: "power3.in" },
+            0.05,
+          )
+          .to(
+            panels[2],
+            { rotationY: 82, transformOrigin: "left center", duration: 0.38, ease: "power3.in" },
+            0.05,
+          );
+      }
+      timeline.to(brochure, { ...target, autoAlpha: 0, duration: 0.48, ease: "power3.inOut" }, 0.23);
+    } else {
+      timeline.to(cover, { ...target, autoAlpha: 0, duration: 0.48, ease: "power3.inOut" }, 0);
+    }
+    timeline.to(scene, { autoAlpha: 0, duration: 0.32 }, brochureOpened ? 0.3 : 0.16);
+  };
+
+  const openBrochure = () => {
+    if (!isOpen || isClosing || brochureOpened || isUnfolding) return;
+    timeline?.kill();
+    timeline = null;
+    brochureOpened = true;
+    isUnfolding = true;
+    scene.classList.add("is-brochure-open");
+    setActiveTab("menu");
+    gsap.set([brochure, panels, panelContent], { clearProps: "all" });
+
+    if (reducedMotion.matches) {
+      gsap.set(cover, { autoAlpha: 0 });
+      gsap.set(brochure, { autoAlpha: 1 });
+      isUnfolding = false;
+      dialog.focus({ preventScroll: true });
+      return;
+    }
+
+    timeline = gsap.timeline({
+      defaults: { ease: "power3.out", overwrite: "auto" },
+      onComplete: () => {
+        timeline = null;
+        isUnfolding = false;
+        dialog.focus({ preventScroll: true });
+      },
+    });
+
+    if (desktop.matches) {
+      gsap.set(panels[0], { rotationY: -88, autoAlpha: 0, transformOrigin: "right center" });
+      gsap.set(panels[1], { scale: 0.9, z: -70, autoAlpha: 0 });
+      gsap.set(panels[2], { rotationY: 88, autoAlpha: 0, transformOrigin: "left center" });
+      gsap.set(panelContent, { autoAlpha: 0, y: 16 });
+      gsap.set(brochure, { autoAlpha: 0 });
+      timeline
+        .to(cover, { rotateX: -76, y: -28, scale: 0.96, autoAlpha: 0, duration: 0.72, ease: "power3.inOut" }, 0)
+        .to(brochure, { autoAlpha: 1, duration: 0.4 }, 0.18)
+        .to(panels[1], { scale: 1, z: 0, autoAlpha: 1, duration: 0.85, ease: "expo.out" }, 0.28)
+        .to(panels[0], { rotationY: 0, autoAlpha: 1, duration: 1.05, ease: "expo.out" }, 0.48)
+        .to(panels[2], { rotationY: 0, autoAlpha: 1, duration: 1.05, ease: "expo.out" }, 0.58)
+        .to(panelContent, { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.025 }, 0.72);
+    } else {
+      gsap.set(brochure, { y: 22, autoAlpha: 0 });
+      timeline
+        .to(cover, { y: -18, scale: 0.96, autoAlpha: 0, duration: 0.5, ease: "power2.in" }, 0)
+        .to(brochure, { y: 0, autoAlpha: 1, duration: 0.58, ease: "expo.out" }, 0.24);
+    }
   };
 
   const openScene = () => {
@@ -263,48 +344,37 @@ export function initRestaurantMenu(): void {
     previousFocus = trigger;
     claimDemoScene({ id: SCENE_ID, deactivate: closeScene });
     isOpen = true;
+    brochureOpened = false;
+    isUnfolding = false;
     scene.hidden = false;
     scene.classList.add("is-open");
+    scene.classList.remove("is-brochure-open");
     scene.setAttribute("aria-hidden", "false");
     document.body.classList.add("demo-scene-open");
     app.inert = true;
     app.setAttribute("aria-hidden", "true");
     setActiveTab("menu");
 
-    gsap.set([scene, dialog, brochure, panels, panelContent], { clearProps: "all" });
+    gsap.set([scene, dialog, cover, brochure, panels, panelContent], { clearProps: "all" });
+    gsap.set(brochure, { autoAlpha: 0 });
     if (reducedMotion.matches) {
       gsap.set(scene, { autoAlpha: 1 });
-      dialog.focus({ preventScroll: true });
+      cover.focus({ preventScroll: true });
       return;
     }
 
-    const origin = cardTransform();
+    const origin = cardTransform(cover);
     gsap.set(scene, { autoAlpha: 0 });
-    gsap.set(dialog, { ...origin, autoAlpha: 0, transformOrigin: "center center" });
-
+    gsap.set(cover, { ...origin, autoAlpha: 0, transformOrigin: "center center" });
     timeline = gsap.timeline({
       defaults: { ease: "power3.out", overwrite: "auto" },
       onComplete: () => {
         timeline = null;
-        dialog.focus({ preventScroll: true });
+        cover.focus({ preventScroll: true });
       },
     });
     timeline.to(scene, { autoAlpha: 1, duration: 0.35 }, 0);
-    timeline.to(dialog, { x: 0, y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, duration: 0.72, ease: "expo.out" }, 0.05);
-
-    if (desktop.matches) {
-      gsap.set(panels[0], { rotationY: -88, autoAlpha: 0, transformOrigin: "right center" });
-      gsap.set(panels[1], { scale: 0.9, z: -70, autoAlpha: 0 });
-      gsap.set(panels[2], { rotationY: 88, autoAlpha: 0, transformOrigin: "left center" });
-      gsap.set(panelContent, { autoAlpha: 0, y: 16 });
-      timeline
-        .to(panels[1], { scale: 1, z: 0, autoAlpha: 1, duration: 0.85, ease: "expo.out" }, 0.3)
-        .to(panels[0], { rotationY: 0, autoAlpha: 1, duration: 1.05, ease: "expo.out" }, 0.48)
-        .to(panels[2], { rotationY: 0, autoAlpha: 1, duration: 1.05, ease: "expo.out" }, 0.58)
-        .to(panelContent, { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.025 }, 0.72);
-    } else {
-      timeline.fromTo(brochure, { y: 22, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.52 }, 0.3);
-    }
+    timeline.to(cover, { x: 0, y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, duration: 0.72, ease: "expo.out" }, 0.05);
   };
 
   trigger.setAttribute("role", "button");
@@ -319,6 +389,7 @@ export function initRestaurantMenu(): void {
       openScene();
     }
   });
+  cover.addEventListener("click", openBrochure);
 
   scene.querySelectorAll<HTMLElement>("[data-rm-close]").forEach((button) => {
     button.addEventListener("click", () => closeScene());

@@ -141,6 +141,142 @@ body.demo-scene-open {
   display: none;
 }
 
+.rm-cover,
+.rm-brochure {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.rm-cover {
+  position: relative;
+  z-index: 5;
+  place-self: center;
+  width: min(360px, 34vw);
+  height: min(620px, calc(100dvh - 7rem));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.65rem, 1.3vw, 1rem);
+  padding: clamp(2rem, 3vw, 2.8rem) clamp(1.3rem, 2vw, 2rem);
+  border: 1px solid rgba(20, 37, 54, 0.14);
+  background:
+    repeating-linear-gradient(8deg, transparent 0 7px, rgba(20, 37, 54, 0.016) 8px 9px),
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.78), transparent 35%),
+    var(--rm-paper);
+  color: var(--rm-ink);
+  box-shadow: 0 34px 70px -25px rgba(0, 0, 0, 0.58), inset 0 1px rgba(255, 255, 255, 0.7);
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.rm-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 70px rgba(20, 37, 54, 0.055);
+}
+
+.rm-cover > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rm-cover > .rm-wave {
+  flex: none;
+  margin-top: 0.8rem;
+  color: var(--rm-accent);
+}
+
+.rm-cover__title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.7rem, 4.4vw, 3.9rem);
+  font-weight: 500;
+  line-height: 0.84;
+  letter-spacing: -0.065em;
+  text-transform: uppercase;
+}
+
+.rm-cover__title span:last-child {
+  font-size: 0.72em;
+  letter-spacing: -0.04em;
+}
+
+.rm-cover__sub {
+  color: var(--rm-accent);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.rm-cover__divider {
+  width: 54px;
+  height: 1px;
+  background: var(--rm-accent);
+  opacity: 0.58;
+}
+
+.rm-cover__art {
+  width: 100%;
+  min-height: 130px;
+  flex: 1;
+  fill: none;
+  stroke: var(--rm-navy);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rm-cover__art path:first-child {
+  stroke: var(--rm-accent);
+}
+
+.rm-cover__tagline {
+  max-width: 26ch;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.9rem;
+  font-style: italic;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.rm-cover__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--rm-accent);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.rm-cover__hint svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.35s var(--ease);
+}
+
+.rm-cover:hover .rm-cover__hint svg,
+.rm-cover:focus-visible .rm-cover__hint svg {
+  transform: translateX(4px);
+}
+
+.rm-scene.is-brochure-open .rm-cover {
+  pointer-events: none;
+}
+
 .rm-brochure {
   position: relative;
   min-height: 0;
@@ -267,6 +403,12 @@ body.demo-scene-open {
   line-height: 0.8;
   letter-spacing: -0.055em;
   text-transform: uppercase;
+}
+
+.rm-brand__head h2 span:last-child {
+  margin-top: 0.12em;
+  font-size: 0.52em;
+  letter-spacing: -0.035em;
 }
 
 .rm-brand__head p {
@@ -517,6 +659,11 @@ body.demo-scene-open {
   .rm-dialog {
     width: min(100%, 470px);
     height: min(88dvh, 760px);
+    grid-template-rows: 42px 0 minmax(0, 1fr);
+    transition: grid-template-rows 0.55s var(--ease);
+  }
+
+  .rm-scene.is-brochure-open .rm-dialog {
     grid-template-rows: 42px 48px minmax(0, 1fr);
   }
 
@@ -532,6 +679,19 @@ body.demo-scene-open {
     z-index: 4;
     background: var(--rm-paper);
     border-bottom: 1px solid rgba(20, 37, 54, 0.14);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 0.25s ease 0.25s,
+      visibility 0s linear 0.55s;
+  }
+
+  .rm-scene.is-brochure-open .rm-tabs {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0.2s, 0s;
   }
 
   .rm-tabs button {
@@ -556,6 +716,20 @@ body.demo-scene-open {
     filter: drop-shadow(0 24px 28px rgba(0, 0, 0, 0.24));
   }
 
+  .rm-cover {
+    width: min(84vw, 350px);
+    height: min(70dvh, 590px);
+    padding: clamp(1.7rem, 6vw, 2.35rem) clamp(1.2rem, 5vw, 1.8rem);
+  }
+
+  .rm-cover__title {
+    font-size: clamp(2.7rem, 14vw, 3.65rem);
+  }
+
+  .rm-cover__art {
+    min-height: 110px;
+  }
+
   .rm-panel {
     display: none;
     width: 100%;
@@ -574,7 +748,7 @@ body.demo-scene-open {
   }
 
   .rm-brand__head h2 {
-    font-size: clamp(3.3rem, 18vw, 4.5rem);
+    font-size: clamp(3rem, 16vw, 4.25rem);
   }
 
   .rm-menu-list,
@@ -607,7 +781,7 @@ body.demo-scene-open {
 @media (max-height: 650px) and (min-width: 781px) {
   .rm-dialog {
     height: calc(100dvh - 1rem);
-    grid-template-rows: 32px minmax(0, 1fr);
+    grid-template-rows: 32px 0 minmax(0, 1fr);
   }
 
   .rm-tabs {
