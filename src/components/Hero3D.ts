@@ -34,12 +34,18 @@ class LetterScene {
   private bgTex: THREE.Texture | null = null;
   private lastW = window.innerWidth;
   private lastH = window.innerHeight;
+  private lastDPR = window.devicePixelRatio || 1;
+  private lastBufferW = 0;
+  private lastBufferH = 0;
   private resizeTimer = 0;
+  private resizeFrame = 0;
   private frostIdle = 999; // quadros sem interação (pula a simulação do rastro)
   private autoFrame = 0; // contador para dividir a simulação por 2 no mobile
   private contextLost = false; // pausa o render enquanto o contexto WebGL está perdido
   // referência de zoom capturada no carregamento (por aparelho).
   private baseDPR = window.devicePixelRatio || 1;
+  private composerPixelRatio = 1;
+  private drawingBufferSize = new THREE.Vector2();
 
   // Faz o "A" acompanhar o zoom da página (Ctrl +/-): sem isso, o A fica
   // gigante ao dar zoom-out porque o resto do conteúdo encolhe e ele não.
@@ -111,8 +117,12 @@ class LetterScene {
     const w = window.innerWidth, h = window.innerHeight;
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setSize(w, h);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.5 : 2));
+    this.composerPixelRatio = Math.min(this.baseDPR, this.isMobile ? 1.5 : 2);
+    this.renderer.setDrawingBufferSize(w, h, this.composerPixelRatio);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    this.lastBufferW = canvas.width;
+    this.lastBufferH = canvas.height;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
 
@@ -144,7 +154,6 @@ class LetterScene {
     this.composer.addPass(
       new UnrealBloomPass(new THREE.Vector2(w, h), this.isMobile ? 0.38 : 0.55, 0.6, 0.8)
     );
-    this.composer.setSize(w, h);
 
     window.addEventListener("pointermove", this.onPointer, { passive: true });
     window.addEventListener("pointerleave", () => (this.ptr.inside = false), { passive: true });
@@ -298,32 +307,77 @@ class LetterScene {
   // Zoom e a barra de endereço do celular disparam resize em rajada; refazer
   // a cena a cada evento trava tudo. Aqui só refazemos quando o usuário PARA
   // de mexer, e ignoramos variações só de altura (barra do navegador).
+  private zoomPixelRatio(): number {
+    return this.composerPixelRatio * ((window.devicePixelRatio || 1) / this.baseDPR);
+  }
+
+  private syncViewport(resizeBuffers: boolean): void {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+
+    this.lastW = width;
+    this.lastH = height;
+    this.lastDPR = dpr;
+    this.renderer.domElement.style.width = `${width}px`;
+    this.renderer.domElement.style.height = `${height}px`;
+
+    const nextAspect = width / Math.max(1, height);
+    if (Math.abs(this.camera.aspect - nextAspect) > 0.0001) {
+      this.camera.aspect = nextAspect;
+      this.camera.updateProjectionMatrix();
+    }
+    this.applyZoomScale();
+
+    if (!resizeBuffers) return;
+
+    const pixelRatio = this.zoomPixelRatio();
+    const targetBufferW = Math.max(1, Math.floor(width * pixelRatio));
+    const targetBufferH = Math.max(1, Math.floor(height * pixelRatio));
+    const bufferChanged =
+      Math.abs(targetBufferW - this.lastBufferW) > 2 ||
+      Math.abs(targetBufferH - this.lastBufferH) > 2;
+    if (!bufferChanged) return;
+
+    this.renderer.setDrawingBufferSize(width, height, pixelRatio);
+    this.composer.setSize(
+      targetBufferW / this.composerPixelRatio,
+      targetBufferH / this.composerPixelRatio,
+    );
+    this.lastBufferW = this.renderer.domElement.width;
+    this.lastBufferH = this.renderer.domElement.height;
+    this.updateResolution();
+  }
+
   private onResize = (): void => {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
     const dw = Math.abs(w - this.lastW);
     const dh = Math.abs(h - this.lastH);
     // largura igual + pequena mudança de altura = barra do navegador → ignora
-    if (dw === 0 && dh < 130) return;
+    if (dw === 0 && dh < 130 && Math.abs(dpr - this.lastDPR) < 0.001) {
+      this.lastH = h;
+      return;
+    }
+
+    if (!this.resizeFrame) {
+      this.resizeFrame = requestAnimationFrame(() => {
+        this.resizeFrame = 0;
+        this.syncViewport(false);
+      });
+    }
 
     if (this.resizeTimer) window.clearTimeout(this.resizeTimer);
     this.resizeTimer = window.setTimeout(() => {
-      const nw = window.innerWidth;
-      const nh = window.innerHeight;
-      this.lastW = nw;
-      this.lastH = nh;
-      this.camera.aspect = nw / nh;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(nw, nh);
-      this.composer.setSize(nw, nh);
-      this.updateResolution();
-      this.applyZoomScale(); // A acompanha o zoom da página
+      this.resizeTimer = 0;
+      this.syncViewport(true);
     }, 200);
   };
 
   private updateResolution(): void {
-    const pr = this.renderer.getPixelRatio();
-    this.frostU.uResolution.value.set(window.innerWidth * pr, window.innerHeight * pr);
+    this.renderer.getDrawingBufferSize(this.drawingBufferSize);
+    this.frostU.uResolution.value.copy(this.drawingBufferSize);
   }
 
   private static smoothstep(a: number, b: number, v: number): number {
