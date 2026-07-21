@@ -162,7 +162,7 @@ const renderAngleCarousel = (cut: BarberCut) => /* html */ `
             const y = Math.floor(index / CUBE_COLUMNS);
             const position = 100 / CUBE_COLUMNS;
             const backgroundPosition = 100 / (CUBE_COLUMNS - 1);
-            return `<span class="bk-cube" data-cube style="left:${x * position}%;top:${y * position}%;--bk-cube-bg-x:${x * backgroundPosition}%;--bk-cube-bg-y:${y * backgroundPosition}%;--bk-cube-delay:${index * 15}ms"><span class="bk-cube__body">${renderCubeFaces(cut)}</span></span>`;
+            return `<span class="bk-cube" data-cube style="left:${x * position}%;top:${y * position}%;--bk-cube-bg-x:${x * backgroundPosition}%;--bk-cube-bg-y:${y * backgroundPosition}%;--bk-cube-delay:${index * 15}ms;--bk-cube-mobile-delay:${index * 6}ms"><span class="bk-cube__body">${renderCubeFaces(cut)}</span></span>`;
           }).join("")}
         </div>
         <canvas class="bk-angle-distortion" data-cube-distortion aria-hidden="true"></canvas>

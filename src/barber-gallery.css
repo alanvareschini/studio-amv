@@ -757,13 +757,30 @@ body.demo-scene-open {
 }
 
 .bk-cube-stage {
+  --bk-swipe-x: 0px;
+  --bk-swipe-rotate: 0deg;
+  --bk-swipe-scale: 1;
   position: relative;
   width: calc(var(--bk-cube-size) * 8);
   height: calc(var(--bk-cube-size) * 8);
-  cursor: default;
-  touch-action: none;
+  cursor: grab;
+  touch-action: pan-y pinch-zoom;
+  transform:
+    translate3d(var(--bk-swipe-x), 0, 0)
+    rotateZ(var(--bk-swipe-rotate))
+    scale(var(--bk-swipe-scale));
   transform-style: preserve-3d;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
   -webkit-touch-callout: none;
+}
+
+.bk-cube-gallery.is-swipe-tracking .bk-cube-stage {
+  will-change: transform;
+}
+
+.bk-cube-gallery.is-swipe-dragging .bk-cube-stage {
+  cursor: grabbing;
+  transition-duration: 0ms;
 }
 
 .bk-cube-stage::before {
@@ -922,6 +939,22 @@ body.demo-scene-open {
 @media (max-height: 760px) and (min-width: 601px) {
   .bk-cube-gallery {
     --bk-cube-size: 54px;
+  }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .bk-cube-stage {
+    cursor: default;
+  }
+
+  .bk-cube {
+    transition-duration: 620ms;
+    transition-delay: var(--bk-cube-mobile-delay);
+  }
+
+  .bk-cube-gallery.is-changing .bk-cube__body {
+    animation-duration: 620ms;
+    animation-delay: var(--bk-cube-mobile-delay);
   }
 }
 

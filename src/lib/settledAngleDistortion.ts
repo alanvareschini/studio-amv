@@ -328,6 +328,7 @@ export class SettledAngleDistortion {
 
   private handlePointerMove = (event: PointerEvent): void => {
     const isMouse = event.pointerType === "mouse";
+    if (this.root.classList.contains("is-swipe-tracking")) return;
     const isActiveTouch = this.activePointerId === event.pointerId;
     if (!this.desiredSettled || (!isMouse && !isActiveTouch)) return;
     if (!isMouse) event.preventDefault();
@@ -343,7 +344,11 @@ export class SettledAngleDistortion {
   };
 
   private handlePointerDown = (event: PointerEvent): void => {
-    if (event.pointerType === "mouse" || !this.desiredSettled) return;
+    if (
+      event.pointerType === "mouse"
+      || !this.desiredSettled
+      || this.root.classList.contains("is-swipe-tracking")
+    ) return;
     this.activePointerId = event.pointerId;
     this.updatePointer(event);
     this.strengthTarget = 1;
