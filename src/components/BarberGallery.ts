@@ -6,7 +6,6 @@ import { KineticCarousel } from "../lib/kineticCarousel";
 
 const SCENE_ID = "barber-gallery";
 const IMAGE_ROOT = "/barber-gallery";
-const MOBILE_IMAGE_ROOT = `${IMAGE_ROOT}/mobile`;
 
 interface BarberCut {
   id: string;
@@ -88,11 +87,7 @@ const imageFileName = (number: number) =>
   `barbearia-corte-${String(number).padStart(2, "0")}.webp`;
 
 const imagePath = (number: number) => `${IMAGE_ROOT}/${imageFileName(number)}`;
-const mobileImagePath = (number: number) => `${MOBILE_IMAGE_ROOT}/${imageFileName(number)}`;
-const displayImagePath = (number: number) =>
-  matchMedia("(max-width: 760px), (max-height: 680px)").matches
-    ? mobileImagePath(number)
-    : imagePath(number);
+const displayImagePath = imagePath;
 
 const CUBE_COLUMNS = 8;
 const CUBE_COUNT = CUBE_COLUMNS * CUBE_COLUMNS;
@@ -122,7 +117,7 @@ const renderCutSlide = (cut: BarberCut, index: number) => /* html */ `
       <span class="bk-card__number">${cut.number}</span>
       <span class="bk-card__halo" aria-hidden="true"></span>
       <span class="bk-card__shadow" data-kc-shadow aria-hidden="true"></span>
-      <img class="bk-card__portrait" data-kc-media data-bk-src="${imagePath(cut.front)}" data-bk-mobile-src="${mobileImagePath(cut.front)}" width="1254" height="1254" alt="Modelo com o corte ${cut.name}" decoding="async">
+      <img class="bk-card__portrait" data-kc-media data-bk-src="${imagePath(cut.front)}" width="1254" height="1254" alt="Modelo com o corte ${cut.name}" decoding="async">
       <span class="bk-card__copy">
         <span class="bk-text-mask"><span data-kc-mask>${cut.finish}</span></span>
         <strong>
@@ -242,13 +237,10 @@ export function initBarberGallery(): void {
   if (!mainRoot) return;
 
   const hydrateImages = (scope: ParentNode) => {
-    const useMobileImages = matchMedia("(max-width: 760px), (max-height: 680px)").matches;
     scope.querySelectorAll<HTMLImageElement>("[data-bk-src]").forEach((image) => {
       if (image.src) return;
       image.addEventListener("load", () => image.classList.add("is-loaded"), { once: true });
-      image.src = useMobileImages
-        ? image.dataset.bkMobileSrc ?? image.dataset.bkSrc ?? ""
-        : image.dataset.bkSrc ?? "";
+      image.src = image.dataset.bkSrc ?? "";
     });
   };
 

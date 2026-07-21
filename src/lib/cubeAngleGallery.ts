@@ -148,11 +148,10 @@ export class CubeAngleGallery {
   };
 
   private handleSwipeStart = (event: PointerEvent): void => {
-    const supportsDrag = event.pointerType === "touch" || event.pointerType === "mouse";
     if (
-      !supportsDrag
+      event.pointerType !== "mouse"
       || !event.isPrimary
-      || (event.pointerType === "mouse" && event.button !== 0)
+      || event.button !== 0
       || this.swipePointerId !== null
       || this.root.classList.contains("is-changing")
       || this.labels.length < 2
