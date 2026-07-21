@@ -281,6 +281,7 @@ export function initHeadingFluid(): void {
   let flowTime = 0;
   let hover = 0;
   let touchPressed = false;
+  let fontsReady = false;
   let rippleIndex = 0;
   const rippleSlots = [uniforms.uR0, uniforms.uR1, uniforms.uR2, uniforms.uR3];
 
@@ -318,6 +319,10 @@ export function initHeadingFluid(): void {
   const layerByElement = new Map(
     layers.map((layer) => [layer.element, layer] as const),
   );
+  const visibleElements = new Set<HTMLElement>();
+  layers.forEach((layer) => {
+    layer.canvas.dataset.renderState = "paused";
+  });
   const rebuildLayer = (layer: HeadingLayer) => {
     const ratio = Math.min(devicePixelRatio, MAX_PIXEL_RATIO);
     const source = rasterizeHeading(layer.element, ratio);
@@ -364,6 +369,7 @@ export function initHeadingFluid(): void {
 
   const visibleLayers = () => {
     return layers
+      .filter((layer) => visibleElements.has(layer.element))
       .map((layer) => ({ layer, rect: layer.element.getBoundingClientRect() }))
       .filter(({ rect }) => (
         rect.bottom > 0 &&
@@ -379,6 +385,7 @@ export function initHeadingFluid(): void {
       ? event.target.closest<HTMLElement>(TARGET_SELECTOR)
       : null;
     touchPressed = Boolean(target && layerByElement.has(target));
+    if (touchPressed) startRender();
   };
 
   const pointerUp = () => {
@@ -399,12 +406,16 @@ export function initHeadingFluid(): void {
       1,
     );
     rippleIndex += 1;
+    startRender();
   };
 
   const resizeObserver = new ResizeObserver((entries) => {
     for (const entry of entries) {
       const layer = layerByElement.get(entry.target as HTMLElement);
-      if (layer) rebuildLayer(layer);
+      if (layer) {
+        rebuildLayer(layer);
+        startRender();
+      }
     }
   });
   targets.forEach((target) => resizeObserver.observe(target));
@@ -420,6 +431,7 @@ export function initHeadingFluid(): void {
       if (layer) changedLayers.add(layer);
     });
     changedLayers.forEach(rebuildLayer);
+    if (changedLayers.size) startRender();
   });
   targets.forEach((target) => {
     mutationObserver.observe(target, {
@@ -440,6 +452,7 @@ export function initHeadingFluid(): void {
       rzTimer = window.setTimeout(() => {
         lastRw = window.innerWidth;
         layers.forEach(rebuildLayer);
+        startRender();
       }, 220);
     },
     { passive: true }
@@ -452,7 +465,11 @@ export function initHeadingFluid(): void {
     "themechange",
     () => {
       layers.forEach(rebuildLayer);
-      window.setTimeout(() => layers.forEach(rebuildLayer), 560);
+      startRender();
+      window.setTimeout(() => {
+        layers.forEach(rebuildLayer);
+        startRender();
+      }, 560);
     },
     { passive: true }
   );
@@ -461,9 +478,9 @@ export function initHeadingFluid(): void {
   addEventListener("pointercancel", pointerUp, { passive: true });
   addEventListener("click", click, { passive: true });
 
-  const render = (time: number) => {
-    animationFrame = requestAnimationFrame(render);
-    if (document.hidden) {
+  function render(time: number) {
+    animationFrame = 0;
+    if (document.hidden || visibleElements.size === 0) {
       lastTime = time;
       return;
     }
@@ -483,10 +500,51 @@ export function initHeadingFluid(): void {
     flowTime += delta * (0.28 + hover * 1.72);
     uniforms.uTime.value = flowTime;
     visibleLayers().forEach(({ layer, rect }) => renderLayer(layer, rect));
+    animationFrame = requestAnimationFrame(render);
+  }
+
+  function startRender() {
+    if (
+      animationFrame
+      || !fontsReady
+      || document.hidden
+      || visibleElements.size === 0
+    ) return;
+    layers.forEach((layer) => {
+      layer.canvas.dataset.renderState = "running";
+    });
+    lastTime = performance.now();
+    animationFrame = requestAnimationFrame(render);
+  }
+
+  function stopRender() {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = 0;
+    layers.forEach((layer) => {
+      layer.canvas.dataset.renderState = "paused";
+    });
+  }
+
+  const intersectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const element = entry.target as HTMLElement;
+      if (entry.isIntersecting) visibleElements.add(element);
+      else visibleElements.delete(element);
+    });
+    if (visibleElements.size) startRender();
+    else stopRender();
+  }, { rootMargin: "48px 0px", threshold: 0.01 });
+  layers.forEach((layer) => intersectionObserver.observe(layer.element));
+
+  const visibilityChanged = () => {
+    if (document.hidden) stopRender();
+    else startRender();
   };
+  document.addEventListener("visibilitychange", visibilityChanged, { passive: true });
 
   document.fonts.ready.then(() => {
-    animationFrame = requestAnimationFrame(render);
+    fontsReady = true;
+    startRender();
   });
 
   // Perda de contexto WebGL (voltar de 2º plano no mobile, reset de driver):
@@ -497,8 +555,7 @@ export function initHeadingFluid(): void {
     "webglcontextlost",
     (e) => {
       e.preventDefault();
-      cancelAnimationFrame(animationFrame);
-      animationFrame = 0;
+      stopRender();
       layers.forEach((layer) => {
         layer.ready = false;
         layer.element.classList.remove("heading-fluid-local-active");
@@ -508,11 +565,12 @@ export function initHeadingFluid(): void {
   );
   overlay.addEventListener("webglcontextrestored", () => {
     layers.forEach(rebuildLayer);
-    if (!animationFrame) animationFrame = requestAnimationFrame(render);
+    startRender();
   });
 
   addEventListener("pagehide", () => {
-    cancelAnimationFrame(animationFrame);
+    stopRender();
+    intersectionObserver.disconnect();
     resizeObserver.disconnect();
     mutationObserver.disconnect();
     renderer.dispose();

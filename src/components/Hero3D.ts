@@ -40,6 +40,7 @@ class LetterScene {
   private lastBufferH = 0;
   private resizeTimer = 0;
   private resizeFrame = 0;
+  private renderFrame = 0;
   private frostIdle = 999; // quadros sem interação (pula a simulação do rastro)
   private autoFrame = 0; // contador para dividir a simulação por 2 no mobile
   private contextLost = false; // pausa o render enquanto o contexto WebGL está perdido
@@ -47,6 +48,7 @@ class LetterScene {
   private baseDPR = window.devicePixelRatio || 1;
   private composerPixelRatio = 1;
   private drawingBufferSize = new THREE.Vector2();
+  private readonly renderStateObserver: MutationObserver;
 
   // Faz o "A" acompanhar o zoom da página (Ctrl +/-): sem isso, o A fica
   // gigante ao dar zoom-out porque o resto do conteúdo encolhe e ele não.
@@ -167,12 +169,22 @@ class LetterScene {
     canvas.addEventListener("webglcontextlost", (e) => {
       e.preventDefault();
       this.contextLost = true;
+      this.syncRenderState();
     }, false);
     canvas.addEventListener("webglcontextrestored", () => {
       this.contextLost = false;
       this.frostTexture.needsUpdate = true;
       if (this.bgTex) this.bgTex.needsUpdate = true;
+      this.syncRenderState();
     }, false);
+
+    document.addEventListener("visibilitychange", this.syncRenderState, { passive: true });
+    this.renderStateObserver = new MutationObserver(this.syncRenderState);
+    this.renderStateObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    window.addEventListener("pagehide", () => {
+      this.stopRenderLoop();
+      this.renderStateObserver.disconnect();
+    }, { once: true });
 
     this.updateResolution();
 
@@ -188,7 +200,7 @@ class LetterScene {
         onError();
       },
     );
-    this.tick();
+    this.syncRenderState();
   }
 
   private addLights(): void {
@@ -434,10 +446,38 @@ class LetterScene {
     this.ptr.py = this.ptr.y;
   }
 
+  private renderShouldPause(): boolean {
+    return (
+      document.hidden
+      || this.contextLost
+      || document.body.classList.contains("ci-site-hidden")
+      || document.body.classList.contains("demo-scene-open")
+    );
+  }
+
+  private startRenderLoop(): void {
+    if (this.renderFrame || this.renderShouldPause()) return;
+    this.renderer.domElement.dataset.renderState = "running";
+    this.renderFrame = requestAnimationFrame(this.tick);
+  }
+
+  private stopRenderLoop(): void {
+    if (this.renderFrame) cancelAnimationFrame(this.renderFrame);
+    this.renderFrame = 0;
+    this.renderer.domElement.dataset.renderState = "paused";
+  }
+
+  private readonly syncRenderState = (): void => {
+    if (this.renderShouldPause()) this.stopRenderLoop();
+    else this.startRenderLoop();
+  };
+
   private tick = (): void => {
-    requestAnimationFrame(this.tick);
-    // pausa quando a aba está oculta ou o contexto WebGL foi perdido
-    if (document.hidden || this.contextLost) return;
+    this.renderFrame = 0;
+    if (this.renderShouldPause()) {
+      this.stopRenderLoop();
+      return;
+    }
     const elapsed = this.clock.getElapsedTime();
     const s = this.scrollT;
 
@@ -490,6 +530,7 @@ class LetterScene {
     this.group.rotation.x += (tiltX - this.group.rotation.x) * 0.06;
 
     this.composer.render();
+    this.startRenderLoop();
   };
 }
 

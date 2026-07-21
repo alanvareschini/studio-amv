@@ -12,6 +12,7 @@
   "dependencies": {
     "gsap": "^3.13.0",
     "pg": "^8.13.1",
+    "swiper": "^12.2.0",
     "three": "^0.169.0"
   },
   "devDependencies": {

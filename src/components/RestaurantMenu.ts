@@ -1,3 +1,4 @@
+import "../restaurant-menu.css";
 import gsap from "gsap";
 import { claimDemoScene, releaseDemoScene } from "../lib/demoSceneManager";
 

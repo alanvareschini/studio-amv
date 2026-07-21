@@ -2,8 +2,6 @@
 // as interações (menu, accordion, formulário, animações).
 import "./style.css";
 import "./emoji-motion.css";
-import "./restaurant-menu.css";
-import "./storefront-demo.css";
 
 import { Hero } from "./components/Hero";
 import {
@@ -29,12 +27,11 @@ import { initHeroScroll } from "./lib/heroScroll";
 import { initHeroBlob } from "./components/HeroBlob";
 import { FlowLines, initFlowLines } from "./components/FlowLines";
 import { ModalShell, initModal } from "./components/Modal";
-import { RestaurantMenu, initRestaurantMenu } from "./components/RestaurantMenu";
-import { StorefrontDemo, initStorefrontDemo } from "./components/StorefrontDemo";
 import { Menu, initMenu } from "./components/Menu";
 import { WhatsAppFab } from "./components/WhatsAppFab";
 import { initAnalytics } from "./lib/analytics";
 import { initHeroIntro } from "./lib/heroIntro";
+import { initLazyDemo } from "./lib/lazyDemo";
 import { initSecretAccess } from "./lib/secretAccess";
 
 const supportsRegisteredProperties =
@@ -65,8 +62,6 @@ if (app) {
     `</main>`,
     Footer(),
     ModalShell(),
-    RestaurantMenu(),
-    StorefrontDemo(),
     Menu(),
     WhatsAppFab(),
   ].join("");
@@ -91,8 +86,33 @@ if (app) {
   safe("menu", initMenu);
   safe("heroBlob", initHeroBlob);
   safe("modal", initModal);
-  safe("restaurantMenu", initRestaurantMenu);
-  safe("storefrontDemo", initStorefrontDemo);
+  safe("restaurantMenuLoader", () => initLazyDemo({
+    scene: "restaurant-menu",
+    sceneElementId: "restaurantMenuScene",
+    label: "Abrir cardápio demonstrativo de restaurante",
+    load: () => import("./components/RestaurantMenu").then((module) => ({
+      render: module.RestaurantMenu,
+      init: module.initRestaurantMenu,
+    })),
+  }));
+  safe("storefrontDemoLoader", () => initLazyDemo({
+    scene: "storefront-demo",
+    sceneElementId: "storefrontDemoScene",
+    label: "Abrir vitrine demonstrativa de loja",
+    load: () => import("./components/StorefrontDemo").then((module) => ({
+      render: module.StorefrontDemo,
+      init: module.initStorefrontDemo,
+    })),
+  }));
+  safe("barberGalleryLoader", () => initLazyDemo({
+    scene: "barber-gallery",
+    sceneElementId: "barberGalleryScene",
+    label: "Abrir catálogo demonstrativo de cortes de cabelo",
+    load: () => import("./components/BarberGallery").then((module) => ({
+      render: module.BarberGallery,
+      init: module.initBarberGallery,
+    })),
+  }));
   safe("packages", initPackages);
   safe("faq", initFAQ);
   safe("contact", initContact);

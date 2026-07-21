@@ -28,6 +28,7 @@ const solutionMotions = ["orbit", "check", "picture", "pin", "talk", "buzz"] as 
 const trustMotions = ["unlock", "spark", "access", "puzzle"] as const;
 const portfolioMotions = ["barber", "sparkle", "serve", "flex", "shop", "chart"] as const;
 const portfolioDemos: Record<string, { scene: string; action: string }> = {
+  Barbearia: { scene: "barber-gallery", action: "Explorar cortes" },
   Restaurante: { scene: "restaurant-menu", action: "Abrir cardápio" },
   "Loja local": { scene: "storefront-demo", action: "Abrir vitrine" },
 };

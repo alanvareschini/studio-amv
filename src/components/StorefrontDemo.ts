@@ -1,3 +1,4 @@
+import "../storefront-demo.css";
 import gsap from "gsap";
 import { claimDemoScene, releaseDemoScene } from "../lib/demoSceneManager";
 
@@ -8,6 +9,18 @@ interface StoreProduct {
   category: string;
   price: string;
   slug: string;
+}
+
+type StoreTheme = "light" | "dark";
+type StoreLights = "off" | "on";
+
+interface StoreState {
+  theme: StoreTheme;
+  lights: StoreLights;
+}
+
+interface StoreViewTransition {
+  finished: Promise<unknown>;
 }
 
 const PRODUCTS: StoreProduct[] = [
@@ -22,21 +35,16 @@ const renderProduct = (product: StoreProduct, index: number) => /* html */ `
     <figure class="sf-product__visual">
       <span class="sf-product__number">0${index + 1}</span>
       <img
-        class="sf-product__image sf-product__image--off"
+        class="sf-product__image"
         data-sf-image
-        data-sf-src="/storefront/${product.slug}-off.webp"
+        data-light-off="/storefront/${product.slug}-off.webp"
+        data-light-on="/storefront/${product.slug}-on.webp"
+        data-dark-off="/storefront/${product.slug}-off.webp"
+        data-dark-on="/storefront/${product.slug}-on.webp"
+        src="/storefront/${product.slug}-off.webp"
         width="1122"
         height="1402"
-        alt=""
-        decoding="async"
-      >
-      <img
-        class="sf-product__image sf-product__image--on"
-        data-sf-image
-        data-sf-src="/storefront/${product.slug}-on.webp"
-        width="1122"
-        height="1402"
-        alt=""
+        alt="${product.name}"
         decoding="async"
       >
       <span class="sf-product__availability">Peça disponível</span>
@@ -130,29 +138,69 @@ export function initStorefrontDemo(): void {
   const count = scene.querySelector<HTMLElement>("[data-sf-count]");
   let timeline: gsap.core.Timeline | null = null;
   let imageLoadPromise: Promise<void> | null = null;
+  let appearancePromise: Promise<void> = Promise.resolve();
   let isOpen = false;
   let isClosing = false;
   let selected = 0;
   let previousFocus: HTMLElement | null = null;
   let afterClose: (() => void) | null = null;
 
+  const imageCache = new Map<string, Promise<void>>();
+
+  const getSrcAttr = (theme: StoreTheme, lights: StoreLights) =>
+    `${theme}${lights.charAt(0).toUpperCase()}${lights.slice(1)}` as "lightOff" | "lightOn" | "darkOff" | "darkOn";
+
+  const getState = (): StoreState => ({
+    theme: scene.dataset.storeTheme === "dark" ? "dark" : "light",
+    lights: scene.dataset.storeLights === "on" ? "on" : "off",
+  });
+
+  const getImageSource = (image: HTMLImageElement, state: StoreState) =>
+    image.dataset[getSrcAttr(state.theme, state.lights)] ?? image.src;
+
+  const preloadSource = (source: string) => {
+    const cached = imageCache.get(source);
+    if (cached) return cached;
+    const pending = new Promise<void>((resolve) => {
+      const preload = new Image();
+      preload.decoding = "async";
+      preload.onload = () => {
+        preload.decode().catch(() => undefined).finally(resolve);
+      };
+      preload.onerror = () => resolve();
+      preload.src = source;
+    });
+    imageCache.set(source, pending);
+    return pending;
+  };
+
+  const preloadState = (state: StoreState) =>
+    Promise.allSettled(productImages.map((image) => preloadSource(getImageSource(image, state))));
+
+  const updateImageSources = (state: StoreState) => {
+    productImages.forEach((image) => {
+      const source = getImageSource(image, state);
+      if (image.getAttribute("src") !== source) image.src = source;
+    });
+  };
+
   const loadProductImages = () => {
     if (imageLoadPromise) return imageLoadPromise;
     scene.classList.add("is-images-loading");
-    imageLoadPromise = Promise.allSettled(
-      productImages.map(async (image) => {
-        const source = image.dataset.sfSrc;
-        if (!source) return;
-        image.src = source;
-        try {
-          await image.decode();
-        } catch {
-          // A failed decode still lets the browser render a successfully loaded image.
-        }
-      }),
-    ).then(() => {
+    const initialState = getState();
+    imageLoadPromise = preloadState(initialState).then(async () => {
+      updateImageSources(initialState);
+      await Promise.allSettled(productImages.map((image) => image.decode()));
       scene.classList.remove("is-images-loading");
       scene.classList.add("is-images-ready");
+
+      const states: StoreState[] = [
+        { theme: "light", lights: "off" },
+        { theme: "light", lights: "on" },
+        { theme: "dark", lights: "off" },
+        { theme: "dark", lights: "on" },
+      ];
+      void Promise.allSettled(states.map(preloadState));
     });
     return imageLoadPromise;
   };
@@ -246,22 +294,69 @@ export function initStorefrontDemo(): void {
       .to(products, { autoAlpha: 1, y: 0, duration: 0.6, stagger: 0.07 }, 0.42);
   };
 
-  const updateAppearance = (kind: "theme" | "lights", button: HTMLButtonElement) => {
-    const current = kind === "theme" ? scene.dataset.storeTheme : scene.dataset.storeLights;
-    const next = kind === "theme" ? (current === "light" ? "dark" : "light") : current === "off" ? "on" : "off";
-    const update = () => {
-      if (kind === "theme") scene.dataset.storeTheme = next;
-      else scene.dataset.storeLights = next;
-      button.setAttribute("aria-pressed", String(next === "dark" || next === "on"));
-    };
-    if (kind === "lights") {
-      update();
-      return;
-    }
-    const documentWithTransition = document as Document & { startViewTransition?: (callback: () => void) => void };
-    if (!reducedMotion.matches && documentWithTransition.startViewTransition) {
-      documentWithTransition.startViewTransition(update);
-    } else update();
+  const updateAppearance = (kind: "theme" | "lights") => {
+    appearancePromise = appearancePromise.then(async () => {
+      const current = getState();
+      const future: StoreState = {
+        theme: kind === "theme" ? (current.theme === "light" ? "dark" : "light") : current.theme,
+        lights: kind === "lights" ? (current.lights === "off" ? "on" : "off") : current.lights,
+      };
+
+      scene.classList.add("is-appearance-switching");
+      scene.setAttribute("aria-busy", "true");
+      toggles.forEach((toggle) => { toggle.disabled = true; });
+
+      await preloadState(future);
+
+      const updateDOM = () => {
+        scene.dataset.storeTheme = future.theme;
+        scene.dataset.storeLights = future.lights;
+        updateImageSources(future);
+        toggles.forEach((toggle) => {
+          const pressed = toggle.dataset.sfToggle === "theme" ? future.theme === "dark" : future.lights === "on";
+          toggle.setAttribute("aria-pressed", String(pressed));
+        });
+      };
+
+      const documentWithTransition = document as Document & {
+        startViewTransition?: (callback: () => void) => StoreViewTransition;
+      };
+
+      try {
+        if (!reducedMotion.matches && documentWithTransition.startViewTransition) {
+          const transition = documentWithTransition.startViewTransition(updateDOM);
+          await transition.finished.catch(() => undefined);
+        } else if (!reducedMotion.matches) {
+          const fadeOut = productImages.map((image) =>
+            image.animate(
+              [{ opacity: 1, transform: "translate(-50%, -50%) scale(1)" }, { opacity: 0, transform: "translate(-50%, -50%) scale(0.985)" }],
+              { duration: 130, easing: "ease-in", fill: "forwards" },
+            ).finished.catch(() => undefined),
+          );
+          await Promise.allSettled(fadeOut);
+          updateDOM();
+          await Promise.allSettled(productImages.map((image) => image.decode()));
+          productImages.forEach((image) => {
+            image.getAnimations().forEach((animation) => animation.cancel());
+            image.animate(
+              [{ opacity: 0, transform: "translate(-50%, -50%) scale(1.015)" }, { opacity: 1, transform: "translate(-50%, -50%) scale(1)" }],
+              { duration: 280, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+            );
+          });
+        } else {
+          updateDOM();
+        }
+      } finally {
+        scene.classList.remove("is-appearance-switching");
+        scene.removeAttribute("aria-busy");
+        toggles.forEach((toggle) => { toggle.disabled = false; });
+      }
+    }).catch((error) => {
+      console.error("[storefront] falha ao trocar aparência", error);
+      scene.classList.remove("is-appearance-switching");
+      scene.removeAttribute("aria-busy");
+      toggles.forEach((toggle) => { toggle.disabled = false; });
+    });
   };
 
   trigger.setAttribute("role", "button");
@@ -283,7 +378,7 @@ export function initStorefrontDemo(): void {
     button.addEventListener("click", () => closeScene());
   });
   toggles.forEach((button) => {
-    button.addEventListener("click", () => updateAppearance(button.dataset.sfToggle as "theme" | "lights", button));
+    button.addEventListener("click", () => updateAppearance(button.dataset.sfToggle as "theme" | "lights"));
   });
   scene.querySelectorAll<HTMLButtonElement>("[data-sf-add]").forEach((button) => {
     button.addEventListener("click", () => {
