@@ -208,11 +208,11 @@
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
         var W = 0, H = 0, dpr = 1, SP = 26;
         var qualityTier = document.documentElement.dataset.performanceTier || "balanced";
-        var GRAV = 0.1, DAMP_ACTIVE = 0.945, DAMP_IDLE = 0.9, DAMP_CORD = 0.92;
+        var GRAV = 0.16, DAMP_ACTIVE = 0.988, DAMP_IDLE = 0.982, DAMP_CORD = 0.95;
         var ITERS = qualityTier === "low" ? 4 : 5;
-        var COMPRESS = 0.58, STRETCH = 1.22, H_COMPRESS = 0.56, H_STRETCH = 2.4;
-        var HOME_RETURN_ACTIVE = 0.016, HOME_RETURN_IDLE = 0.055;
-        var HOME_SNAP_DISTANCE = 0.65, HOME_SNAP_SPEED = 0.14;
+        var COMPRESS = 0.22, STRETCH = 1.42, H_COMPRESS = 0.38, H_STRETCH = 3.4;
+        var HOME_RETURN_ACTIVE = 0.0025, HOME_RETURN_IDLE = 0.009;
+        var HOME_SNAP_DISTANCE = 0.45, HOME_SNAP_SPEED = 0.08;
         var MOUSE_STRENGTH = 0.78;
         var STEP_MS = 1000 / 60, MAX_STEPS = 2;
         var curtains = [], cord = [], handle = null, bandImg = [];
@@ -410,7 +410,7 @@
           var P = cur.P;
           var links = cur.links;
           for (var i = 0; i < links.length; i += 4) {
-            link(P[links[i]], P[links[i + 1]], links[i + 2], links[i + 3], 0.46, 0.82);
+            link(P[links[i]], P[links[i + 1]], links[i + 2], links[i + 3], 0.24, 0.93);
           }
         }
         function solveCord() {
@@ -595,7 +595,7 @@
           }
 
           repel();
-          var pointerDecay = Math.pow(0.42, dt);
+          var pointerDecay = Math.pow(0.68, dt);
           ptr.vx *= pointerDecay;
           ptr.vy *= pointerDecay;
           if (Math.abs(ptr.vx) < 0.01) ptr.vx = 0;
