@@ -1,3 +1,5 @@
+import { getPerformanceBudget } from "./motionPreference";
+
 export type IglooAtlasGlyph = {
   el: HTMLElement;
   character: string;
@@ -77,6 +79,7 @@ export type IglooGlyphAtlas = {
 };
 
 export function createIglooGlyphAtlas(host: HTMLElement): IglooGlyphAtlas | null {
+  let performanceBudget = getPerformanceBudget();
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { alpha: true });
   if (!context) return null;
@@ -94,7 +97,12 @@ export function createIglooGlyphAtlas(host: HTMLElement): IglooGlyphAtlas | null
 
   const resize = () => {
     const touch = window.matchMedia("(pointer: coarse)").matches;
-    dpr = Math.min(window.devicePixelRatio || 1, touch ? 1.25 : 1.5);
+    dpr = Math.min(
+      window.devicePixelRatio || 1,
+      touch
+        ? performanceBudget.iglooPixelRatioMobile
+        : performanceBudget.iglooPixelRatioDesktop,
+    );
     const hostBounds = host.getBoundingClientRect();
     width = Math.max(1, Math.round(hostBounds.width));
     height = Math.max(1, Math.round(host.scrollHeight || hostBounds.height));
@@ -190,5 +198,9 @@ export function createIglooGlyphAtlas(host: HTMLElement): IglooGlyphAtlas | null
   };
 
   resize();
+  window.addEventListener("amv:performance-tier-change", () => {
+    performanceBudget = getPerformanceBudget();
+    resize();
+  }, { passive: true });
   return { resize, measure, render, clear };
 }

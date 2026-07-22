@@ -13,6 +13,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
+import { getPerformanceBudget } from "./motionPreference";
 
 const VERTEX_SHADER = /* glsl */ `
   precision highp float;
@@ -96,8 +97,7 @@ const FRAGMENT_SHADER = /* glsl */ `
   }
 `;
 
-const MAX_PIXEL_RATIO = 1.6;
-const MAX_MOBILE_PIXEL_RATIO = 1.25;
+const INITIAL_PERFORMANCE = getPerformanceBudget();
 const SETTLED_CLASS = "is-distortion-settled";
 
 export class SettledAngleDistortion {
@@ -106,7 +106,12 @@ export class SettledAngleDistortion {
   private readonly renderer: WebGLRenderer;
   private readonly scene = new Scene();
   private readonly camera = new PerspectiveCamera(60, 1, 0.1, 5000);
-  private readonly geometry = new PlaneGeometry(1, 1, 96, 54);
+  private readonly geometry = new PlaneGeometry(
+    1,
+    1,
+    INITIAL_PERFORMANCE.distortionSegmentsX,
+    INITIAL_PERFORMANCE.distortionSegmentsY,
+  );
   private readonly placeholderTexture = new Texture();
   private readonly material: ShaderMaterial;
   private readonly mesh: Mesh<PlaneGeometry, ShaderMaterial>;
@@ -127,10 +132,12 @@ export class SettledAngleDistortion {
   private sizeReady = false;
   private disposed = false;
   private lastTime = 0;
+  private lastRenderedAt = 0;
   private pointerTarget = { x: 0.5, y: 0.5 };
   private pointerCurrent = { x: 0.5, y: 0.5 };
   private strengthTarget = 0;
   private strengthCurrent = 0;
+  private performanceBudget = getPerformanceBudget();
 
   constructor(root: HTMLElement, stage: HTMLElement, imageUrls: string[]) {
     const canvas = stage.querySelector<HTMLCanvasElement>("[data-cube-distortion]");
@@ -176,6 +183,10 @@ export class SettledAngleDistortion {
     stage.addEventListener("pointerup", this.handlePointerUp, { signal, passive: true });
     stage.addEventListener("pointercancel", this.handlePointerUp, { signal, passive: true });
     canvas.addEventListener("webglcontextlost", this.handleContextLost, { signal });
+    window.addEventListener("amv:performance-tier-change", this.handlePerformanceTierChange, {
+      signal,
+      passive: true,
+    });
 
     const ResizeObserverConstructor = (
       window as unknown as { ResizeObserver?: typeof ResizeObserver }
@@ -246,7 +257,9 @@ export class SettledAngleDistortion {
     const mobile = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
     const pixelRatio = Math.min(
       window.devicePixelRatio || 1,
-      mobile ? MAX_MOBILE_PIXEL_RATIO : MAX_PIXEL_RATIO,
+      mobile
+        ? this.performanceBudget.distortionPixelRatioMobile
+        : this.performanceBudget.distortionPixelRatioDesktop,
     );
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(width, height, false);
@@ -373,9 +386,16 @@ export class SettledAngleDistortion {
     this.stopLoop();
   };
 
+  private handlePerformanceTierChange = (): void => {
+    this.performanceBudget = getPerformanceBudget();
+    this.lastRenderedAt = 0;
+    this.resize();
+  };
+
   private startLoop(): void {
     if (this.frameId || this.disposed || !this.desiredSettled || !this.sizeReady) return;
     this.lastTime = performance.now();
+    this.lastRenderedAt = 0;
     this.frameId = window.requestAnimationFrame(this.tick);
   }
 
@@ -387,6 +407,13 @@ export class SettledAngleDistortion {
   private readonly tick = (time: number): void => {
     this.frameId = 0;
     if (this.disposed || !this.desiredSettled) return;
+
+    const frameInterval = 1000 / this.performanceBudget.distortionFps;
+    if (this.lastRenderedAt && time - this.lastRenderedAt < frameInterval - 1) {
+      this.frameId = window.requestAnimationFrame(this.tick);
+      return;
+    }
+    this.lastRenderedAt = time;
 
     const delta = Math.min(32, Math.max(0, time - this.lastTime));
     this.lastTime = time;

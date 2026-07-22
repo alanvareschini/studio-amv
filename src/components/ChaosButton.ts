@@ -2,7 +2,7 @@
 // Sem GSAP/tweakpane: a transição resting↔active é feita com lerp no requestAnimationFrame.
 // Cores trocadas para a paleta da loja.
 
-import { isReducedMotion } from "../lib/motionPreference";
+import { getPerformanceBudget, isReducedMotion } from "../lib/motionPreference";
 
 export function ChaosButton(label: string, href: string): string {
   return /* html */ `
@@ -135,6 +135,7 @@ const RESTING: ChaosState = { speed: 0.35, amplitude: 80, pulseMin: 0.05, pulseM
 const ACTIVE: ChaosState = { speed: 2.8, amplitude: 10, pulseMin: 0.05, pulseMax: 0.4, tap: 1.0 };
 
 class ChaosButtonGL {
+  private performanceBudget = getPerformanceBudget();
   private button: HTMLElement;
   private canvas: HTMLCanvasElement;
   private gl: WebGLRenderingContext | null = null;
@@ -149,6 +150,7 @@ class ChaosButtonGL {
   private contextLost = false;
   private light = document.documentElement.dataset.theme === "light" ? 1 : 0;
   private raf = 0;
+  private lastRenderedAt = 0;
   private bodyStateObserver: MutationObserver | null = null;
 
   constructor(button: HTMLElement) {
@@ -185,6 +187,11 @@ class ChaosButtonGL {
     }
     window.addEventListener("themechange", (e) => {
       this.light = (e as CustomEvent).detail === "light" ? 1 : 0;
+    });
+    window.addEventListener("amv:performance-tier-change", () => {
+      this.performanceBudget = getPerformanceBudget();
+      this.lastRenderedAt = 0;
+      this.resize();
     });
     this.setupEvents();
     this.observeVisibility();
@@ -252,7 +259,12 @@ class ChaosButtonGL {
   private resize(): void {
     const gl = this.gl!;
     const compactScreen = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
-    const dpr = Math.min(window.devicePixelRatio, compactScreen ? 1.5 : 2);
+    const dpr = Math.min(
+      window.devicePixelRatio,
+      compactScreen
+        ? this.performanceBudget.chaosPixelRatioMobile
+        : this.performanceBudget.chaosPixelRatioDesktop,
+    );
     const rect = this.button.getBoundingClientRect();
     this.canvas.width = Math.max(1, rect.width * dpr);
     this.canvas.height = Math.max(1, rect.height * dpr);
@@ -341,12 +353,19 @@ class ChaosButtonGL {
     this.raf = requestAnimationFrame(this.render);
   }
 
-  private render = (): void => {
+  private render = (frameTime: number): void => {
     this.raf = 0;
     if (!this.gl || !this.visible || this.contextLost || this.renderShouldPause()) {
       this.last = performance.now() / 1000;
       return;
     }
+
+    const frameInterval = 1000 / this.performanceBudget.chaosFps;
+    if (this.lastRenderedAt && frameTime - this.lastRenderedAt < frameInterval - 1) {
+      this.scheduleRender();
+      return;
+    }
+    this.lastRenderedAt = frameTime;
 
     const now = performance.now() / 1000;
     const dt = Math.min(now - this.last, 0.05);

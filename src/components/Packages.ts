@@ -2,7 +2,7 @@
 import { packages, type Package } from "../data/packages";
 import { openModal, closeModal } from "./Modal";
 import { quickWhatsappLink } from "../lib/whatsapp";
-import { isReducedMotion } from "../lib/motionPreference";
+import { getPerformanceBudget, isReducedMotion } from "../lib/motionPreference";
 import gsap from "gsap";
 
 // conteúdo do modal de detalhe do pacote
@@ -112,6 +112,10 @@ function goToForm(pacote: string): void {
 
 // Clicar num pacote abre o modal com os detalhes.
 export function initPackages(): void {
+  performanceBudget = getPerformanceBudget();
+  window.addEventListener("amv:performance-tier-change", () => {
+    performanceBudget = getPerformanceBudget();
+  });
   document.querySelectorAll<HTMLButtonElement>("[data-pacote]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const pkg = packages.find((p) => p.name === btn.dataset.pacote);
@@ -172,7 +176,9 @@ type PhysicsCard = {
 };
 
 const physicsCards = new Map<HTMLElement, PhysicsCard>();
+let performanceBudget = getPerformanceBudget();
 let physicsRaf = 0;
+let physicsLastFrame = 0;
 
 const LIQUID_TILT_MAX = 12;
 const clampValue = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -391,6 +397,12 @@ function finishLetterPhysics(state: PhysicsCard): void {
 
 function tickLetterPhysics(ts: number): void {
   physicsRaf = 0;
+  const frameInterval = 1000 / performanceBudget.packagePhysicsFps;
+  if (physicsLastFrame && ts - physicsLastFrame < frameInterval - 1) {
+    physicsRaf = requestAnimationFrame(tickLetterPhysics);
+    return;
+  }
+  physicsLastFrame = ts;
   physicsCards.forEach((state) => {
     const dt = Math.min(0.032, Math.max(0.001, (ts - state.lastTs) / 1000));
     state.lastTs = ts;
@@ -813,6 +825,7 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   let gotEvent = false;
   let started = false;
   let packagesVisible = true;
+  let lastAppliedAt = 0;
 
   const setBtn = (txt: string, cls?: "ok" | "err") => {
     if (!btn) return;
@@ -832,14 +845,23 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
     if (!raf && shouldAnimate()) raf = requestAnimationFrame(apply);
   };
 
-  const apply = () => {
+  const apply = (time: number) => {
     if (!shouldAnimate()) {
       raf = 0;
       return;
     }
 
-    ry += (targetRy - ry) * SMOOTH;
-    rx += (targetRx - rx) * SMOOTH;
+    const frameInterval = 1000 / performanceBudget.gyroFps;
+    if (lastAppliedAt && time - lastAppliedAt < frameInterval - 1) {
+      raf = requestAnimationFrame(apply);
+      return;
+    }
+    const elapsed = lastAppliedAt ? Math.min(50, time - lastAppliedAt) : 16.667;
+    lastAppliedAt = time;
+    const smooth = 1 - Math.pow(1 - SMOOTH, elapsed / 16.667);
+
+    ry += (targetRy - ry) * smooth;
+    rx += (targetRx - rx) * smooth;
     cards.forEach((card) => {
       card.classList.add("is-touching");
       card.style.setProperty("--ry", `${ry.toFixed(2)}deg`);

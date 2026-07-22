@@ -34,6 +34,7 @@ import { initHeroIntro } from "./lib/heroIntro";
 import { initLazyDemo } from "./lib/lazyDemo";
 import { initSecretAccess } from "./lib/secretAccess";
 import { initMotionPreference, isReducedMotion } from "./lib/motionPreference";
+import { initRuntimePerformanceMonitor } from "./lib/runtimePerformance";
 
 initMotionPreference();
 
@@ -131,6 +132,7 @@ if (app) {
   );
   safe("emojiMotion", initEmojiMotion);
   safe("flowLines", initFlowLines);
+  safe("runtimePerformance", initRuntimePerformanceMonitor);
 
   // -------------------------------------------------------------------------
   // Efeitos pesados (Three.js): carregam num chunk separado, depois da primeira

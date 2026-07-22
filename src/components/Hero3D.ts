@@ -10,14 +10,16 @@ import { FontLoader, type Font } from "three/addons/loaders/FontLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { isReducedMotion } from "../lib/motionPreference";
+import { getPerformanceBudget, isReducedMotion } from "../lib/motionPreference";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const SIM = 128;
+const INITIAL_PERFORMANCE = getPerformanceBudget();
+const SIM = INITIAL_PERFORMANCE.heroSimulationSize;
 const fontUrl = new URL("../assets/font.json", import.meta.url).href;
 
 class LetterScene {
+  private performanceBudget = getPerformanceBudget();
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
@@ -122,7 +124,12 @@ class LetterScene {
     const w = window.innerWidth, h = window.innerHeight;
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.composerPixelRatio = Math.min(this.baseDPR, this.isMobile ? 1.5 : 2);
+    this.composerPixelRatio = Math.min(
+      this.baseDPR,
+      this.isMobile
+        ? this.performanceBudget.heroPixelRatioMobile
+        : this.performanceBudget.heroPixelRatioDesktop,
+    );
     this.renderer.setDrawingBufferSize(w, h, this.composerPixelRatio);
     canvas.style.width = `${w}px`;
     canvas.style.height = `${h}px`;
@@ -167,6 +174,7 @@ class LetterScene {
     window.addEventListener("pointerleave", () => (this.ptr.inside = false), { passive: true });
     window.addEventListener("amv:gyrotilt", this.onGyroTilt as EventListener, { passive: true });
     window.addEventListener("resize", this.onResize, { passive: true });
+    window.addEventListener("amv:performance-tier-change", this.onPerformanceTierChange);
 
     // Perda/restauração de contexto WebGL (voltar de 2º plano no mobile, reset
     // de driver): sem tratar, o "A" fica preto e o tick() renderiza sobre um
@@ -329,6 +337,18 @@ class LetterScene {
     return this.composerPixelRatio * ((window.devicePixelRatio || 1) / this.baseDPR);
   }
 
+  private onPerformanceTierChange = (): void => {
+    this.performanceBudget = getPerformanceBudget();
+    this.composerPixelRatio = Math.min(
+      this.baseDPR,
+      this.isMobile
+        ? this.performanceBudget.heroPixelRatioMobile
+        : this.performanceBudget.heroPixelRatioDesktop,
+    );
+    this.lastRenderedAt = 0;
+    this.syncViewport(true);
+  };
+
   private syncViewport(resizeBuffers: boolean): void {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -483,15 +503,19 @@ class LetterScene {
       this.stopRenderLoop();
       return;
     }
-    const frameInterval = document.getElementById("clothintro")
-      ? 1000 / 30
+    const targetFps = document.getElementById("clothintro")
+      ? Math.min(30, this.performanceBudget.heroFps)
       : this.isMobile && this.scrollT > 0.3
-        ? 1000 / 40
-        : 1000 / 60;
+        ? this.performanceBudget.heroBackgroundFps
+        : this.performanceBudget.heroFps;
+    const frameInterval = 1000 / targetFps;
     if (this.lastRenderedAt && frameTime - this.lastRenderedAt < frameInterval - 1) {
       this.startRenderLoop();
       return;
     }
+    const frameScale = this.lastRenderedAt
+      ? Math.min(3, (frameTime - this.lastRenderedAt) / 16.667)
+      : 1;
     this.lastRenderedAt = frameTime;
     const elapsed = this.clock.getElapsedTime();
     const s = this.scrollT;
@@ -516,9 +540,12 @@ class LetterScene {
     }
     // Só roda a simulação do rastro (loop de 16k células) quando há interação
     // ou logo depois (enquanto o rastro some). Parado = pula, economiza CPU.
-    // No mobile roda em quadros alternados (metade do custo).
+    // A cadencia da simulacao muda por capacidade sem remover o efeito.
     this.frostIdle = this.overA ? 0 : this.frostIdle + 1;
-    const doFrost = this.frostIdle < 100 && (!this.isMobile || (this.autoFrame++ & 1) === 0);
+    const frostStride = this.isMobile
+      ? this.performanceBudget.heroSimulationStrideMobile
+      : this.performanceBudget.heroSimulationStrideDesktop;
+    const doFrost = this.frostIdle < 100 && this.autoFrame++ % frostStride === 0;
     if (doFrost) this.updateFrost(elapsed);
 
     // coreografia pelo scroll
@@ -529,8 +556,9 @@ class LetterScene {
     const reach = this.isMobile ? 1.4 : 2.8;
     const tx = Math.sin(s * Math.PI * 3) * reach;
     const ty = Math.sin(s * Math.PI * 2) * 0.7;
-    this.group.position.x += (tx - this.group.position.x) * 0.07;
-    this.group.position.y += (ty - this.group.position.y) * 0.07;
+    const positionEase = 1 - Math.pow(1 - 0.07, frameScale);
+    this.group.position.x += (tx - this.group.position.x) * positionEase;
+    this.group.position.y += (ty - this.group.position.y) * positionEase;
 
     // Desktop: inclina seguindo o cursor. Mobile: balanço automático suave,
     // pra o A nunca ficar congelado em repouso (não há cursor no toque).
@@ -541,8 +569,9 @@ class LetterScene {
       tiltY = gyroFresh ? this.gyroTilt.ry * 0.42 : Math.sin(elapsed * 0.55) * 0.34;
       tiltX = gyroFresh ? this.gyroTilt.rx * 0.28 : Math.sin(elapsed * 0.4) * 0.16;
     }
-    this.group.rotation.y += (tiltY - this.group.rotation.y) * 0.06;
-    this.group.rotation.x += (tiltX - this.group.rotation.x) * 0.06;
+    const rotationEase = 1 - Math.pow(1 - 0.06, frameScale);
+    this.group.rotation.y += (tiltY - this.group.rotation.y) * rotationEase;
+    this.group.rotation.x += (tiltX - this.group.rotation.x) * rotationEase;
 
     this.composer.render();
     this.startRenderLoop();

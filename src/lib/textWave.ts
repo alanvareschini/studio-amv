@@ -2,7 +2,7 @@ import {
   createIglooGlyphAtlas,
   type IglooAtlasGlyph,
 } from "./iglooGlyphAtlas";
-import { isReducedMotion } from "./motionPreference";
+import { getPerformanceBudget, isReducedMotion } from "./motionPreference";
 
 type IglooOwner = {
   el: HTMLElement;
@@ -36,7 +36,6 @@ type IglooSimulation = {
   lastStep: number;
 };
 
-const FIELD_SCALE = 5;
 const FIELD_DAMPING = 0.985;
 const FIELD_STEP_MS = 15;
 const LIGHT_START = 0.6;
@@ -106,6 +105,7 @@ const distanceToSegment = (
 function initIglooWave(elements: HTMLElement[]): void {
   if (!elements.length) return;
 
+  let fieldScale = getPerformanceBudget().iglooFieldScale;
   const glyphs: IglooGlyph[] = [];
   const owners: IglooOwner[] = elements.map((el) => ({ el, visible: false }));
   const atlasHost = elements[0].closest<HTMLElement>("#faq") ?? elements[0].parentElement;
@@ -201,8 +201,8 @@ function initIglooWave(elements: HTMLElement[]): void {
   const resize = () => {
     atlas?.resize();
     atlas?.measure(glyphs);
-    const width = Math.max(2, Math.floor(window.innerWidth / FIELD_SCALE));
-    const height = Math.max(2, Math.floor(window.innerHeight / FIELD_SCALE));
+    const width = Math.max(2, Math.floor(window.innerWidth / fieldScale));
+    const height = Math.max(2, Math.floor(window.innerHeight / fieldScale));
     if (width === simulation.width && height === simulation.height) return;
 
     simulation.width = width;
@@ -445,6 +445,10 @@ function initIglooWave(elements: HTMLElement[]): void {
     ).observe(atlasHost);
   }
   window.addEventListener("resize", resize, { passive: true });
+  window.addEventListener("amv:performance-tier-change", () => {
+    fieldScale = getPerformanceBudget().iglooFieldScale;
+    resize();
+  }, { passive: true });
   window.addEventListener(
     "pointermove",
     (event) => setPointer(event.clientX, event.clientY),

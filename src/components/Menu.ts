@@ -2,6 +2,7 @@
 // com links grandes e o blob original de dia/noite dentro.
 import { HeroBlob } from "./HeroBlob";
 import {
+  getPerformanceTier,
   getMotionMode,
   setMotionMode,
   type MotionMode,
@@ -38,9 +39,10 @@ export function Menu(): string {
           <span class="menu-motion__label">Anima&ccedil;&otilde;es</span>
           <span class="menu-motion__status" data-motion-status aria-live="polite"></span>
         </div>
-        <div class="menu-motion__options" role="group" aria-label="Intensidade das anima&ccedil;&otilde;es">
+        <div class="menu-motion__options" role="group" aria-label="Qualidade da experi&ecirc;ncia visual">
           <button type="button" data-motion-mode="auto">Auto</button>
-          <button type="button" data-motion-mode="full">Completa</button>
+          <button type="button" data-motion-mode="full">M&aacute;xima</button>
+          <button type="button" data-motion-mode="balanced">M&eacute;dia</button>
           <button type="button" data-motion-mode="reduced">Leve</button>
         </div>
       </div>
@@ -57,10 +59,16 @@ export function initMenu(): void {
   );
   const motionStatus = overlay.querySelector<HTMLElement>("[data-motion-status]");
   const motionLabels: Record<MotionMode, string> = {
-    auto: "Segue o aparelho",
-    full: "Qualidade total",
-    reduced: "Mais leve",
+    auto: "",
+    full: "Qualidade máxima",
+    balanced: "Equilibrada",
+    reduced: "Economia máxima",
   };
+  const tierLabels = {
+    high: "máxima",
+    balanced: "equilibrada",
+    low: "leve",
+  } as const;
   const syncMotionControl = () => {
     const mode = getMotionMode();
     motionButtons.forEach((motionButton) => {
@@ -68,7 +76,11 @@ export function initMenu(): void {
       motionButton.classList.toggle("is-active", active);
       motionButton.setAttribute("aria-pressed", String(active));
     });
-    if (motionStatus) motionStatus.textContent = motionLabels[mode];
+    if (motionStatus) {
+      motionStatus.textContent = mode === "auto"
+        ? `Detectado: ${tierLabels[getPerformanceTier()]}`
+        : motionLabels[mode];
+    }
   };
 
   motionButtons.forEach((motionButton) => {
@@ -86,6 +98,7 @@ export function initMenu(): void {
       window.setTimeout(() => window.location.reload(), 120);
     });
   });
+  window.addEventListener("amv:performance-tier-change", syncMotionControl);
   syncMotionControl();
 
   const open = () => {

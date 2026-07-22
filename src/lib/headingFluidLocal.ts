@@ -11,14 +11,12 @@ import {
   Vector4,
   WebGLRenderer,
 } from "three";
-import { isReducedMotion } from "./motionPreference";
+import { getPerformanceBudget, isReducedMotion } from "./motionPreference";
 
 const TARGET_SELECTOR =
   "h1.hero__brand, h2.section__title, h2.cta-final__title";
 const EXCLUDED_SELECTOR =
   ".card, .pkg, .pkg-modal, .timeline, #faq, [role='dialog']";
-const MAX_PIXEL_RATIO = 2;
-
 interface HeadingLayer {
   element: HTMLElement;
   canvas: HTMLCanvasElement;
@@ -131,6 +129,7 @@ function rasterizeHeading(
 
 export function initHeadingFluid(): void {
   if (isReducedMotion()) return;
+  let performanceBudget = getPerformanceBudget();
 
   const targets = [...document.querySelectorAll<HTMLElement>(TARGET_SELECTOR)]
     .filter((element) => !element.closest(EXCLUDED_SELECTOR));
@@ -279,6 +278,7 @@ export function initHeadingFluid(): void {
 
   let animationFrame = 0;
   let lastTime = performance.now();
+  let lastRenderedAt = 0;
   let flowTime = 0;
   let hover = 0;
   let touchPressed = false;
@@ -294,7 +294,7 @@ export function initHeadingFluid(): void {
     const context = canvas.getContext("2d");
     if (!context) return null;
 
-    const ratio = Math.min(devicePixelRatio, MAX_PIXEL_RATIO);
+    const ratio = Math.min(devicePixelRatio, performanceBudget.headingPixelRatio);
     const source = rasterizeHeading(element, ratio);
     const texture = new CanvasTexture(source);
     texture.minFilter = LinearFilter;
@@ -326,7 +326,7 @@ export function initHeadingFluid(): void {
     layer.canvas.dataset.renderState = "paused";
   });
   const rebuildLayer = (layer: HeadingLayer) => {
-    const ratio = Math.min(devicePixelRatio, MAX_PIXEL_RATIO);
+    const ratio = Math.min(devicePixelRatio, performanceBudget.headingPixelRatio);
     const source = rasterizeHeading(layer.element, ratio);
     layer.texture.dispose();
     layer.texture = new CanvasTexture(source);
@@ -339,7 +339,7 @@ export function initHeadingFluid(): void {
   };
 
   const renderLayer = (layer: HeadingLayer, rect: DOMRect) => {
-    const ratio = Math.min(devicePixelRatio, MAX_PIXEL_RATIO);
+    const ratio = Math.min(devicePixelRatio, performanceBudget.headingPixelRatio);
     renderer.setPixelRatio(ratio);
     renderer.setSize(
       Math.max(1, rect.width),
@@ -487,6 +487,13 @@ export function initHeadingFluid(): void {
       return;
     }
 
+    const frameInterval = 1000 / performanceBudget.headingFps;
+    if (lastRenderedAt && time - lastRenderedAt < frameInterval - 1) {
+      animationFrame = requestAnimationFrame(render);
+      return;
+    }
+    lastRenderedAt = time;
+
     const delta = Math.min((time - lastTime) / 1000, 0.05);
     lastTime = time;
     uniforms.uLight.value = document.documentElement.dataset.theme === "light" ? 1 : 0;
@@ -516,6 +523,7 @@ export function initHeadingFluid(): void {
       layer.canvas.dataset.renderState = "running";
     });
     lastTime = performance.now();
+    lastRenderedAt = 0;
     animationFrame = requestAnimationFrame(render);
   }
 
@@ -543,6 +551,12 @@ export function initHeadingFluid(): void {
     else startRender();
   };
   document.addEventListener("visibilitychange", visibilityChanged, { passive: true });
+  window.addEventListener("amv:performance-tier-change", () => {
+    performanceBudget = getPerformanceBudget();
+    layers.forEach(rebuildLayer);
+    lastRenderedAt = 0;
+    startRender();
+  }, { passive: true });
 
   document.fonts.ready.then(() => {
     fontsReady = true;

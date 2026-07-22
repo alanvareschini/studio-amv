@@ -21,17 +21,42 @@
         var mode = "auto";
         try {
           var savedMode = localStorage.getItem("amv-motion-mode");
-          if (savedMode === "auto" || savedMode === "full" || savedMode === "reduced") mode = savedMode;
+          if (savedMode === "auto" || savedMode === "full" || savedMode === "balanced" || savedMode === "reduced") mode = savedMode;
           if (sessionStorage.getItem("amv-skip-intro-once") === "1") {
             sessionStorage.removeItem("amv-skip-intro-once");
             document.documentElement.dataset.skipMotionIntro = "true";
           }
         } catch (e) {}
         var systemReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse), (max-width: 760px)").matches;
+        var memory = navigator.deviceMemory;
+        var cores = navigator.hardwareConcurrency;
+        var saveData = navigator.connection && navigator.connection.saveData;
+        var tier = "balanced";
+        if (mode === "full") tier = "high";
+        else if (mode === "reduced" || (mode === "auto" && systemReduced)) tier = "low";
+        else if (mode === "balanced") tier = "balanced";
+        else if (saveData || memory <= 2 || cores <= 4 || (coarsePointer && memory <= 4)) tier = "low";
+        else if (!coarsePointer && memory >= 8 && cores >= 8) tier = "high";
+        var hardwareTier = tier;
+        if (mode === "auto") {
+          try {
+            var runtimeSaved = JSON.parse(sessionStorage.getItem("amv-runtime-performance-tier") || "null");
+            var runtimeTier = runtimeSaved && runtimeSaved.tier;
+            var runtimeFresh = runtimeSaved && typeof runtimeSaved.at === "number" && Date.now() - runtimeSaved.at < 1800000;
+            var rank = { low: 0, balanced: 1, high: 2 };
+            if (runtimeFresh && typeof runtimeTier === "string" && runtimeTier in rank && rank[runtimeTier] < rank[tier]) tier = runtimeTier;
+          } catch (e) {}
+        }
         document.documentElement.dataset.motionPreference = mode;
         document.documentElement.dataset.motion = mode === "reduced" || (mode === "auto" && systemReduced)
           ? "reduced"
           : "full";
+        document.documentElement.dataset.performanceTier = tier;
+        document.documentElement.dataset.hardwareTier = hardwareTier;
+        document.documentElement.dataset.performanceSource = mode === "auto" && tier !== hardwareTier
+          ? "runtime"
+          : mode === "auto" ? "detected" : "manual";
       })();
     </script>
 
@@ -181,7 +206,8 @@
         var BANDS = 5;
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
         var W = 0, H = 0, dpr = 1, SP = 26;
-        var GRAV = 0.2, DAMP = 0.992, ITERS = 5;
+        var qualityTier = document.documentElement.dataset.performanceTier || "balanced";
+        var GRAV = 0.2, DAMP = 0.992, ITERS = qualityTier === "low" ? 4 : 5;
         var COMPRESS = 0.02, STRETCH = 1.1, H_COMPRESS = 0.6, H_STRETCH = 4;
         var HOME_FORCE = 0.0028, HOME_DEADZONE = 10;
         var MOUSE_STRENGTH = 0.78;
