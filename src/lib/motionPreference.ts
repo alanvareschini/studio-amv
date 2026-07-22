@@ -94,8 +94,8 @@ const BUDGETS: Record<PerformanceTier, PerformanceBudget> = {
     heroPixelRatioMobile: 1,
     heroPixelRatioDesktop: 1.25,
     heroSimulationSize: 88,
-    heroSimulationStrideMobile: 1,
-    heroSimulationStrideDesktop: 1,
+    heroSimulationStrideMobile: 2,
+    heroSimulationStrideDesktop: 2,
     heroFps: 30,
     heroBackgroundFps: 30,
     headingPixelRatio: 1,
@@ -236,8 +236,10 @@ export function getMotionMode(): MotionMode {
 }
 
 function resolveMotion(mode: MotionMode): "full" | "reduced" {
-  if (mode === "reduced") return "reduced";
-  if (mode === "auto" && matchMedia(REDUCED_QUERY).matches) return "reduced";
+  // "Leve" lowers rendering quality but keeps the interactive experience.
+  // Motion is removed only for the operating-system accessibility preference.
+  const followsSystemPreference = mode === "auto" || mode === "reduced";
+  if (followsSystemPreference && matchMedia(REDUCED_QUERY).matches) return "reduced";
   return "full";
 }
 

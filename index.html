@@ -189,6 +189,7 @@
             host.removeEventListener("pointerleave", onLeave);
           }
           window.removeEventListener("resize", onResize);
+          window.removeEventListener("blur", cancelInteraction);
           if (host && host.parentNode) host.remove();
           document.body.classList.remove("ci-lock");
           revealSite();
@@ -207,9 +208,11 @@
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
         var W = 0, H = 0, dpr = 1, SP = 26;
         var qualityTier = document.documentElement.dataset.performanceTier || "balanced";
-        var GRAV = 0.2, DAMP = 0.992, ITERS = qualityTier === "low" ? 4 : 5;
-        var COMPRESS = 0.02, STRETCH = 1.1, H_COMPRESS = 0.6, H_STRETCH = 4;
-        var HOME_FORCE = 0.0028, HOME_DEADZONE = 10;
+        var GRAV = 0.1, DAMP_ACTIVE = 0.945, DAMP_IDLE = 0.9, DAMP_CORD = 0.92;
+        var ITERS = qualityTier === "low" ? 4 : 5;
+        var COMPRESS = 0.58, STRETCH = 1.22, H_COMPRESS = 0.56, H_STRETCH = 2.4;
+        var HOME_RETURN_ACTIVE = 0.016, HOME_RETURN_IDLE = 0.055;
+        var HOME_SNAP_DISTANCE = 0.65, HOME_SNAP_SPEED = 0.14;
         var MOUSE_STRENGTH = 0.78;
         var STEP_MS = 1000 / 60, MAX_STEPS = 2;
         var curtains = [], cord = [], handle = null, bandImg = [];
@@ -222,6 +225,8 @@
           active: false,
           vx: 0,
           vy: 0,
+          pointerId: null,
+          pointerType: "mouse",
           cordGrab: false,
           cordParticle: null,
           cordParticleWasPinned: false,
@@ -344,29 +349,29 @@
           lastT = performance.now();
         }
 
+        function resetPoint(p) {
+          p.x = p.hx;
+          p.y = p.hy;
+          p.ox = p.hx;
+          p.oy = p.hy;
+          p.ax = 0;
+          p.ay = 0;
+        }
+
         function verlet(points, gravity, dt) {
-          var damp = Math.pow(DAMP, dt);
           for (var i = 0; i < points.length; i++) {
             var p = points[i];
+            if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.ox) || !Number.isFinite(p.oy)) {
+              resetPoint(p);
+            }
             if (p.pin) { p.ax = 0; p.ay = 0; continue; }
+            var baseDamp = p.cord ? DAMP_CORD : ptr.active ? DAMP_ACTIVE : DAMP_IDLE;
+            var damp = Math.pow(baseDamp, dt);
             var vx = (p.x - p.ox) * damp;
             var vy = (p.y - p.oy) * damp;
             p.ox = p.x;
             p.oy = p.y;
             p.ay += gravity;
-            if (!opening && p !== ptr.particle && typeof p.hx === "number" && typeof p.hy === "number") {
-              var homeDx = p.hx - p.x;
-              var homeDy = p.hy - p.y;
-              var homeD2 = homeDx * homeDx + homeDy * homeDy;
-              var homeDeadzone = p.cord ? 2 : HOME_DEADZONE;
-              if (homeD2 > homeDeadzone * homeDeadzone) {
-                var homeEase = Math.min(1, (Math.sqrt(homeD2) - homeDeadzone) / (p.cord ? 60 : 90));
-                homeEase = homeEase * homeEase * (3 - 2 * homeEase);
-                var homeForce = p.cord ? 0.018 : HOME_FORCE;
-                p.ax += homeDx * homeForce * homeEase;
-                p.ay += homeDy * homeForce * homeEase;
-              }
-            }
             p.x += vx + p.ax * dt * dt;
             p.y += vy + p.ay * dt * dt;
             p.ax = 0;
@@ -374,7 +379,7 @@
           }
         }
 
-        function link(p1, p2, minLength, maxLength) {
+        function link(p1, p2, minLength, maxLength, stiffness, absorption) {
           var dx = p2.x - p1.x;
           var dy = p2.y - p1.y;
           var d = Math.hypot(dx, dy) || 0.001;
@@ -383,22 +388,78 @@
           else if (d > maxLength) targetLength = maxLength;
           else return;
           var diff = targetLength - d;
-          var percent = diff / d / 2;
+          var share = p1.pin || p2.pin ? 1 : 0.5;
+          var percent = diff / d * share * stiffness;
           var ox = dx * percent;
           var oy = dy * percent;
-          if (!p1.pin) { p1.x -= ox; p1.y -= oy; }
-          if (!p2.pin) { p2.x += ox; p2.y += oy; }
+          if (!p1.pin) {
+            p1.x -= ox;
+            p1.y -= oy;
+            p1.ox -= ox * absorption;
+            p1.oy -= oy * absorption;
+          }
+          if (!p2.pin) {
+            p2.x += ox;
+            p2.y += oy;
+            p2.ox += ox * absorption;
+            p2.oy += oy * absorption;
+          }
         }
 
         function solveCurtain(cur) {
           var P = cur.P;
           var links = cur.links;
           for (var i = 0; i < links.length; i += 4) {
-            link(P[links[i]], P[links[i + 1]], links[i + 2], links[i + 3]);
+            link(P[links[i]], P[links[i + 1]], links[i + 2], links[i + 3], 0.46, 0.82);
           }
         }
         function solveCord() {
-          for (var i = 0; i < cord.length - 1; i++) link(cord[i], cord[i + 1], cord[i].len, cord[i].len);
+          for (var i = 0; i < cord.length - 1; i++) {
+            link(cord[i], cord[i + 1], cord[i].len, cord[i].len, 0.88, 0.7);
+          }
+        }
+
+        function stabilize(points, dt, returnHome) {
+          var maxDisplacement = Math.max(180, Math.min(W, H) * 0.48);
+          for (var i = 0; i < points.length; i++) {
+            var p = points[i];
+            if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.ox) || !Number.isFinite(p.oy)) {
+              resetPoint(p);
+              continue;
+            }
+            if (!returnHome || p === ptr.particle || p === ptr.cordParticle) continue;
+            if (p.pin) {
+              resetPoint(p);
+              continue;
+            }
+
+            var dx = p.hx - p.x;
+            var dy = p.hy - p.y;
+            var distance = Math.hypot(dx, dy);
+            if (distance > maxDisplacement) {
+              var clampScale = maxDisplacement / distance;
+              p.x = p.hx - dx * clampScale;
+              p.y = p.hy - dy * clampScale;
+              p.ox = p.x;
+              p.oy = p.y;
+              dx = p.hx - p.x;
+              dy = p.hy - p.y;
+              distance = maxDisplacement;
+            }
+
+            var nearPointer = ptr.active && Math.hypot(ptr.x - p.x, ptr.y - p.y) < (W < 640 ? 120 : 158);
+            var returnRate = p.cord ? 0.075 : nearPointer ? HOME_RETURN_ACTIVE : HOME_RETURN_IDLE;
+            var homeBlend = 1 - Math.pow(1 - returnRate, dt);
+            var correctionX = dx * homeBlend;
+            var correctionY = dy * homeBlend;
+            p.x += correctionX;
+            p.y += correctionY;
+            p.ox += correctionX;
+            p.oy += correctionY;
+
+            var speed = Math.hypot(p.x - p.ox, p.y - p.oy);
+            if (!ptr.active && distance < HOME_SNAP_DISTANCE && speed < HOME_SNAP_SPEED) resetPoint(p);
+          }
         }
 
         function pointToSegmentDistanceSq(x, y, a, b) {
@@ -461,7 +522,7 @@
               var ls = dx * dx + dy * dy;
               if (ls < radius2 && ls > 1) {
                 var falloff = smoothstep(radius2, 0, ls);
-                var strength = falloff * MOUSE_STRENGTH * (0.75 + speed * 0.025);
+                var strength = falloff * MOUSE_STRENGTH * (0.14 + speed * 0.045);
                 if (ptr.cordGrab || ptr.particle) strength *= 1.45;
                 var inverseDistance = strength / Math.sqrt(ls);
                 p.ax -= dx * inverseDistance;
@@ -534,6 +595,11 @@
           }
 
           repel();
+          var pointerDecay = Math.pow(0.42, dt);
+          ptr.vx *= pointerDecay;
+          ptr.vy *= pointerDecay;
+          if (Math.abs(ptr.vx) < 0.01) ptr.vx = 0;
+          if (Math.abs(ptr.vy) < 0.01) ptr.vy = 0;
 
           if (opening) {
             for (var j = 0; j < curtains.length; j++) {
@@ -556,6 +622,9 @@
             for (var n = 0; n < curtains.length; n++) solveCurtain(curtains[n]);
             solveCord();
           }
+
+          for (var s = 0; s < curtains.length; s++) stabilize(curtains[s].P, dt, !opening);
+          stabilize(cord, dt, true);
 
           armCordIfPulled();
           openWhenCordReturns();
@@ -657,7 +726,16 @@
           }
         }
 
+        function deactivatePointer() {
+          ptr.active = false;
+          ptr.x = -9999;
+          ptr.y = -9999;
+          ptr.vx = 0;
+          ptr.vy = 0;
+        }
+
         function onMove(e) {
+          if (ptr.pointerId !== null && typeof e.pointerId === "number" && e.pointerId !== ptr.pointerId) return;
           if (ptr.x > -1000) {
             ptr.vx = Math.max(-28, Math.min(28, e.clientX - ptr.x));
             ptr.vy = Math.max(-28, Math.min(28, e.clientY - ptr.y));
@@ -667,7 +745,8 @@
           ptr.active = true;
           armCordIfPulled();
         }
-        function onUp() {
+        function onUp(e) {
+          if (ptr.pointerId !== null && e && typeof e.pointerId === "number" && e.pointerId !== ptr.pointerId) return;
           var shouldOpenOnReturn = ptr.cordGrab && ptr.cordArmed;
           var returnParticle = ptr.cordParticle || handle;
           var releaseY = ptr.cordPeakY || ptr.y;
@@ -694,14 +773,24 @@
             ptr.particle.pin = ptr.particleWasPinned;
             ptr.particle = null;
           }
+          ptr.pointerId = null;
+          ptr.cordParticleWasPinned = false;
+          ptr.particleWasPinned = false;
+          if (ptr.pointerType !== "mouse") deactivatePointer();
+        }
+        function cancelInteraction() {
+          ptr.cordArmed = false;
+          ptr.cordWaitingReturn = false;
+          ptr.cordReturnParticle = null;
+          onUp();
+          deactivatePointer();
         }
         function onLeave() {
-          ptr.active = false;
-          ptr.vx = 0;
-          ptr.vy = 0;
           onUp();
+          deactivatePointer();
         }
         function onResize() {
+          cancelInteraction();
           clearTimeout(resizeTimer);
           resizeTimer = window.setTimeout(function () { if (!opening) build(); }, 180);
         }
@@ -722,6 +811,7 @@
         }
         function onVisibility() {
           if (document.hidden) {
+            cancelInteraction();
             if (raf) cancelAnimationFrame(raf);
             raf = 0;
             return;
@@ -730,6 +820,8 @@
         }
 
         host.addEventListener("pointerdown", function (e) {
+          ptr.pointerId = e.pointerId;
+          ptr.pointerType = e.pointerType || "mouse";
           onMove(e);
           ptr.cordParticle = findCordParticle(ptr.x, ptr.y);
           if (ptr.cordParticle) {
@@ -771,6 +863,7 @@
         host.addEventListener("lostpointercapture", onUp);
         host.addEventListener("pointerleave", onLeave);
         window.addEventListener("resize", onResize, { passive: true });
+        window.addEventListener("blur", cancelInteraction);
         window.addEventListener("visibilitychange", onVisibility);
         window.addEventListener("amv:visuals-ready", onVisualsReady, { once: true });
 

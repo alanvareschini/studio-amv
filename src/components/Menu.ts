@@ -62,7 +62,7 @@ export function initMenu(): void {
     auto: "",
     full: "Qualidade máxima",
     balanced: "Equilibrada",
-    reduced: "Economia máxima",
+    reduced: "Experiência otimizada",
   };
   const tierLabels = {
     high: "máxima",

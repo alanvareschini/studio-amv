@@ -23,7 +23,7 @@ class LetterScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
-  private composer: EffectComposer;
+  private composer: EffectComposer | null = null;
   private group = new THREE.Group();
   private spinner = new THREE.Group();
   private mesh: THREE.Mesh | null = null;
@@ -123,7 +123,12 @@ class LetterScene {
     this.isMobile = window.matchMedia("(max-width: 760px)").matches;
     const w = window.innerWidth, h = window.innerHeight;
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    const lowTier = this.performanceBudget.tier === "low";
+    this.renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: !lowTier,
+      powerPreference: lowTier ? "low-power" : "high-performance",
+    });
     this.composerPixelRatio = Math.min(
       this.baseDPR,
       this.isMobile
@@ -162,13 +167,16 @@ class LetterScene {
     this.frostTexture.needsUpdate = true;
     this.frostU.tMouseFrost.value = this.frostTexture;
 
-    this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    // Low mode keeps the animated A, but skips bloom's extra render targets.
+    if (!lowTier) {
+      this.composer = new EffectComposer(this.renderer);
+      this.composer.addPass(new RenderPass(this.scene, this.camera));
     // threshold alto (0.8): só os brilhos mais fortes (reflexos + rastro) fazem
     // bloom → o fundo claro NÃO é "lavado".
-    this.composer.addPass(
-      new UnrealBloomPass(new THREE.Vector2(w, h), this.isMobile ? 0.38 : 0.55, 0.6, 0.8)
-    );
+      this.composer.addPass(
+        new UnrealBloomPass(new THREE.Vector2(w, h), this.isMobile ? 0.38 : 0.55, 0.6, 0.8),
+      );
+    }
 
     window.addEventListener("pointermove", this.onPointer, { passive: true });
     window.addEventListener("pointerleave", () => (this.ptr.inside = false), { passive: true });
@@ -378,7 +386,7 @@ class LetterScene {
     if (!bufferChanged) return;
 
     this.renderer.setDrawingBufferSize(width, height, pixelRatio);
-    this.composer.setSize(
+    this.composer?.setSize(
       targetBufferW / this.composerPixelRatio,
       targetBufferH / this.composerPixelRatio,
     );
@@ -573,7 +581,11 @@ class LetterScene {
     this.group.rotation.y += (tiltY - this.group.rotation.y) * rotationEase;
     this.group.rotation.x += (tiltX - this.group.rotation.x) * rotationEase;
 
-    this.composer.render();
+    if (this.performanceBudget.tier === "low" || !this.composer) {
+      this.renderer.render(this.scene, this.camera);
+    } else {
+      this.composer.render();
+    }
     this.startRenderLoop();
   };
 }

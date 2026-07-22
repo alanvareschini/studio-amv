@@ -2943,3 +2943,78 @@ html.amv-touch .gyro-btn { display: inline-flex; }
 :root[data-motion="reduced"].amv-touch .pkg__holo {
   animation: none !important;
 }
+
+/* Low-end Android compositor fallback. Avoid filtered fixed layers, backdrop
+   readbacks and masked gradients that can corrupt tiles while scrolling. */
+:root[data-performance-tier="low"] body {
+  background: var(--grad-bg), var(--bg);
+}
+
+:root[data-performance-tier="low"] body::before {
+  display: none !important;
+}
+
+:root[data-motion="reduced"] .flow-lines {
+  display: none !important;
+}
+
+:root[data-performance-tier="low"] .flow-lines {
+  display: none !important;
+}
+
+:root[data-performance-tier="low"] .flow-lines__p {
+  filter: none;
+}
+
+:root[data-performance-tier="low"] .header.is-scrolled {
+  background: rgba(7, 10, 18, 0.94);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-theme="light"][data-performance-tier="low"] .header.is-scrolled {
+  background: rgba(238, 241, 248, 0.96);
+}
+
+:root[data-performance-tier="low"] .section,
+:root[data-performance-tier="low"] .float-card,
+:root[data-performance-tier="low"] .mobile-menu,
+:root[data-performance-tier="low"] .modal-overlay {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-performance-tier="low"] .hero-blob {
+  filter: none;
+}
+
+:root[data-performance-tier="low"] .card {
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    var(--grad-main) border-box;
+  border-color: transparent;
+  will-change: auto;
+}
+
+:root[data-performance-tier="low"] .card::after {
+  content: none;
+}
+
+:root[data-performance-tier="low"] .pkg {
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    var(--grad-main) border-box;
+  border-color: transparent;
+  will-change: auto;
+}
+
+:root[data-performance-tier="low"] .pkg--featured {
+  background:
+    linear-gradient(var(--bg-2), var(--bg-2)) padding-box,
+    var(--grad-main) border-box;
+}
+
+:root[data-performance-tier="low"] .pkg::after,
+:root[data-performance-tier="low"] .pkg__holo {
+  display: none;
+}

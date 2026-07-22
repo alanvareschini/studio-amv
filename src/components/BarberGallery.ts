@@ -3,7 +3,7 @@ import gsap from "gsap";
 import { claimDemoScene, releaseDemoScene } from "../lib/demoSceneManager";
 import { CubeAngleGallery } from "../lib/cubeAngleGallery";
 import { KineticCarousel } from "../lib/kineticCarousel";
-import { isReducedMotion } from "../lib/motionPreference";
+import { getPerformanceTier, isReducedMotion } from "../lib/motionPreference";
 
 const SCENE_ID = "barber-gallery";
 const IMAGE_ROOT = "/barber-gallery";
@@ -147,11 +147,12 @@ const renderCubeFaces = (cut: BarberCut) => {
   return faces.map((source) => `<i style="--bk-cube-image:url('${source}')"></i>`).join("");
 };
 
-const renderAngleCarousel = (cut: BarberCut) => /* html */ `
-  <div class="bk-cube-gallery" data-bk-angle-cube tabindex="0" role="region" aria-label="Ângulos do corte ${cut.name}">
-    ${renderBackgrounds(cut.angles.length, cut.tone)}
-    <div class="bk-cube-gallery__body">
-      <div class="bk-cube-stage" data-cube-stage role="img" aria-label="${cut.angles[0]?.label ?? "Frente"}, ângulo 1 de ${cut.angles.length}">
+const renderAngleCarousel = (cut: BarberCut) => {
+  const useCubes = getPerformanceTier() === "high";
+  const initialImage = displayImagePath(cut.angles[0]?.image ?? cut.front);
+  const nextImage = cut.angles[1] ? displayImagePath(cut.angles[1].image) : "";
+  const visual = useCubes
+    ? /* html */ `
         <div class="bk-cube-grid" aria-hidden="true">
           ${Array.from({ length: CUBE_COUNT }, (_, index) => {
             const x = index % CUBE_COLUMNS;
@@ -161,7 +162,19 @@ const renderAngleCarousel = (cut: BarberCut) => /* html */ `
             return `<span class="bk-cube" data-cube style="left:${x * position}%;top:${y * position}%;--bk-cube-bg-x:${x * backgroundPosition}%;--bk-cube-bg-y:${y * backgroundPosition}%;--bk-cube-delay:${index * 15}ms;--bk-cube-mobile-delay:${index * 6}ms"><span class="bk-cube__body">${renderCubeFaces(cut)}</span></span>`;
           }).join("")}
         </div>
-        <canvas class="bk-angle-distortion" data-cube-distortion aria-hidden="true"></canvas>
+        <canvas class="bk-angle-distortion" data-cube-distortion aria-hidden="true"></canvas>`
+    : /* html */ `
+        <div class="bk-angle-simple" aria-hidden="true">
+          <img class="bk-angle-simple__image is-active" data-angle-simple-image src="${initialImage}" alt="" draggable="false" decoding="async">
+          <img class="bk-angle-simple__image" data-angle-simple-image${nextImage ? ` src="${nextImage}"` : ""} alt="" draggable="false" decoding="async">
+        </div>`;
+
+  return /* html */ `
+  <div class="bk-cube-gallery" data-bk-angle-cube data-bk-renderer="${useCubes ? "cube" : "simple"}" tabindex="0" role="region" aria-label="Ângulos do corte ${cut.name}">
+    ${renderBackgrounds(cut.angles.length, cut.tone)}
+    <div class="bk-cube-gallery__body">
+      <div class="bk-cube-stage" data-cube-stage role="img" aria-label="${cut.angles[0]?.label ?? "Frente"}, ângulo 1 de ${cut.angles.length}">
+        ${visual}
       </div>
     </div>
     <div class="bk-carousel__controls bk-cube-controls">
@@ -177,6 +190,7 @@ const renderAngleCarousel = (cut: BarberCut) => /* html */ `
       </button>
     </div>
   </div>`;
+};
 
 export function BarberGallery(): string {
   return /* html */ `

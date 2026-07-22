@@ -29,6 +29,8 @@ export class CubeAngleGallery {
   private readonly counter: HTMLElement | null;
   private readonly label: HTMLElement | null;
   private readonly labels: string[];
+  private readonly images: string[];
+  private readonly simpleImages: HTMLImageElement[];
   private readonly abortController = new AbortController();
   private readonly distortion: SettledAngleDistortion | null;
   private activeIndex = 0;
@@ -40,6 +42,8 @@ export class CubeAngleGallery {
   private swipeStartTime = 0;
   private swipeDistance = 0;
   private swipeWidth = 1;
+  private simpleImageToken = 0;
+  private simpleTransitionTimer = 0;
 
   constructor(root: HTMLElement, options: CubeAngleGalleryOptions) {
     const stage = root.querySelector<HTMLElement>("[data-cube-stage]");
@@ -54,6 +58,10 @@ export class CubeAngleGallery {
     this.counter = root.querySelector<HTMLElement>("[data-cube-current]");
     this.label = root.querySelector<HTMLElement>("[data-cube-label]");
     this.labels = options.labels;
+    this.images = options.images;
+    this.simpleImages = Array.from(
+      root.querySelectorAll<HTMLImageElement>("[data-angle-simple-image]"),
+    );
 
     const signal = this.abortController.signal;
     this.previousButton?.addEventListener("click", () => this.moveTo(this.activeIndex - 1), { signal });
@@ -72,11 +80,12 @@ export class CubeAngleGallery {
   moveTo(index: number, animate = true): void {
     const target = clamp(index, 0, this.labels.length - 1);
     const rotation = ROTATIONS[target] ?? ROTATIONS[0];
+    const previousIndex = this.activeIndex;
     const changed = target !== this.activeIndex;
     this.activeIndex = target;
     this.distortion?.prepare(target);
 
-    if (animate && changed && !isReducedMotion()) {
+    if (this.cubes.length && animate && changed && !isReducedMotion()) {
       window.clearTimeout(this.transitionTimer);
       this.distortion?.hideForTransition();
       this.root.classList.remove("is-changing");
@@ -92,6 +101,10 @@ export class CubeAngleGallery {
       this.distortion?.settle(target);
     }
 
+    if (this.simpleImages.length) {
+      this.showSimpleImage(target, animate && changed, target < previousIndex);
+    }
+
     this.cubes.forEach((cube) => {
       cube.style.setProperty("--bk-cube-rx", `${rotation.x}deg`);
       cube.style.setProperty("--bk-cube-ry", `${rotation.y}deg`);
@@ -101,6 +114,8 @@ export class CubeAngleGallery {
 
   destroy(): void {
     window.clearTimeout(this.transitionTimer);
+    window.clearTimeout(this.simpleTransitionTimer);
+    this.simpleImageToken += 1;
     this.resetSwipe();
     this.abortController.abort();
     this.distortion?.destroy();
@@ -111,12 +126,55 @@ export class CubeAngleGallery {
   }
 
   private createDistortion(images: string[]): SettledAngleDistortion | null {
-    if (isReducedMotion()) return null;
+    if (isReducedMotion() || this.root.dataset.bkRenderer !== "cube") return null;
     try {
       return new SettledAngleDistortion(this.root, this.stage, images);
     } catch {
       return null;
     }
+  }
+
+  private showSimpleImage(index: number, animate: boolean, movingBack: boolean): void {
+    const source = this.images[index];
+    if (!source || this.simpleImages.length < 2) return;
+
+    const active = this.simpleImages.find((image) => image.classList.contains("is-active"))
+      ?? this.simpleImages[0];
+    if (active.getAttribute("src") === source) return;
+
+    const incoming = this.simpleImages.find((image) => image !== active) ?? this.simpleImages[1];
+    const token = ++this.simpleImageToken;
+    let committed = false;
+    const commit = () => {
+      if (committed || token !== this.simpleImageToken) return;
+      committed = true;
+      window.clearTimeout(this.simpleTransitionTimer);
+      this.root.classList.toggle("is-simple-back", movingBack);
+
+      if (!animate) {
+        active.classList.remove("is-active", "is-leaving");
+        incoming.classList.remove("is-entering", "is-leaving");
+        incoming.classList.add("is-active");
+        return;
+      }
+
+      incoming.classList.add("is-entering");
+      void incoming.offsetWidth;
+      active.classList.remove("is-active");
+      active.classList.add("is-leaving");
+      incoming.classList.remove("is-entering");
+      incoming.classList.add("is-active");
+      this.simpleTransitionTimer = window.setTimeout(() => {
+        active.classList.remove("is-leaving");
+      }, 420);
+    };
+
+    incoming.onload = commit;
+    incoming.onerror = () => {
+      if (token === this.simpleImageToken) incoming.removeAttribute("src");
+    };
+    incoming.src = source;
+    if (incoming.complete && incoming.naturalWidth > 0) commit();
   }
 
   private updateState(): void {
@@ -149,8 +207,9 @@ export class CubeAngleGallery {
   };
 
   private handleSwipeStart = (event: PointerEvent): void => {
+    const simpleRenderer = this.root.dataset.bkRenderer === "simple";
     if (
-      event.pointerType !== "mouse"
+      (event.pointerType !== "mouse" && !simpleRenderer)
       || !event.isPrimary
       || event.button !== 0
       || this.swipePointerId !== null
