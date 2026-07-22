@@ -208,11 +208,9 @@
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
         var W = 0, H = 0, dpr = 1, SP = 26;
         var qualityTier = document.documentElement.dataset.performanceTier || "balanced";
-        var GRAV = 0.16, DAMP_ACTIVE = 0.988, DAMP_IDLE = 0.982, DAMP_CORD = 0.95;
-        var ITERS = qualityTier === "low" ? 4 : 5;
-        var COMPRESS = 0.22, STRETCH = 1.42, H_COMPRESS = 0.38, H_STRETCH = 3.4;
-        var HOME_RETURN_ACTIVE = 0.0025, HOME_RETURN_IDLE = 0.009;
-        var HOME_SNAP_DISTANCE = 0.45, HOME_SNAP_SPEED = 0.08;
+        var GRAV = 0.2, DAMP = 0.992, ITERS = qualityTier === "low" ? 4 : 5;
+        var COMPRESS = 0.02, STRETCH = 1.1, H_COMPRESS = 0.6, H_STRETCH = 4;
+        var HOME_FORCE = 0.0028, HOME_DEADZONE = 10;
         var MOUSE_STRENGTH = 0.78;
         var STEP_MS = 1000 / 60, MAX_STEPS = 2;
         var curtains = [], cord = [], handle = null, bandImg = [];
@@ -225,6 +223,8 @@
           active: false,
           vx: 0,
           vy: 0,
+          lastMoveAt: 0,
+          lastReleaseAt: -1,
           pointerId: null,
           pointerType: "mouse",
           cordGrab: false,
@@ -359,19 +359,31 @@
         }
 
         function verlet(points, gravity, dt) {
+          var damp = Math.pow(DAMP, dt);
           for (var i = 0; i < points.length; i++) {
             var p = points[i];
             if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.ox) || !Number.isFinite(p.oy)) {
               resetPoint(p);
             }
             if (p.pin) { p.ax = 0; p.ay = 0; continue; }
-            var baseDamp = p.cord ? DAMP_CORD : ptr.active ? DAMP_ACTIVE : DAMP_IDLE;
-            var damp = Math.pow(baseDamp, dt);
             var vx = (p.x - p.ox) * damp;
             var vy = (p.y - p.oy) * damp;
             p.ox = p.x;
             p.oy = p.y;
             p.ay += gravity;
+            if (!opening && p !== ptr.particle && typeof p.hx === "number" && typeof p.hy === "number") {
+              var homeDx = p.hx - p.x;
+              var homeDy = p.hy - p.y;
+              var homeD2 = homeDx * homeDx + homeDy * homeDy;
+              var homeDeadzone = p.cord ? 2 : HOME_DEADZONE;
+              if (homeD2 > homeDeadzone * homeDeadzone) {
+                var homeEase = Math.min(1, (Math.sqrt(homeD2) - homeDeadzone) / (p.cord ? 60 : 90));
+                homeEase = homeEase * homeEase * (3 - 2 * homeEase);
+                var homeForce = p.cord ? 0.018 : HOME_FORCE;
+                p.ax += homeDx * homeForce * homeEase;
+                p.ay += homeDy * homeForce * homeEase;
+              }
+            }
             p.x += vx + p.ax * dt * dt;
             p.y += vy + p.ay * dt * dt;
             p.ax = 0;
@@ -379,7 +391,7 @@
           }
         }
 
-        function link(p1, p2, minLength, maxLength, stiffness, absorption) {
+        function link(p1, p2, minLength, maxLength) {
           var dx = p2.x - p1.x;
           var dy = p2.y - p1.y;
           var d = Math.hypot(dx, dy) || 0.001;
@@ -388,77 +400,50 @@
           else if (d > maxLength) targetLength = maxLength;
           else return;
           var diff = targetLength - d;
-          var share = p1.pin || p2.pin ? 1 : 0.5;
-          var percent = diff / d * share * stiffness;
+          var percent = diff / d / 2;
           var ox = dx * percent;
           var oy = dy * percent;
-          if (!p1.pin) {
-            p1.x -= ox;
-            p1.y -= oy;
-            p1.ox -= ox * absorption;
-            p1.oy -= oy * absorption;
-          }
-          if (!p2.pin) {
-            p2.x += ox;
-            p2.y += oy;
-            p2.ox += ox * absorption;
-            p2.oy += oy * absorption;
-          }
+          if (!p1.pin) { p1.x -= ox; p1.y -= oy; }
+          if (!p2.pin) { p2.x += ox; p2.y += oy; }
         }
 
         function solveCurtain(cur) {
           var P = cur.P;
           var links = cur.links;
           for (var i = 0; i < links.length; i += 4) {
-            link(P[links[i]], P[links[i + 1]], links[i + 2], links[i + 3], 0.24, 0.93);
+            link(P[links[i]], P[links[i + 1]], links[i + 2], links[i + 3]);
           }
         }
         function solveCord() {
-          for (var i = 0; i < cord.length - 1; i++) {
-            link(cord[i], cord[i + 1], cord[i].len, cord[i].len, 0.88, 0.7);
-          }
+          for (var i = 0; i < cord.length - 1; i++) link(cord[i], cord[i + 1], cord[i].len, cord[i].len);
         }
 
-        function stabilize(points, dt, returnHome) {
-          var maxDisplacement = Math.max(180, Math.min(W, H) * 0.48);
-          for (var i = 0; i < points.length; i++) {
-            var p = points[i];
-            if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.ox) || !Number.isFinite(p.oy)) {
-              resetPoint(p);
-              continue;
+        function recoverStuckCurtains(now, dt) {
+          if (opening || ptr.active || ptr.lastReleaseAt < 0 || now - ptr.lastReleaseAt < 2400) return;
+          var blend = 1 - Math.pow(0.982, dt);
+          for (var k = 0; k < curtains.length; k++) {
+            var points = curtains[k].P;
+            for (var i = 0; i < points.length; i++) {
+              var p = points[i];
+              if (p.pin) continue;
+              if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.ox) || !Number.isFinite(p.oy)) {
+                resetPoint(p);
+                continue;
+              }
+              var dx = p.hx - p.x;
+              var dy = p.hy - p.y;
+              var distance = Math.hypot(dx, dy);
+              if (distance < 0.5) {
+                resetPoint(p);
+                continue;
+              }
+              var correctionX = dx * blend;
+              var correctionY = dy * blend;
+              p.x += correctionX;
+              p.y += correctionY;
+              p.ox += correctionX;
+              p.oy += correctionY;
             }
-            if (!returnHome || p === ptr.particle || p === ptr.cordParticle) continue;
-            if (p.pin) {
-              resetPoint(p);
-              continue;
-            }
-
-            var dx = p.hx - p.x;
-            var dy = p.hy - p.y;
-            var distance = Math.hypot(dx, dy);
-            if (distance > maxDisplacement) {
-              var clampScale = maxDisplacement / distance;
-              p.x = p.hx - dx * clampScale;
-              p.y = p.hy - dy * clampScale;
-              p.ox = p.x;
-              p.oy = p.y;
-              dx = p.hx - p.x;
-              dy = p.hy - p.y;
-              distance = maxDisplacement;
-            }
-
-            var nearPointer = ptr.active && Math.hypot(ptr.x - p.x, ptr.y - p.y) < (W < 640 ? 120 : 158);
-            var returnRate = p.cord ? 0.075 : nearPointer ? HOME_RETURN_ACTIVE : HOME_RETURN_IDLE;
-            var homeBlend = 1 - Math.pow(1 - returnRate, dt);
-            var correctionX = dx * homeBlend;
-            var correctionY = dy * homeBlend;
-            p.x += correctionX;
-            p.y += correctionY;
-            p.ox += correctionX;
-            p.oy += correctionY;
-
-            var speed = Math.hypot(p.x - p.ox, p.y - p.oy);
-            if (!ptr.active && distance < HOME_SNAP_DISTANCE && speed < HOME_SNAP_SPEED) resetPoint(p);
           }
         }
 
@@ -522,7 +507,7 @@
               var ls = dx * dx + dy * dy;
               if (ls < radius2 && ls > 1) {
                 var falloff = smoothstep(radius2, 0, ls);
-                var strength = falloff * MOUSE_STRENGTH * (0.14 + speed * 0.045);
+                var strength = falloff * MOUSE_STRENGTH * (0.75 + speed * 0.025);
                 if (ptr.cordGrab || ptr.particle) strength *= 1.45;
                 var inverseDistance = strength / Math.sqrt(ls);
                 p.ax -= dx * inverseDistance;
@@ -595,11 +580,14 @@
           }
 
           repel();
-          var pointerDecay = Math.pow(0.68, dt);
-          ptr.vx *= pointerDecay;
-          ptr.vy *= pointerDecay;
-          if (Math.abs(ptr.vx) < 0.01) ptr.vx = 0;
-          if (Math.abs(ptr.vy) < 0.01) ptr.vy = 0;
+          var now = performance.now();
+          if (now - ptr.lastMoveAt > 48) {
+            var pointerDecay = Math.pow(0.3, dt);
+            ptr.vx *= pointerDecay;
+            ptr.vy *= pointerDecay;
+            if (Math.abs(ptr.vx) < 0.01) ptr.vx = 0;
+            if (Math.abs(ptr.vy) < 0.01) ptr.vy = 0;
+          }
 
           if (opening) {
             for (var j = 0; j < curtains.length; j++) {
@@ -623,8 +611,7 @@
             solveCord();
           }
 
-          for (var s = 0; s < curtains.length; s++) stabilize(curtains[s].P, dt, !opening);
-          stabilize(cord, dt, true);
+          recoverStuckCurtains(now, dt);
 
           armCordIfPulled();
           openWhenCordReturns();
@@ -743,6 +730,7 @@
           ptr.x = e.clientX;
           ptr.y = e.clientY;
           ptr.active = true;
+          ptr.lastMoveAt = performance.now();
           armCordIfPulled();
         }
         function onUp(e) {
@@ -776,7 +764,10 @@
           ptr.pointerId = null;
           ptr.cordParticleWasPinned = false;
           ptr.particleWasPinned = false;
-          if (ptr.pointerType !== "mouse") deactivatePointer();
+          if (ptr.pointerType !== "mouse" || (e && e.type === "pointercancel")) {
+            ptr.lastReleaseAt = performance.now();
+            deactivatePointer();
+          }
         }
         function cancelInteraction() {
           ptr.cordArmed = false;
@@ -784,10 +775,12 @@
           ptr.cordReturnParticle = null;
           onUp();
           deactivatePointer();
+          ptr.lastReleaseAt = performance.now();
         }
         function onLeave() {
           onUp();
           deactivatePointer();
+          ptr.lastReleaseAt = performance.now();
         }
         function onResize() {
           cancelInteraction();
