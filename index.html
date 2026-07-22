@@ -49,7 +49,7 @@
           } catch (e) {}
         }
         document.documentElement.dataset.motionPreference = mode;
-        document.documentElement.dataset.motion = mode === "reduced" || (mode === "auto" && systemReduced)
+        document.documentElement.dataset.motion = (mode === "auto" || mode === "reduced") && systemReduced
           ? "reduced"
           : "full";
         document.documentElement.dataset.performanceTier = tier;

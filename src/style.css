@@ -2989,32 +2989,56 @@ html.amv-touch .gyro-btn { display: inline-flex; }
 }
 
 :root[data-performance-tier="low"] .card {
-  background:
-    linear-gradient(var(--card), var(--card)) padding-box,
-    var(--grad-main) border-box;
+  background: rgba(11, 16, 32, 0.94);
   border-color: transparent;
   will-change: auto;
 }
 
-:root[data-performance-tier="low"] .card::after {
-  content: none;
+:root[data-theme="light"][data-performance-tier="low"] .card {
+  background: rgba(247, 249, 253, 0.96);
 }
 
 :root[data-performance-tier="low"] .pkg {
-  background:
-    linear-gradient(var(--card), var(--card)) padding-box,
-    var(--grad-main) border-box;
+  background: rgba(11, 16, 32, 0.94);
   border-color: transparent;
   will-change: auto;
 }
 
 :root[data-performance-tier="low"] .pkg--featured {
-  background:
-    linear-gradient(var(--bg-2), var(--bg-2)) padding-box,
-    var(--grad-main) border-box;
+  background: var(--bg-2);
 }
 
-:root[data-performance-tier="low"] .pkg::after,
+:root[data-theme="light"][data-performance-tier="low"] .pkg {
+  background: rgba(247, 249, 253, 0.96);
+}
+
+:root[data-theme="light"][data-performance-tier="low"] .pkg--featured {
+  background: var(--bg-2);
+}
+
+/* Lightweight strips avoid Android padding-box leaks into the card surface. */
+:root[data-performance-tier="low"] .card::after,
+:root[data-performance-tier="low"] .pkg::after {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: -1px;
+  z-index: 4;
+  border-radius: inherit;
+  padding: 0;
+  background:
+    linear-gradient(90deg, var(--purple), var(--cyan), var(--green)) top / 100% 1.5px no-repeat,
+    linear-gradient(270deg, var(--purple), var(--cyan), var(--green)) bottom / 100% 1.5px no-repeat,
+    linear-gradient(180deg, var(--purple), var(--cyan), var(--green)) left / 1.5px 100% no-repeat,
+    linear-gradient(0deg, var(--purple), var(--cyan), var(--green)) right / 1.5px 100% no-repeat;
+  opacity: 0.76;
+  animation: none;
+  -webkit-mask: none;
+  mask: none;
+  pointer-events: none;
+}
+
+:root[data-performance-tier="low"] .pkg--featured::before,
 :root[data-performance-tier="low"] .pkg__holo {
   display: none;
 }

@@ -98,7 +98,7 @@ const BUDGETS: Record<PerformanceTier, PerformanceBudget> = {
     heroSimulationStrideDesktop: 2,
     heroFps: 30,
     heroBackgroundFps: 30,
-    headingPixelRatio: 1,
+    headingPixelRatio: 1.35,
     headingFps: 30,
     chaosPixelRatioMobile: 1,
     chaosPixelRatioDesktop: 1,

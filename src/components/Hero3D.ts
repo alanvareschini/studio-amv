@@ -347,6 +347,7 @@ class LetterScene {
 
   private onPerformanceTierChange = (): void => {
     this.performanceBudget = getPerformanceBudget();
+    if (this.performanceBudget.tier === "low") this.clearFrostSurface();
     this.composerPixelRatio = Math.min(
       this.baseDPR,
       this.isMobile
@@ -356,6 +357,15 @@ class LetterScene {
     this.lastRenderedAt = 0;
     this.syncViewport(true);
   };
+
+  private clearFrostSurface(): void {
+    this.field.fill(0);
+    this.nextField.fill(0);
+    this.frostPixels.fill(0);
+    this.frostTexture.needsUpdate = true;
+    this.overA = false;
+    this.frostIdle = 999;
+  }
 
   private syncViewport(resizeBuffers: boolean): void {
     const width = window.innerWidth;
@@ -531,10 +541,13 @@ class LetterScene {
     // No MOBILE não existe cursor: uma luz automática atravessa o A em curva,
     // acendendo a superfície no gradiente (substitui o rastro do cursor).
     // Só enquanto o A está em cena (economiza bateria ao rolar a página).
-    const autoSurface = this.isMobile && s < 0.3;
+    const surfaceEffectEnabled = this.performanceBudget.tier !== "low";
+    const autoSurface = surfaceEffectEnabled && this.isMobile && s < 0.3;
 
     // rastro só onde está sobre o A
-    if (autoSurface) {
+    if (!surfaceEffectEnabled) {
+      this.overA = false;
+    } else if (autoSurface) {
       const t = elapsed * 0.5;
       this.ptr.x = 0.5 + Math.cos(t * 1.3) * 0.24;
       this.ptr.y = 0.5 + Math.sin(t * 1.7) * 0.28;
@@ -553,7 +566,9 @@ class LetterScene {
     const frostStride = this.isMobile
       ? this.performanceBudget.heroSimulationStrideMobile
       : this.performanceBudget.heroSimulationStrideDesktop;
-    const doFrost = this.frostIdle < 100 && this.autoFrame++ % frostStride === 0;
+    const doFrost = surfaceEffectEnabled
+      && this.frostIdle < 100
+      && this.autoFrame++ % frostStride === 0;
     if (doFrost) this.updateFrost(elapsed);
 
     // coreografia pelo scroll
