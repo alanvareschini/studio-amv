@@ -698,11 +698,9 @@
   100% { stroke-dashoffset: -58; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .emoji-motion-target,
-  .emoji-motion-target::before,
-  .emoji-motion-target::after {
-    animation: none !important;
-    filter: none !important;
-  }
+:root[data-motion="reduced"] .emoji-motion-target,
+:root[data-motion="reduced"] .emoji-motion-target::before,
+:root[data-motion="reduced"] .emoji-motion-target::after {
+  animation: none !important;
+  filter: none !important;
 }

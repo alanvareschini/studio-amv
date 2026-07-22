@@ -2,6 +2,7 @@ import {
   createIglooGlyphAtlas,
   type IglooAtlasGlyph,
 } from "./iglooGlyphAtlas";
+import { isReducedMotion } from "./motionPreference";
 
 type IglooOwner = {
   el: HTMLElement;
@@ -431,7 +432,7 @@ function initIglooWave(elements: HTMLElement[]): void {
 // Brilho de texto leve. A variante .txt-wave--igloo usa a simulacao global
 // observada no efeito original e mantem os glifos completamente estaveis.
 export function initTextWave(selector: string): void {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isReducedMotion()) return;
 
   const hasHover = window.matchMedia("(hover: hover)").matches;
   const items: HTMLElement[] = [];

@@ -2,6 +2,7 @@
 import { packages, type Package } from "../data/packages";
 import { openModal, closeModal } from "./Modal";
 import { quickWhatsappLink } from "../lib/whatsapp";
+import { isReducedMotion } from "../lib/motionPreference";
 import gsap from "gsap";
 
 // conteúdo do modal de detalhe do pacote
@@ -312,7 +313,7 @@ function visiblePackageCards(cards: HTMLElement[]): HTMLElement[] {
 }
 
 function startLetterPhysics(cards: HTMLElement[], impulse: number): void {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isReducedMotion()) return;
 
   const now = performance.now();
   visiblePackageCards(cards).forEach((card) => {
@@ -652,7 +653,7 @@ function initCheckFx(): void {
 // Card fica reto por padrão; só inclina enquanto o mouse está sobre ele.
 function initTilt(): void {
   // Só respeita a preferência de menos movimento (aí fica tudo parado).
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isReducedMotion()) return;
 
   const MAX_ANGLE = 12; // graus máximos de inclinação
   const isTouch = isTouchDevice();

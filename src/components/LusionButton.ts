@@ -1,5 +1,7 @@
 // Botão estilo Lusion: pílula clara com um ponto; no hover um círculo com o
 // gradiente da loja cresce a partir do ponto e preenche o botão (+ leve magnético).
+import { isReducedMotion } from "../lib/motionPreference";
+
 export function LusionButton(label: string, href: string): string {
   return /* html */ `
     <a class="lusion-btn" href="${href}" draggable="false">
@@ -10,7 +12,7 @@ export function LusionButton(label: string, href: string): string {
 
 // efeito magnético: o botão e o texto seguem levemente o cursor
 export function initLusionButtons(): void {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isReducedMotion()) return;
   if (!window.matchMedia("(hover: hover)").matches) return;
 
   document.querySelectorAll<HTMLElement>(".lusion-btn").forEach((btn) => {

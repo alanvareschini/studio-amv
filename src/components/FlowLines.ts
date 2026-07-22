@@ -1,5 +1,7 @@
 // Teste (somente mobile): linhas com o gradiente da loja que "fluem" conforme o
 // scroll (dash animado), ao fundo, com os nossos cards passando por cima.
+import { isReducedMotion } from "../lib/motionPreference";
+
 export function FlowLines(): string {
   return /* html */ `
     <svg class="flow-lines" aria-hidden="true" viewBox="0 0 100 200" preserveAspectRatio="none">
@@ -20,7 +22,7 @@ export function initFlowLines(): void {
   const svg = document.querySelector(".flow-lines");
   if (!svg) return;
   if (!window.matchMedia("(max-width: 760px)").matches) return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isReducedMotion()) return;
 
   const root = document.documentElement;
   let ticking = false;

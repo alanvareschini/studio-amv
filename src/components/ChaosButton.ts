@@ -2,6 +2,8 @@
 // Sem GSAP/tweakpane: a transição resting↔active é feita com lerp no requestAnimationFrame.
 // Cores trocadas para a paleta da loja.
 
+import { isReducedMotion } from "../lib/motionPreference";
+
 export function ChaosButton(label: string, href: string): string {
   return /* html */ `
     <a class="chaos-button" href="${href}" draggable="false">
@@ -346,7 +348,7 @@ class ChaosButtonGL {
 }
 
 export function initChaosButtons(): void {
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduce = isReducedMotion();
   document.querySelectorAll<HTMLElement>(".chaos-button").forEach((btn) => {
     if (reduce) {
       btn.classList.add("is-static");

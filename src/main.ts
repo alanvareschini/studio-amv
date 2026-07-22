@@ -33,6 +33,9 @@ import { initAnalytics } from "./lib/analytics";
 import { initHeroIntro } from "./lib/heroIntro";
 import { initLazyDemo } from "./lib/lazyDemo";
 import { initSecretAccess } from "./lib/secretAccess";
+import { initMotionPreference, isReducedMotion } from "./lib/motionPreference";
+
+initMotionPreference();
 
 const supportsRegisteredProperties =
   typeof CSS !== "undefined" && typeof CSS.registerProperty === "function";
@@ -135,7 +138,10 @@ if (app) {
   import("./components/Hero3D")
     .then((m) => m.initHero3D())
     .finally(() => window.dispatchEvent(new CustomEvent("amv:visuals-ready")))
-    .catch((e) => console.error("[init] Hero3D não carregou", e));
+    .catch((e) => {
+      document.querySelector<HTMLElement>(".hero3d")?.classList.add("is-static");
+      console.error("[init] Hero3D não carregou", e);
+    });
 
   // Fluido dos títulos — decorativo; carrega ocioso e pula em reduced-motion.
   const whenIdle = (fn: () => void) => {
@@ -159,7 +165,7 @@ if (app) {
 
   afterIntro(() => {
     whenIdle(() => {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (isReducedMotion()) return;
       import("./lib/headingFluidLocal")
         .then((m) => safe("headingFluid", m.initHeadingFluid))
         .catch((e) => console.error("[init] headingFluid não carregou", e));

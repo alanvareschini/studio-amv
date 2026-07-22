@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { claimDemoScene, releaseDemoScene } from "../lib/demoSceneManager";
 import { CubeAngleGallery } from "../lib/cubeAngleGallery";
 import { KineticCarousel } from "../lib/kineticCarousel";
+import { isReducedMotion } from "../lib/motionPreference";
 
 const SCENE_ID = "barber-gallery";
 const IMAGE_ROOT = "/barber-gallery";
@@ -232,7 +233,7 @@ export function initBarberGallery(): void {
   if (!trigger || !scene || !shell || !collection || !detail || !detailHost || !app) return;
 
   document.body.appendChild(scene);
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const reducedMotion = isReducedMotion;
   const mainRoot = scene.querySelector<HTMLElement>("[data-bk-main-carousel]");
   if (!mainRoot) return;
 
@@ -271,7 +272,7 @@ export function initBarberGallery(): void {
     isDetailOpen = false;
     detailGallery?.destroy();
     detailGallery = null;
-    if (!animate || reducedMotion.matches) {
+    if (!animate || reducedMotion()) {
       detail.classList.remove("is-active");
       detail.setAttribute("aria-hidden", "true");
       collection.classList.add("is-active");
@@ -317,7 +318,7 @@ export function initBarberGallery(): void {
       detail.setAttribute("aria-hidden", "false");
       detailGallery?.moveTo(0, false);
     };
-    if (reducedMotion.matches) {
+    if (reducedMotion()) {
       reveal();
       return;
     }
@@ -356,7 +357,7 @@ export function initBarberGallery(): void {
     afterClose = callback ?? null;
     timeline?.kill();
     timeline = null;
-    if (immediate || reducedMotion.matches) {
+    if (immediate || reducedMotion()) {
       finishClose();
       return;
     }
@@ -383,7 +384,7 @@ export function initBarberGallery(): void {
     mainCarousel.moveTo(0, 0);
     gsap.set([scene, shell], { clearProps: "all" });
 
-    if (reducedMotion.matches) {
+    if (reducedMotion()) {
       gsap.set(scene, { autoAlpha: 1 });
       shell.focus({ preventScroll: true });
       return;

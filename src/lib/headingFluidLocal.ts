@@ -11,6 +11,7 @@ import {
   Vector4,
   WebGLRenderer,
 } from "three";
+import { isReducedMotion } from "./motionPreference";
 
 const TARGET_SELECTOR =
   "h1.hero__brand, h2.section__title, h2.cta-final__title";
@@ -129,7 +130,7 @@ function rasterizeHeading(
 }
 
 export function initHeadingFluid(): void {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isReducedMotion()) return;
 
   const targets = [...document.querySelectorAll<HTMLElement>(TARGET_SELECTOR)]
     .filter((element) => !element.closest(EXCLUDED_SELECTOR));

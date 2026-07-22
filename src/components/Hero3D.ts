@@ -10,6 +10,7 @@ import { FontLoader, type Font } from "three/addons/loaders/FontLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { isReducedMotion } from "../lib/motionPreference";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -539,7 +540,7 @@ export function initHero3D(): Promise<void> {
   const host = document.querySelector<HTMLElement>(".hero3d");
   if (!canvas || !host) return Promise.resolve();
 
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (isReducedMotion()) {
     host.classList.add("is-static");
     return Promise.resolve();
   }

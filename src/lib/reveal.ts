@@ -1,11 +1,11 @@
 // RNF04 / RNF06 — Animações de entrada leves via IntersectionObserver.
-// Usa apenas opacity/transform e respeita prefers-reduced-motion.
+import { isReducedMotion } from "./motionPreference";
 
 export function initReveal(): void {
-  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reducedMotion = isReducedMotion();
   const elements = document.querySelectorAll<HTMLElement>("[data-reveal]");
 
-  if (prefersReduced || !("IntersectionObserver" in window)) {
+  if (!("IntersectionObserver" in window)) {
     elements.forEach((el) => el.classList.add("is-visible"));
     return;
   }
@@ -15,7 +15,7 @@ export function initReveal(): void {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const el = entry.target as HTMLElement;
-          const delay = el.dataset.revealDelay;
+          const delay = reducedMotion ? null : el.dataset.revealDelay;
           if (delay) el.style.transitionDelay = `${delay}ms`;
           el.classList.add("is-visible");
           observer.unobserve(el);

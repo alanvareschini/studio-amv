@@ -1,3 +1,5 @@
+import { isReducedMotion } from "./motionPreference";
+
 const LUSION_EASE = "cubic-bezier(.35, 0, 0, 1)";
 
 export function initHeroIntro(): void {
@@ -7,13 +9,22 @@ export function initHeroIntro(): void {
     if (hasRevealed) return;
     hasRevealed = true;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = isReducedMotion();
     const words = Array.from(document.querySelectorAll<HTMLElement>(".hero-intro__word"));
     const subtitle = document.querySelector<HTMLElement>(".hero__subtitle");
     const actions = document.querySelector<HTMLElement>(".hero__actions");
 
     document.body.classList.remove("is-intro-pending");
-    if (reducedMotion) return;
+    if (reducedMotion) {
+      [...words, subtitle, actions].forEach((element) => {
+        element?.animate([{ opacity: 0 }, { opacity: 1 }], {
+          duration: 240,
+          easing: "ease-out",
+          fill: "both",
+        });
+      });
+      return;
+    }
 
     words.forEach((word, index) => {
       word.animate(

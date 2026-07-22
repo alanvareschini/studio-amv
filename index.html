@@ -15,6 +15,26 @@
       } catch (e) {}
     </script>
 
+    <!-- Resolve a preferencia de movimento antes do CSS, canvas e WebGL. -->
+    <script>
+      (function () {
+        var mode = "auto";
+        try {
+          var savedMode = localStorage.getItem("amv-motion-mode");
+          if (savedMode === "auto" || savedMode === "full" || savedMode === "reduced") mode = savedMode;
+          if (sessionStorage.getItem("amv-skip-intro-once") === "1") {
+            sessionStorage.removeItem("amv-skip-intro-once");
+            document.documentElement.dataset.skipMotionIntro = "true";
+          }
+        } catch (e) {}
+        var systemReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        document.documentElement.dataset.motionPreference = mode;
+        document.documentElement.dataset.motion = mode === "reduced" || (mode === "auto" && systemReduced)
+          ? "reduced"
+          : "full";
+      })();
+    </script>
+
     <!-- Recarrega se a página voltar do cache (bfcache), pra o WebGL (fluido,
          "A" 3D, botões) não ficar "morto" ao usar o botão voltar. -->
     <script>
@@ -150,7 +170,8 @@
         }
 
         if (!host || !canvas || !canvas.getContext) { finishNow(); return true; }
-        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { finishNow(); return true; }
+        if (document.documentElement.dataset.skipMotionIntro === "true") { finishNow(); return true; }
+        if (document.documentElement.dataset.motion === "reduced") { finishNow(); return true; }
 
         var ctx = canvas.getContext("2d", { alpha: true });
         if (!ctx) { finishNow(); return true; }

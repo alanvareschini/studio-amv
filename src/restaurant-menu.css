@@ -982,11 +982,10 @@ body.demo-scene-open {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .rm-scene *,
-  .rm-scene *::before,
-  .rm-scene *::after {
-    animation: none !important;
-    transition: none !important;
-  }
+:root[data-motion="reduced"] .rm-scene *,
+:root[data-motion="reduced"] .rm-scene *::before,
+:root[data-motion="reduced"] .rm-scene *::after {
+  animation: none !important;
+  transition-duration: 0.16s !important;
+  transition-delay: 0s !important;
 }

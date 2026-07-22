@@ -1248,19 +1248,18 @@ body.demo-scene-open {
 
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bk-carousel__track,
-  .bk-card,
-  .bk-card__portrait,
-  .bk-card__shadow,
-  .bk-text-mask > span,
-  .bk-carousel__background,
-  .bk-cube,
-  .bk-cube-stage {
-    transition-duration: 0.01ms !important;
-  }
+:root[data-motion="reduced"] .bk-carousel__track,
+:root[data-motion="reduced"] .bk-card,
+:root[data-motion="reduced"] .bk-card__portrait,
+:root[data-motion="reduced"] .bk-card__shadow,
+:root[data-motion="reduced"] .bk-text-mask > span,
+:root[data-motion="reduced"] .bk-carousel__background,
+:root[data-motion="reduced"] .bk-cube,
+:root[data-motion="reduced"] .bk-cube-stage {
+  transition-duration: 0.16s !important;
+  transition-delay: 0s !important;
+}
 
-  .bk-cube-gallery.is-changing .bk-cube__body {
-    animation: none !important;
-  }
+:root[data-motion="reduced"] .bk-cube-gallery.is-changing .bk-cube__body {
+  animation: none !important;
 }

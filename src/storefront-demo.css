@@ -681,11 +681,10 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sf-scene *,
-  .sf-scene *::before,
-  .sf-scene *::after {
-    animation: none !important;
-    transition: none !important;
-  }
+:root[data-motion="reduced"] .sf-scene *,
+:root[data-motion="reduced"] .sf-scene *::before,
+:root[data-motion="reduced"] .sf-scene *::after {
+  animation: none !important;
+  transition-duration: 0.16s !important;
+  transition-delay: 0s !important;
 }

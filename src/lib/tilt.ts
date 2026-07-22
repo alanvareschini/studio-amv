@@ -1,7 +1,9 @@
+import { isReducedMotion } from "./motionPreference";
+
 // Tilt 3D leve que segue o cursor no desktop e o dedo no mobile. Aplica a
 // transform inline (sobrepoe outras regras, evitando conflito com [data-reveal]).
 export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 800): void {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (isReducedMotion()) {
     return;
   }
 

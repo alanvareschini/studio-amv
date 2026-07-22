@@ -1,6 +1,7 @@
 import "../restaurant-menu.css";
 import gsap from "gsap";
 import { claimDemoScene, releaseDemoScene } from "../lib/demoSceneManager";
+import { isReducedMotion } from "../lib/motionPreference";
 
 const SCENE_ID = "restaurant-menu";
 
@@ -206,7 +207,7 @@ export function initRestaurantMenu(): void {
   const panels = Array.from(scene.querySelectorAll<HTMLElement>(".rm-panel"));
   const panelContent = Array.from(scene.querySelectorAll<HTMLElement>(".rm-panel__inner > *"));
   const tabs = Array.from(scene.querySelectorAll<HTMLButtonElement>("[data-rm-tab]"));
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const reducedMotion = isReducedMotion;
   const desktop = matchMedia("(min-width: 781px)");
   let timeline: gsap.core.Timeline | null = null;
   let isOpen = false;
@@ -240,7 +241,7 @@ export function initRestaurantMenu(): void {
   };
 
   const moveCover = (clientX: number, clientY: number, pointerType: string) => {
-    if (!isOpen || brochureOpened || isClosing || isUnfolding || reducedMotion.matches) return;
+    if (!isOpen || brochureOpened || isClosing || isUnfolding || reducedMotion()) return;
     const rect = cover.getBoundingClientRect();
     const px = Math.max(-1, Math.min(1, ((clientX - rect.left) / rect.width) * 2 - 1));
     const py = Math.max(-1, Math.min(1, ((clientY - rect.top) / rect.height) * 2 - 1));
@@ -312,7 +313,7 @@ export function initRestaurantMenu(): void {
     timeline?.kill();
     timeline = null;
     gsap.killTweensOf([scene, dialog, cover, brochure, panels, panelContent]);
-    if (immediate || reducedMotion.matches) {
+    if (immediate || reducedMotion()) {
       finishClose();
       return;
     }
@@ -356,7 +357,7 @@ export function initRestaurantMenu(): void {
     setActiveTab("menu");
     gsap.set([brochure, panels, panelContent], { clearProps: "all" });
 
-    if (reducedMotion.matches) {
+    if (reducedMotion()) {
       gsap.set(cover, { autoAlpha: 0 });
       gsap.set(brochure, { autoAlpha: 1 });
       isUnfolding = false;
@@ -412,7 +413,7 @@ export function initRestaurantMenu(): void {
 
     gsap.set([scene, dialog, cover, brochure, panels, panelContent], { clearProps: "all" });
     gsap.set(brochure, { autoAlpha: 0 });
-    if (reducedMotion.matches) {
+    if (reducedMotion()) {
       gsap.set(scene, { autoAlpha: 1 });
       cover.focus({ preventScroll: true });
       return;

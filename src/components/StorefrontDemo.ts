@@ -1,6 +1,7 @@
 import "../storefront-demo.css";
 import gsap from "gsap";
 import { claimDemoScene, releaseDemoScene } from "../lib/demoSceneManager";
+import { isReducedMotion } from "../lib/motionPreference";
 
 const SCENE_ID = "storefront-demo";
 
@@ -131,7 +132,7 @@ export function initStorefrontDemo(): void {
   if (!trigger || !scene || !shell || !app) return;
 
   document.body.appendChild(scene);
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const reducedMotion = isReducedMotion;
   const products = Array.from(scene.querySelectorAll<HTMLElement>(".sf-product"));
   const productImages = Array.from(scene.querySelectorAll<HTMLImageElement>("[data-sf-image]"));
   const toggles = Array.from(scene.querySelectorAll<HTMLButtonElement>("[data-sf-toggle]"));
@@ -244,7 +245,7 @@ export function initStorefrontDemo(): void {
     timeline?.kill();
     timeline = null;
     gsap.killTweensOf([scene, shell, products]);
-    if (immediate || reducedMotion.matches) {
+    if (immediate || reducedMotion()) {
       finishClose();
       return;
     }
@@ -271,7 +272,7 @@ export function initStorefrontDemo(): void {
     app.setAttribute("aria-hidden", "true");
     gsap.set([scene, shell, products], { clearProps: "all" });
 
-    if (reducedMotion.matches) {
+    if (reducedMotion()) {
       gsap.set(scene, { autoAlpha: 1 });
       shell.focus({ preventScroll: true });
       return;
@@ -323,10 +324,10 @@ export function initStorefrontDemo(): void {
       };
 
       try {
-        if (!reducedMotion.matches && documentWithTransition.startViewTransition) {
+        if (!reducedMotion() && documentWithTransition.startViewTransition) {
           const transition = documentWithTransition.startViewTransition(updateDOM);
           await transition.finished.catch(() => undefined);
-        } else if (!reducedMotion.matches) {
+        } else if (!reducedMotion()) {
           const fadeOut = productImages.map((image) =>
             image.animate(
               [{ opacity: 1, transform: "translate(-50%, -50%) scale(1)" }, { opacity: 0, transform: "translate(-50%, -50%) scale(0.985)" }],

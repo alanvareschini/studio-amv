@@ -1,4 +1,5 @@
 import { SettledAngleDistortion } from "./settledAngleDistortion";
+import { isReducedMotion } from "./motionPreference";
 
 interface CubeAngleGalleryOptions {
   labels: string[];
@@ -75,7 +76,7 @@ export class CubeAngleGallery {
     this.activeIndex = target;
     this.distortion?.prepare(target);
 
-    if (animate && changed && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (animate && changed && !isReducedMotion()) {
       window.clearTimeout(this.transitionTimer);
       this.distortion?.hideForTransition();
       this.root.classList.remove("is-changing");
@@ -110,7 +111,7 @@ export class CubeAngleGallery {
   }
 
   private createDistortion(images: string[]): SettledAngleDistortion | null {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
+    if (isReducedMotion()) return null;
     try {
       return new SettledAngleDistortion(this.root, this.stage, images);
     } catch {

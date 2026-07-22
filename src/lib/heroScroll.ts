@@ -4,12 +4,13 @@
 // 2) Cards de plano: aparecem um por um conforme o scroll.
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { isReducedMotion } from "./motionPreference";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function initHeroScroll(): void {
   // Em "reduzir movimento", deixa tudo visível e estático (nada de scrub).
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isReducedMotion()) return;
 
   setupPackages();
 }

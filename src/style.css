@@ -478,11 +478,9 @@ ol {
       rotateY(calc(360deg * var(--sy)));
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .spin-mark__text {
-    animation: none;
-    transform: rotateX(-12deg);
-  }
+:root[data-motion="reduced"] .spin-mark__text {
+  animation: none;
+  transform: rotateX(-12deg);
 }
 .nav {
   display: flex;
@@ -562,14 +560,12 @@ ol {
     rotate(calc(var(--_s) * var(--tan) * var(--tilt) * -1));
   will-change: transform;
 }
-@media (prefers-reduced-motion: reduce) {
-  .nav-link,
-  .nav-link:hover {
-    transition: color 0.2s var(--ease);
-  }
-  .nav-link__l {
-    transform: none;
-  }
+:root[data-motion="reduced"] .nav-link,
+:root[data-motion="reduced"] .nav-link:hover {
+  transition: color 0.2s var(--ease);
+}
+:root[data-motion="reduced"] .nav-link__l {
+  transform: none;
 }
 .header__actions {
   display: flex;
@@ -987,6 +983,9 @@ ol {
   right: 16px;
   z-index: 390;
   width: min(300px, calc(100vw - 32px));
+  max-height: calc(100dvh - 86px);
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -1090,6 +1089,67 @@ ol {
 .menu-theme__blob .moon {
   width: 25px;
   height: 25px;
+}
+.menu-motion {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.15rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+.menu-motion__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.menu-motion__label {
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.menu-motion__status {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+.menu-motion__options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+  padding: 0.25rem;
+  background: rgba(127, 127, 127, 0.08);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.menu-motion__options button {
+  min-width: 0;
+  padding: 0.5rem 0.35rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  transition: color 0.2s var(--ease), background 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.menu-motion__options button:hover,
+.menu-motion__options button:focus-visible {
+  color: var(--text);
+}
+.menu-motion__options button:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.menu-motion__options button.is-active {
+  background: var(--grad-main);
+  color: #04110a;
+  box-shadow: 0 5px 16px rgba(34, 211, 238, 0.18);
 }
 @media (max-width: 720px) {
   .menu-theme {
@@ -2685,10 +2745,8 @@ html.amv-touch .gyro-btn { display: inline-flex; }
     box-shadow: 0 8px 26px rgba(37, 211, 102, 0.45), 0 0 0 12px rgba(37, 211, 102, 0);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .wa-fab {
-    animation: none;
-  }
+:root[data-motion="reduced"] .wa-fab {
+  animation: none;
 }
 
 /* -------------------------------------------------------------- CTA final */
@@ -2854,18 +2912,34 @@ html.amv-touch .gyro-btn { display: inline-flex; }
   }
 }
 
-/* RNF06 â€” respeitar prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-  [data-reveal] {
-    opacity: 1;
-    transform: none;
-  }
+/* O modo leve preserva feedback e fades, mas remove movimento continuo/pesado. */
+:root[data-motion="reduced"] {
+  scroll-behavior: auto;
+}
+:root[data-motion="reduced"] [data-reveal] {
+  transform: none;
+  transition: opacity 0.22s ease-out;
+  transition-delay: 0s !important;
+}
+:root[data-motion="reduced"] .hero-blob .blobClip,
+:root[data-motion="reduced"] .hero-blob .wave,
+:root[data-motion="reduced"] .hero__scrollhint,
+:root[data-motion="reduced"] .hero__bg,
+:root[data-motion="reduced"] .mockup,
+:root[data-motion="reduced"] .float-card,
+:root[data-motion="reduced"] .pkg--featured,
+:root[data-motion="reduced"] .pkg__badge::after,
+:root[data-motion="reduced"] .btn--ghost:hover,
+:root[data-motion="reduced"] .btn--ghost:focus-visible,
+:root[data-motion="reduced"] .lusion-btn:hover,
+:root[data-motion="reduced"] .lusion-btn:focus-visible,
+:root[data-motion="reduced"] .chaos-button:hover,
+:root[data-motion="reduced"] .chaos-button:focus-visible,
+:root[data-motion="reduced"] .pkg:hover::after,
+:root[data-motion="reduced"] .pkg:focus-within::after,
+:root[data-motion="reduced"].amv-touch .card,
+:root[data-motion="reduced"].amv-touch .pkg,
+:root[data-motion="reduced"].amv-touch .pkg::after,
+:root[data-motion="reduced"].amv-touch .pkg__holo {
+  animation: none !important;
 }
