@@ -149,6 +149,7 @@ class ChaosButtonGL {
   private contextLost = false;
   private light = document.documentElement.dataset.theme === "light" ? 1 : 0;
   private raf = 0;
+  private bodyStateObserver: MutationObserver | null = null;
 
   constructor(button: HTMLElement) {
     this.button = button;
@@ -187,11 +188,12 @@ class ChaosButtonGL {
     });
     this.setupEvents();
     this.observeVisibility();
+    this.observePageState();
     this.scheduleRender();
   }
 
   private setupWebGL(): boolean {
-    const gl = this.canvas.getContext("webgl", { alpha: false, antialias: true });
+    const gl = this.canvas.getContext("webgl", { alpha: false, antialias: false });
     if (!gl) return false;
     this.gl = gl;
 
@@ -249,7 +251,8 @@ class ChaosButtonGL {
 
   private resize(): void {
     const gl = this.gl!;
-    const dpr = Math.min(window.devicePixelRatio, 2);
+    const compactScreen = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
+    const dpr = Math.min(window.devicePixelRatio, compactScreen ? 1.5 : 2);
     const rect = this.button.getBoundingClientRect();
     this.canvas.width = Math.max(1, rect.width * dpr);
     this.canvas.height = Math.max(1, rect.height * dpr);
@@ -307,14 +310,40 @@ class ChaosButtonGL {
     }).observe(this.button);
   }
 
+  private observePageState(): void {
+    const sync = () => {
+      if (this.renderShouldPause()) {
+        if (this.raf) cancelAnimationFrame(this.raf);
+        this.raf = 0;
+      } else {
+        this.last = performance.now() / 1000;
+        this.scheduleRender();
+      }
+    };
+    this.bodyStateObserver = new MutationObserver(sync);
+    this.bodyStateObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    window.addEventListener("pagehide", () => this.bodyStateObserver?.disconnect(), { once: true });
+  }
+
+  private renderShouldPause(): boolean {
+    return (
+      document.hidden ||
+      document.body.classList.contains("ci-site-hidden") ||
+      document.body.classList.contains("demo-scene-open")
+    );
+  }
+
   private scheduleRender(): void {
-    if (this.raf || !this.gl || !this.visible || this.contextLost || document.hidden) return;
+    if (this.raf || !this.gl || !this.visible || this.contextLost || this.renderShouldPause()) return;
     this.raf = requestAnimationFrame(this.render);
   }
 
   private render = (): void => {
     this.raf = 0;
-    if (!this.gl || !this.visible || this.contextLost || document.hidden) {
+    if (!this.gl || !this.visible || this.contextLost || this.renderShouldPause()) {
       this.last = performance.now() / 1000;
       return;
     }

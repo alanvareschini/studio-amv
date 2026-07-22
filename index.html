@@ -682,6 +682,7 @@
         function revealIntroWhenReady() {
           if (!bootMinElapsed || !visualsReady || !host || finished) return;
           host.classList.remove("ci-boot");
+          startLoop();
         }
         function onVisualsReady() {
           visualsReady = true;
@@ -791,7 +792,6 @@
           visualsReady = true;
           revealIntroWhenReady();
         }, 1800);
-        startLoop();
         return true;
       };
       window.__amvClothIntro();

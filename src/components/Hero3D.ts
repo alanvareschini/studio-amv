@@ -42,6 +42,7 @@ class LetterScene {
   private resizeTimer = 0;
   private resizeFrame = 0;
   private renderFrame = 0;
+  private lastRenderedAt = 0;
   private frostIdle = 999; // quadros sem interação (pula a simulação do rastro)
   private autoFrame = 0; // contador para dividir a simulação por 2 no mobile
   private contextLost = false; // pausa o render enquanto o contexto WebGL está perdido
@@ -140,7 +141,10 @@ class LetterScene {
     // Environment map: dá reflexos reais ao "A" (aspecto de vidro/metal polido,
     // em vez de plástico chapado). Gerado uma vez a partir de um ambiente neutro.
     const pmrem = new THREE.PMREMGenerator(this.renderer);
-    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const roomEnvironment = new RoomEnvironment();
+    this.scene.environment = pmrem.fromScene(roomEnvironment, 0.04).texture;
+    roomEnvironment.dispose();
+    pmrem.dispose();
 
     // fundo em degradê já no início (evita flash de cor chapada)
     this.applyTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
@@ -473,12 +477,22 @@ class LetterScene {
     else this.startRenderLoop();
   };
 
-  private tick = (): void => {
+  private tick = (frameTime: number): void => {
     this.renderFrame = 0;
     if (this.renderShouldPause()) {
       this.stopRenderLoop();
       return;
     }
+    const frameInterval = document.getElementById("clothintro")
+      ? 1000 / 30
+      : this.isMobile && this.scrollT > 0.3
+        ? 1000 / 40
+        : 1000 / 60;
+    if (this.lastRenderedAt && frameTime - this.lastRenderedAt < frameInterval - 1) {
+      this.startRenderLoop();
+      return;
+    }
+    this.lastRenderedAt = frameTime;
     const elapsed = this.clock.getElapsedTime();
     const s = this.scrollT;
 

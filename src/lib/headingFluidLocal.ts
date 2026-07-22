@@ -284,6 +284,7 @@ export function initHeadingFluid(): void {
   let touchPressed = false;
   let fontsReady = false;
   let rippleIndex = 0;
+  const hasHover = matchMedia("(hover: hover)").matches;
   const rippleSlots = [uniforms.uR0, uniforms.uR1, uniforms.uR2, uniforms.uR3];
 
   const createLayer = (element: HTMLElement): HeadingLayer | null => {
@@ -492,7 +493,7 @@ export function initHeadingFluid(): void {
     const hoverTarget =
       touchPressed ||
       (
-        matchMedia("(hover: hover)").matches &&
+        hasHover &&
         layers.some((layer) => layer.element.matches(":hover"))
       )
         ? 1

@@ -130,6 +130,7 @@ function initIglooWave(elements: HTMLElement[]): void {
     lastStep: 0,
   };
   let raf = 0;
+  let effectVisible = !atlasHost || !("IntersectionObserver" in window);
 
   const wrapTextNode = (node: Text, owner: IglooOwner) => {
     const text = node.textContent ?? "";
@@ -378,7 +379,7 @@ function initIglooWave(elements: HTMLElement[]): void {
   };
 
   const frame = (time: number) => {
-    if (document.hidden) {
+    if (document.hidden || !effectVisible) {
       atlas?.clear();
       raf = 0;
       return;
@@ -400,10 +401,11 @@ function initIglooWave(elements: HTMLElement[]): void {
   };
 
   const wake = () => {
-    if (!raf) raf = requestAnimationFrame(frame);
+    if (effectVisible && !raf) raf = requestAnimationFrame(frame);
   };
 
   const setPointer = (clientX: number, clientY: number) => {
+    if (!effectVisible) return;
     simulation.x = clamp(clientX / Math.max(window.innerWidth, 1));
     simulation.y = clamp(clientY / Math.max(window.innerHeight, 1));
     wake();
@@ -413,6 +415,35 @@ function initIglooWave(elements: HTMLElement[]): void {
   document.fonts?.ready.then(() => {
     atlas?.measure(glyphs);
   });
+  if (atlasHost && "IntersectionObserver" in window) {
+    new IntersectionObserver(
+      ([entry]) => {
+        effectVisible = Boolean(entry?.isIntersecting);
+        if (effectVisible) return;
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+        simulation.field.fill(0);
+        simulation.nextField.fill(0);
+        simulation.rim.fill(0);
+        simulation.rimTrail.fill(0);
+        simulation.nextRimTrail.fill(0);
+        simulation.targetVelocity = 0;
+        simulation.velocity = 0;
+        owners.forEach((owner) => (owner.visible = false));
+        glyphs.forEach((glyph) => {
+          glyph.light = 0;
+          glyph.translucency = 0;
+          glyph.faceOpacity = 1;
+          glyph.atlasVisible = false;
+          glyph.el.style.setProperty("--igloo-light", "0");
+          glyph.el.style.setProperty("--igloo-translucency", "0");
+          glyph.el.style.setProperty("--igloo-face-opacity", "1");
+        });
+        atlas?.clear();
+      },
+      { rootMargin: "80px 0px", threshold: 0.01 },
+    ).observe(atlasHost);
+  }
   window.addEventListener("resize", resize, { passive: true });
   window.addEventListener(
     "pointermove",
@@ -436,6 +467,7 @@ export function initTextWave(selector: string): void {
 
   const hasHover = window.matchMedia("(hover: hover)").matches;
   const items: HTMLElement[] = [];
+  const itemSet = new Set<HTMLElement>();
   let activeTouchItem: HTMLElement | null = null;
   let isTouchActive = false;
   let touchX = 0;
@@ -460,6 +492,7 @@ export function initTextWave(selector: string): void {
     element.classList.add("txt-wave");
     if (!hasHover) element.classList.add("txt-wave--touch");
     items.push(element);
+    itemSet.add(element);
 
     element.addEventListener(
       "pointermove",
@@ -480,21 +513,8 @@ export function initTextWave(selector: string): void {
 
   const findTouchItem = (clientX: number, clientY: number) => {
     const hit = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-    const direct = hit?.closest<HTMLElement>(selector);
-    if (direct?.classList.contains("txt-wave") && !isBlocked(direct)) return direct;
-
-    return (
-      items.find((item) => {
-        if (isBlocked(item)) return false;
-        const bounds = item.getBoundingClientRect();
-        return (
-          clientX >= bounds.left &&
-          clientX <= bounds.right &&
-          clientY >= bounds.top &&
-          clientY <= bounds.bottom
-        );
-      }) ?? null
-    );
+    const direct = hit?.closest<HTMLElement>(".txt-wave") ?? null;
+    return direct && itemSet.has(direct) && !isBlocked(direct) ? direct : null;
   };
 
   const updateTouchTarget = () => {

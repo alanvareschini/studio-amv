@@ -125,7 +125,7 @@ export function initAnalytics(): void {
   const markActive = () => {
     lastActivity = Date.now();
   };
-  ["pointerdown", "pointermove", "keydown", "scroll", "touchstart", "click", "wheel"].forEach((ev) =>
+  ["pointerdown", "keydown", "scroll", "touchstart", "click", "wheel"].forEach((ev) =>
     window.addEventListener(ev, markActive, { passive: true })
   );
   const engagedTimer = window.setInterval(() => {
