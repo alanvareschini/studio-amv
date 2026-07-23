@@ -33,8 +33,13 @@ import { initAnalytics } from "./lib/analytics";
 import { initHeroIntro } from "./lib/heroIntro";
 import { initLazyDemo } from "./lib/lazyDemo";
 import { initSecretAccess } from "./lib/secretAccess";
-import { initMotionPreference, isReducedMotion } from "./lib/motionPreference";
+import {
+  getPerformanceTier,
+  initMotionPreference,
+  isReducedMotion,
+} from "./lib/motionPreference";
 import { initRuntimePerformanceMonitor } from "./lib/runtimePerformance";
+import { initRenderActivity } from "./lib/renderActivity";
 
 initMotionPreference();
 
@@ -85,6 +90,7 @@ if (app) {
   safe("analytics", initAnalytics);
   // Acesso secreto ao painel (palavra no teclado ou 5 toques na marca).
   safe("secret", initSecretAccess);
+  safe("renderActivity", initRenderActivity);
 
   // Leves e essenciais rodam já (menu, tema, formulário, etc.).
   safe("menu", initMenu);
@@ -134,18 +140,6 @@ if (app) {
   safe("flowLines", initFlowLines);
   safe("runtimePerformance", initRuntimePerformanceMonitor);
 
-  // -------------------------------------------------------------------------
-  // Efeitos pesados (Three.js): carregam num chunk separado, depois da primeira
-  // pintura, pra não travar o carregamento. O "A" 3D é a identidade da hero.
-  import("./components/Hero3D")
-    .then((m) => m.initHero3D())
-    .finally(() => window.dispatchEvent(new CustomEvent("amv:visuals-ready")))
-    .catch((e) => {
-      document.querySelector<HTMLElement>(".hero3d")?.classList.add("is-static");
-      console.error("[init] Hero3D não carregou", e);
-    });
-
-  // Fluido dos títulos — decorativo; carrega ocioso e pula em reduced-motion.
   const whenIdle = (fn: () => void) => {
     const w = window as unknown as {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void;
@@ -165,6 +159,29 @@ if (app) {
     );
   };
 
+  // -------------------------------------------------------------------------
+  // Efeitos pesados (Three.js): carregam num chunk separado, depois da primeira
+  // pintura, pra não travar o carregamento. O "A" 3D é a identidade da hero.
+  const signalVisualsReady = () =>
+    window.dispatchEvent(new CustomEvent("amv:visuals-ready"));
+  const loadHero3D = () =>
+    import("./components/Hero3D")
+      .then((m) => m.initHero3D())
+      .catch((e) => {
+        document.querySelector<HTMLElement>(".hero3d")?.classList.add("is-static");
+        console.error("[init] Hero3D não carregou", e);
+      });
+
+  if (getPerformanceTier() === "minimal") {
+    // No Essencial, a cortina ganha a thread principal sozinha. O placeholder
+    // do A cobre a hero até o WebGL carregar após a abertura.
+    requestAnimationFrame(signalVisualsReady);
+    afterIntro(() => whenIdle(() => void loadHero3D()));
+  } else {
+    void loadHero3D().finally(signalVisualsReady);
+  }
+
+  // Fluido dos títulos — decorativo; carrega ocioso e pula em reduced-motion.
   afterIntro(() => {
     whenIdle(() => {
       if (isReducedMotion()) return;

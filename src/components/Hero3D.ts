@@ -615,16 +615,20 @@ export function initHero3D(): Promise<void> {
   if (!canvas || !host) return Promise.resolve();
 
   if (isReducedMotion()) {
-    host.classList.add("is-static");
+    host.classList.add("is-static", "is-ready");
     return Promise.resolve();
   }
   return new Promise((resolve) => {
     const fallback = () => {
-      host.classList.add("is-static");
+      host.classList.add("is-static", "is-ready");
+      resolve();
+    };
+    const ready = () => {
+      host.classList.add("is-ready");
       resolve();
     };
     try {
-      new LetterScene(canvas, resolve, fallback);
+      new LetterScene(canvas, ready, fallback);
     } catch (err) {
       console.error("Cena 3D falhou, usando fallback:", err);
       fallback();

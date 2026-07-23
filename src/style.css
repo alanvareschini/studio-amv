@@ -1006,6 +1006,10 @@ ol {
   visibility: visible;
   transform: none;
 }
+.menu-overlay:not(.open) .hero-blob .blobClip,
+.menu-overlay:not(.open) .hero-blob .wave {
+  animation-play-state: paused;
+}
 .menu-nav {
   display: flex;
   flex-direction: column;
@@ -1360,6 +1364,29 @@ ol {
   inset: 0;
   z-index: 0;
   pointer-events: none; /* hover é via mousemove global; cliques passam pro conteúdo */
+}
+:root[data-performance-tier="minimal"] .hero3d:not(.is-ready):not(.is-static)::before {
+  content: "A";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: transparent;
+  background: var(--grad-main);
+  background-clip: text;
+  -webkit-background-clip: text;
+  font-family: var(--font);
+  font-size: min(72vw, 34rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.12em;
+  opacity: 0.24;
+  transform: scaleX(0.82);
+  transform-origin: center;
+}
+:root[data-theme="light"][data-performance-tier="minimal"]
+  .hero3d:not(.is-ready):not(.is-static)::before {
+  opacity: 0.18;
 }
 .hero3d-canvas {
   display: block;
@@ -2975,6 +3002,20 @@ html.amv-touch .gyro-btn { display: inline-flex; }
   .cta-final__actions {
     flex-direction: column;
   }
+}
+
+/* Keep the exact animations while visible, but do not paint them in sections
+   that are well outside the viewport or while the browser tab is hidden. */
+[data-render-active="false"],
+[data-render-active="false"] *,
+[data-render-active="false"]::before,
+[data-render-active="false"]::after,
+[data-render-active="false"] *::before,
+[data-render-active="false"] *::after,
+:root[data-page-active="false"] *,
+:root[data-page-active="false"] *::before,
+:root[data-page-active="false"] *::after {
+  animation-play-state: paused !important;
 }
 
 /* O modo leve preserva feedback e fades, mas remove movimento continuo/pesado. */

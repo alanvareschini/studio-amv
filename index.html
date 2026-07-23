@@ -218,13 +218,13 @@
         var BANDS = 5;
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
         var qualityTier = document.documentElement.dataset.performanceTier || "balanced";
-        var W = 0, H = 0, dpr = 1, SP = qualityTier === "minimal" ? 30 : 26;
-        var GRAV = 0.2, DAMP = 0.992, ITERS = qualityTier === "minimal" ? 3 : qualityTier === "low" ? 4 : 5;
+        var W = 0, H = 0, dpr = 1, SP = 26;
+        var GRAV = 0.2, DAMP = 0.992, ITERS = qualityTier === "minimal" ? 2 : qualityTier === "low" ? 4 : 5;
         var COMPRESS = 0.02, STRETCH = 1.1, H_COMPRESS = 0.6, H_STRETCH = 4;
         var HOME_FORCE = 0.0028, HOME_DEADZONE = 10;
         var MOUSE_STRENGTH = 0.78;
         var STEP_MS = 1000 / 60, MAX_STEPS = qualityTier === "minimal" ? 1 : 2;
-        var FRAME_MS = qualityTier === "minimal" ? 1000 / 30 : 0;
+        var FRAME_MS = qualityTier === "minimal" ? 1000 / 24 : 0;
         var curtains = [], cord = [], handle = null, bandImg = [];
         var glyphAtlas = null, glyphSize = 0, handleColor = "";
         var opening = false, openT = 0, started = performance.now(), lastT = started, acc = 0;
@@ -310,8 +310,8 @@
         function makeCurtain(x0, x1, dir) {
           var width = x1 - x0;
           var gap = SP;
-          var maxCols = qualityTier === "minimal" ? (W < 640 ? 24 : 44) : (W < 640 ? 30 : 56);
-          var maxRows = qualityTier === "minimal" ? (W < 640 ? 72 : 84) : (W < 640 ? 96 : 110);
+          var maxCols = qualityTier === "minimal" ? (W < 640 ? 18 : 36) : (W < 640 ? 30 : 56);
+          var maxRows = qualityTier === "minimal" ? (W < 640 ? 48 : 68) : (W < 640 ? 96 : 110);
           var minCols = qualityTier === "minimal" ? 10 : 12;
           var minRows = qualityTier === "minimal" ? 18 : 22;
           var cols = Math.max(minCols, Math.min(maxCols, Math.ceil(width / gap) + 1));
@@ -348,7 +348,9 @@
           W = window.innerWidth;
           H = window.innerHeight;
           dpr = Math.min(W < 640 ? 1 : 1.35, window.devicePixelRatio || 1);
-          SP = W < 640 ? 12 : W < 980 ? 17 : 19;
+          SP = qualityTier === "minimal"
+            ? (W < 640 ? 20 : W < 980 ? 22 : 24)
+            : (W < 640 ? 12 : W < 980 ? 17 : 19);
           canvas.width = Math.max(1, Math.round(W * dpr));
           canvas.height = Math.max(1, Math.round(H * dpr));
           canvas.style.width = W + "px";
