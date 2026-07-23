@@ -1,5 +1,6 @@
 export type MotionMode = "auto" | "full" | "balanced" | "reduced";
-export type PerformanceTier = "high" | "balanced" | "low";
+export type PerformanceTier = "high" | "balanced" | "low" | "minimal";
+type MotionLevel = "full" | "limited" | "reduced";
 
 export type PerformanceBudget = {
   tier: PerformanceTier;
@@ -32,14 +33,40 @@ const RUNTIME_STORAGE_KEY = "amv-runtime-performance-tier";
 const RUNTIME_TTL_MS = 15 * 60 * 1000;
 const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 const TIER_RANK: Record<PerformanceTier, number> = {
-  low: 0,
-  balanced: 1,
-  high: 2,
+  minimal: 0,
+  low: 1,
+  balanced: 2,
+  high: 3,
 };
-const TIER_BY_RANK: PerformanceTier[] = ["low", "balanced", "high"];
+const TIER_BY_RANK: PerformanceTier[] = ["minimal", "low", "balanced", "high"];
 let detectedHardwareTier: PerformanceTier | null = null;
 
 const BUDGETS: Record<PerformanceTier, PerformanceBudget> = {
+  minimal: {
+    tier: "minimal",
+    heroPixelRatioMobile: 0.8,
+    heroPixelRatioDesktop: 1,
+    heroSimulationSize: 64,
+    heroSimulationStrideMobile: 3,
+    heroSimulationStrideDesktop: 3,
+    heroFps: 24,
+    heroBackgroundFps: 18,
+    headingPixelRatio: 1,
+    headingFps: 24,
+    chaosPixelRatioMobile: 0.8,
+    chaosPixelRatioDesktop: 1,
+    chaosFps: 24,
+    iglooFieldScale: 10,
+    iglooPixelRatioMobile: 0.75,
+    iglooPixelRatioDesktop: 0.9,
+    distortionSegmentsX: 36,
+    distortionSegmentsY: 20,
+    distortionPixelRatioMobile: 0.8,
+    distortionPixelRatioDesktop: 0.9,
+    distortionFps: 24,
+    packagePhysicsFps: 24,
+    gyroFps: 24,
+  },
   high: {
     tier: "high",
     heroPixelRatioMobile: 1.75,
@@ -128,7 +155,7 @@ const isMotionMode = (value: unknown): value is MotionMode =>
   value === "auto" || value === "full" || value === "balanced" || value === "reduced";
 
 const isPerformanceTier = (value: unknown): value is PerformanceTier =>
-  value === "high" || value === "balanced" || value === "low";
+  value === "high" || value === "balanced" || value === "low" || value === "minimal";
 
 function detectGpuClass(): "high" | "balanced" | "low" | "none" {
   const canvas = document.createElement("canvas");
@@ -162,7 +189,7 @@ function detectHardwareTier(): PerformanceTier {
   let score = 0;
 
   if (gpu === "none") {
-    detectedHardwareTier = "low";
+    detectedHardwareTier = "minimal";
     return detectedHardwareTier;
   }
   if (gpu === "low") score -= 3;
@@ -183,7 +210,8 @@ function detectHardwareTier(): PerformanceTier {
   if (mobile && typeof memory === "number" && memory <= 4) score -= 0.5;
   if (hints.connection?.saveData) score -= 2;
 
-  if (score <= -2) detectedHardwareTier = "low";
+  if (score <= -4) detectedHardwareTier = "minimal";
+  else if (score <= -2) detectedHardwareTier = "low";
   else if (
     score >= 2.5
     || (!mobile && gpu !== "low" && (memory ?? 8) >= 8 && (cores ?? 8) >= 8)
@@ -193,7 +221,11 @@ function detectHardwareTier(): PerformanceTier {
 }
 
 function capRuntimeTier(hardwareTier: PerformanceTier, runtimeTier: PerformanceTier): PerformanceTier {
-  const maximumRank = Math.min(TIER_BY_RANK.length - 1, TIER_RANK[hardwareTier] + 1);
+  const hardwareMaximum = Math.min(TIER_BY_RANK.length - 1, TIER_RANK[hardwareTier] + 1);
+  const systemMaximum = matchMedia(REDUCED_QUERY).matches
+    ? TIER_RANK.low
+    : TIER_BY_RANK.length - 1;
+  const maximumRank = Math.min(hardwareMaximum, systemMaximum);
   return TIER_BY_RANK[Math.min(TIER_RANK[runtimeTier], maximumRank)];
 }
 
@@ -217,7 +249,7 @@ function getRuntimeTier(): PerformanceTier | null {
 }
 
 function resolveAutoTier(): PerformanceTier {
-  if (matchMedia(REDUCED_QUERY).matches) return "low";
+  if (matchMedia(REDUCED_QUERY).matches) return "minimal";
   const hardwareTier = detectHardwareTier();
   const runtimeTier = getRuntimeTier();
   return runtimeTier ? capRuntimeTier(hardwareTier, runtimeTier) : hardwareTier;
@@ -237,10 +269,10 @@ export function getMotionMode(): MotionMode {
   return "auto";
 }
 
-function resolveMotion(mode: MotionMode): "full" | "reduced" {
-  // Manual quality choices are explicit overrides. Auto keeps respecting the
-  // operating-system accessibility preference.
-  if (mode === "auto" && matchMedia(REDUCED_QUERY).matches) return "reduced";
+function resolveMotion(mode: MotionMode): MotionLevel {
+  // A preferência do sistema reduz a carga e a amplitude, mas não desmonta a
+  // identidade do site. O usuário ainda recebe feedback visual essencial.
+  if (mode === "auto" && matchMedia(REDUCED_QUERY).matches) return "limited";
   return "full";
 }
 
@@ -255,10 +287,15 @@ function applyMotionMode(mode: MotionMode): void {
   const root = document.documentElement;
   root.dataset.motionPreference = mode;
   root.dataset.motion = resolveMotion(mode);
-  root.dataset.performanceTier = resolveTier(mode);
+  const tier = resolveTier(mode);
+  root.dataset.performanceTier = tier;
+  root.dataset.performanceClass = tier === "minimal" ? "low" : tier;
+  root.dataset.systemMotion = matchMedia(REDUCED_QUERY).matches ? "reduced" : "full";
   if (mode === "auto") {
     root.dataset.hardwareTier = detectHardwareTier();
-    root.dataset.performanceSource = getRuntimeTier() ? "runtime" : "detected";
+    root.dataset.performanceSource = matchMedia(REDUCED_QUERY).matches
+      ? "system"
+      : getRuntimeTier() ? "runtime" : "detected";
   } else {
     root.dataset.performanceSource = "manual";
   }
@@ -329,6 +366,7 @@ export function setRuntimePerformanceTier(tier: PerformanceTier): PerformanceTie
   const root = document.documentElement;
   const previousTier = getPerformanceTier();
   root.dataset.performanceTier = nextTier;
+  root.dataset.performanceClass = nextTier === "minimal" ? "low" : nextTier;
   root.dataset.performanceSource = "runtime";
   if (previousTier !== nextTier) {
     window.dispatchEvent(new CustomEvent("amv:performance-tier-change", {
@@ -345,6 +383,14 @@ export function getPerformanceBudget(): PerformanceBudget {
 export function isReducedMotion(): boolean {
   const resolved = document.documentElement.dataset.motion;
   if (resolved === "reduced") return true;
-  if (resolved === "full") return false;
+  if (resolved === "full" || resolved === "limited") return false;
   return resolveMotion(getMotionMode()) === "reduced";
+}
+
+export function isSystemMotionReduced(): boolean {
+  return matchMedia(REDUCED_QUERY).matches;
+}
+
+export function isLowPerformanceTier(tier = getPerformanceTier()): boolean {
+  return tier === "low" || tier === "minimal";
 }

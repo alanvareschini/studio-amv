@@ -10,7 +10,11 @@ import { FontLoader, type Font } from "three/addons/loaders/FontLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { getPerformanceBudget, isReducedMotion } from "../lib/motionPreference";
+import {
+  getPerformanceBudget,
+  isLowPerformanceTier,
+  isReducedMotion,
+} from "../lib/motionPreference";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -123,7 +127,7 @@ class LetterScene {
     this.isMobile = window.matchMedia("(max-width: 760px)").matches;
     const w = window.innerWidth, h = window.innerHeight;
 
-    const lowTier = this.performanceBudget.tier === "low";
+    const lowTier = isLowPerformanceTier(this.performanceBudget.tier);
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: !lowTier,
@@ -347,7 +351,7 @@ class LetterScene {
 
   private onPerformanceTierChange = (): void => {
     this.performanceBudget = getPerformanceBudget();
-    if (this.performanceBudget.tier === "low") this.clearFrostSurface();
+    if (isLowPerformanceTier(this.performanceBudget.tier)) this.clearFrostSurface();
     this.composerPixelRatio = Math.min(
       this.baseDPR,
       this.isMobile
@@ -541,7 +545,7 @@ class LetterScene {
     // No MOBILE não existe cursor: uma luz automática atravessa o A em curva,
     // acendendo a superfície no gradiente (substitui o rastro do cursor).
     // Só enquanto o A está em cena (economiza bateria ao rolar a página).
-    const surfaceEffectEnabled = this.performanceBudget.tier !== "low";
+    const surfaceEffectEnabled = !isLowPerformanceTier(this.performanceBudget.tier);
     const autoSurface = surfaceEffectEnabled && this.isMobile && s < 0.3;
 
     // rastro só onde está sobre o A
@@ -596,7 +600,7 @@ class LetterScene {
     this.group.rotation.y += (tiltY - this.group.rotation.y) * rotationEase;
     this.group.rotation.x += (tiltX - this.group.rotation.x) * rotationEase;
 
-    if (this.performanceBudget.tier === "low" || !this.composer) {
+    if (isLowPerformanceTier(this.performanceBudget.tier) || !this.composer) {
       this.renderer.render(this.scene, this.camera);
     } else {
       this.composer.render();

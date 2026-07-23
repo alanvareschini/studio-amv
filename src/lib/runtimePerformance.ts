@@ -3,6 +3,7 @@ import {
   getMotionMode,
   getPerformanceTier,
   isReducedMotion,
+  isSystemMotionReduced,
   setRuntimePerformanceTier,
   type PerformanceTier,
 } from "./motionPreference";
@@ -12,7 +13,7 @@ const MAX_WINDOWS = 12;
 const BAD_WINDOWS_REQUIRED = 3;
 const GOOD_WINDOWS_REQUIRED = 4;
 const START_DELAY_MS = 3200;
-const TIER_ORDER: PerformanceTier[] = ["low", "balanced", "high"];
+const TIER_ORDER: PerformanceTier[] = ["minimal", "low", "balanced", "high"];
 
 const percentile = (values: number[], amount: number): number => {
   if (!values.length) return 0;
@@ -91,8 +92,10 @@ export function initRuntimePerformanceMonitor(): void {
 
     const currentTier = getPerformanceTier();
     const hardwareTier = getHardwarePerformanceTier();
-    const maximumMeasuredTier = adjacentTier(hardwareTier, 1);
-    if (badWindows >= BAD_WINDOWS_REQUIRED && currentTier !== "low") {
+    const maximumMeasuredTier = isSystemMotionReduced()
+      ? "low"
+      : adjacentTier(hardwareTier, 1);
+    if (badWindows >= BAD_WINDOWS_REQUIRED && currentTier !== "minimal") {
       setRuntimePerformanceTier(adjacentTier(currentTier, -1));
       downgradedThisRun = true;
       cooldownWindows = 1;

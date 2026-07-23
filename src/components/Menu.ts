@@ -4,7 +4,7 @@ import { HeroBlob } from "./HeroBlob";
 import {
   getPerformanceTier,
   getMotionMode,
-  isReducedMotion,
+  isSystemMotionReduced,
   setMotionMode,
   type MotionMode,
 } from "../lib/motionPreference";
@@ -69,6 +69,7 @@ export function initMenu(): void {
     high: "máxima",
     balanced: "equilibrada",
     low: "leve",
+    minimal: "essencial",
   } as const;
   const syncMotionControl = () => {
     const mode = getMotionMode();
@@ -78,10 +79,11 @@ export function initMenu(): void {
       motionButton.setAttribute("aria-pressed", String(active));
     });
     if (motionStatus) {
-      motionStatus.textContent = mode === "auto" && isReducedMotion()
-        ? "Sistema: movimento reduzido"
-        : mode === "auto"
-        ? `Detectado: ${tierLabels[getPerformanceTier()]}`
+      const tierLabel = tierLabels[getPerformanceTier()];
+      motionStatus.textContent = mode === "auto"
+        ? isSystemMotionReduced()
+          ? `Sistema reduzido · ${tierLabel}`
+          : `Detectado: ${tierLabel}`
         : motionLabels[mode];
     }
   };

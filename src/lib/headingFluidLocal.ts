@@ -145,10 +145,10 @@ export function initHeadingFluid(): void {
     renderer = new WebGLRenderer({
       canvas: overlay,
       alpha: true,
-      antialias: true,
+      antialias: performanceBudget.tier !== "minimal",
       premultipliedAlpha: false, // evita fio nas bordas ao copiar p/ canvas 2D
       preserveDrawingBuffer: true,
-      powerPreference: "high-performance",
+      powerPreference: performanceBudget.tier === "minimal" ? "low-power" : "high-performance",
     });
   } catch {
     return;

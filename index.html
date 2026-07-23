@@ -32,30 +32,37 @@
         var memory = navigator.deviceMemory;
         var cores = navigator.hardwareConcurrency;
         var saveData = navigator.connection && navigator.connection.saveData;
-        var tier = "balanced";
+        var detectedTier = "balanced";
+        if (memory <= 2 || (coarsePointer && cores <= 4 && memory <= 4)) detectedTier = "minimal";
+        else if (saveData || cores <= 4 || (coarsePointer && memory <= 4)) detectedTier = "low";
+        else if (!coarsePointer && memory >= 8 && cores >= 8) detectedTier = "high";
+        var tier = detectedTier;
         if (mode === "full") tier = "high";
-        else if (mode === "reduced" || (mode === "auto" && systemReduced)) tier = "low";
+        else if (mode === "reduced") tier = "low";
         else if (mode === "balanced") tier = "balanced";
-        else if (saveData || memory <= 2 || cores <= 4 || (coarsePointer && memory <= 4)) tier = "low";
-        else if (!coarsePointer && memory >= 8 && cores >= 8) tier = "high";
-        var hardwareTier = tier;
-        if (mode === "auto") {
+        else if (systemReduced) tier = "minimal";
+        var hardwareTier = detectedTier;
+        if (mode === "auto" && !systemReduced) {
           try {
             var runtimeSaved = JSON.parse(sessionStorage.getItem("amv-runtime-performance-tier") || "null");
             var runtimeTier = runtimeSaved && runtimeSaved.tier;
             var runtimeFresh = runtimeSaved && typeof runtimeSaved.at === "number" && Date.now() - runtimeSaved.at < 900000;
-            var rank = { low: 0, balanced: 1, high: 2 };
-            var maxRuntimeRank = Math.min(2, rank[tier] + 1);
+            var rank = { minimal: 0, low: 1, balanced: 2, high: 3 };
+            var maxRuntimeRank = Math.min(3, rank[tier] + 1);
             if (runtimeFresh && typeof runtimeTier === "string" && runtimeTier in rank && rank[runtimeTier] <= maxRuntimeRank) tier = runtimeTier;
           } catch (e) {}
         }
         document.documentElement.dataset.motionPreference = mode;
         document.documentElement.dataset.motion = mode === "auto" && systemReduced
-          ? "reduced"
+          ? "limited"
           : "full";
         document.documentElement.dataset.performanceTier = tier;
+        document.documentElement.dataset.performanceClass = tier === "minimal" ? "low" : tier;
         document.documentElement.dataset.hardwareTier = hardwareTier;
-        document.documentElement.dataset.performanceSource = mode === "auto" && tier !== hardwareTier
+        document.documentElement.dataset.systemMotion = systemReduced ? "reduced" : "full";
+        document.documentElement.dataset.performanceSource = mode === "auto" && systemReduced
+          ? "system"
+          : mode === "auto" && tier !== hardwareTier
           ? "runtime"
           : mode === "auto" ? "detected" : "manual";
       })();
@@ -210,13 +217,14 @@
         var CODE_CHARS = " </>  {}  ()  =>  #01 ";
         var BANDS = 5;
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
-        var W = 0, H = 0, dpr = 1, SP = 26;
         var qualityTier = document.documentElement.dataset.performanceTier || "balanced";
-        var GRAV = 0.2, DAMP = 0.992, ITERS = qualityTier === "low" ? 4 : 5;
+        var W = 0, H = 0, dpr = 1, SP = qualityTier === "minimal" ? 30 : 26;
+        var GRAV = 0.2, DAMP = 0.992, ITERS = qualityTier === "minimal" ? 3 : qualityTier === "low" ? 4 : 5;
         var COMPRESS = 0.02, STRETCH = 1.1, H_COMPRESS = 0.6, H_STRETCH = 4;
         var HOME_FORCE = 0.0028, HOME_DEADZONE = 10;
         var MOUSE_STRENGTH = 0.78;
-        var STEP_MS = 1000 / 60, MAX_STEPS = 2;
+        var STEP_MS = 1000 / 60, MAX_STEPS = qualityTier === "minimal" ? 1 : 2;
+        var FRAME_MS = qualityTier === "minimal" ? 1000 / 30 : 0;
         var curtains = [], cord = [], handle = null, bandImg = [];
         var glyphAtlas = null, glyphSize = 0, handleColor = "";
         var opening = false, openT = 0, started = performance.now(), lastT = started, acc = 0;
@@ -302,10 +310,12 @@
         function makeCurtain(x0, x1, dir) {
           var width = x1 - x0;
           var gap = SP;
-          var maxCols = W < 640 ? 30 : 56;
-          var maxRows = W < 640 ? 96 : 110;
-          var cols = Math.max(12, Math.min(maxCols, Math.ceil(width / gap) + 1));
-          var rows = Math.max(22, Math.min(maxRows, Math.ceil(H / gap) + 1));
+          var maxCols = qualityTier === "minimal" ? (W < 640 ? 24 : 44) : (W < 640 ? 30 : 56);
+          var maxRows = qualityTier === "minimal" ? (W < 640 ? 72 : 84) : (W < 640 ? 96 : 110);
+          var minCols = qualityTier === "minimal" ? 10 : 12;
+          var minRows = qualityTier === "minimal" ? 18 : 22;
+          var cols = Math.max(minCols, Math.min(maxCols, Math.ceil(width / gap) + 1));
+          var rows = Math.max(minRows, Math.min(maxRows, Math.ceil(H / gap) + 1));
           // Distribute the capped grid over the exact viewport dimensions so
           // tall tablets and wide screens never expose an uncovered strip.
           var hrest = width / Math.max(1, cols - 1);
@@ -871,6 +881,10 @@
         function loop(now) {
           raf = 0;
           if (finished || document.hidden) return;
+          if (FRAME_MS && now - lastT < FRAME_MS - 1) {
+            raf = requestAnimationFrame(loop);
+            return;
+          }
           var elapsed = Math.min(50, now - lastT);
           lastT = now;
           acc += elapsed;
