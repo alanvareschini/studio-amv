@@ -8,7 +8,10 @@ import {
 } from "./motionPreference";
 
 const SAMPLE_WINDOW_MS = 2000;
-const MAX_WINDOWS = 10;
+const MAX_WINDOWS = 12;
+const BAD_WINDOWS_REQUIRED = 3;
+const GOOD_WINDOWS_REQUIRED = 4;
+const START_DELAY_MS = 3200;
 const TIER_ORDER: PerformanceTier[] = ["low", "balanced", "high"];
 
 const percentile = (values: number[], amount: number): number => {
@@ -88,16 +91,17 @@ export function initRuntimePerformanceMonitor(): void {
 
     const currentTier = getPerformanceTier();
     const hardwareTier = getHardwarePerformanceTier();
-    if (badWindows >= 2 && currentTier !== "low") {
+    const maximumMeasuredTier = adjacentTier(hardwareTier, 1);
+    if (badWindows >= BAD_WINDOWS_REQUIRED && currentTier !== "low") {
       setRuntimePerformanceTier(adjacentTier(currentTier, -1));
       downgradedThisRun = true;
       cooldownWindows = 1;
       badWindows = 0;
       goodWindows = 0;
     } else if (
-      goodWindows >= 3
+      goodWindows >= GOOD_WINDOWS_REQUIRED
       && !downgradedThisRun
-      && TIER_ORDER.indexOf(currentTier) < TIER_ORDER.indexOf(hardwareTier)
+      && TIER_ORDER.indexOf(currentTier) < TIER_ORDER.indexOf(maximumMeasuredTier)
     ) {
       setRuntimePerformanceTier(adjacentTier(currentTier, 1));
       cooldownWindows = 2;
@@ -143,7 +147,7 @@ export function initRuntimePerformanceMonitor(): void {
 
   const scheduleStart = () => {
     if (started || startTimer) return;
-    startTimer = window.setTimeout(start, 1800);
+    startTimer = window.setTimeout(start, START_DELAY_MS);
   };
 
   window.addEventListener("amv:intro-complete", scheduleStart, { once: true });

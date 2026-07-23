@@ -4,6 +4,7 @@ import { HeroBlob } from "./HeroBlob";
 import {
   getPerformanceTier,
   getMotionMode,
+  isReducedMotion,
   setMotionMode,
   type MotionMode,
 } from "../lib/motionPreference";
@@ -77,7 +78,9 @@ export function initMenu(): void {
       motionButton.setAttribute("aria-pressed", String(active));
     });
     if (motionStatus) {
-      motionStatus.textContent = mode === "auto"
+      motionStatus.textContent = mode === "auto" && isReducedMotion()
+        ? "Sistema: movimento reduzido"
+        : mode === "auto"
         ? `Detectado: ${tierLabels[getPerformanceTier()]}`
         : motionLabels[mode];
     }

@@ -1151,7 +1151,7 @@ ol {
   color: #04110a;
   box-shadow: 0 5px 16px rgba(34, 211, 238, 0.18);
 }
-@media (max-width: 720px) {
+@media (max-width: 1024px), (pointer: coarse) {
   .menu-theme {
     gap: 0.7rem;
   }
@@ -2314,6 +2314,56 @@ html.amv-touch .wa-fab * {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Narrow Android compositors can detach masked/translucent pseudo-elements
+   while their parent is tilted. Keep one opaque moving surface and draw the
+   border with simple strips so the whole card follows the touch together. */
+@media (max-width: 600px) {
+  html.amv-touch .card,
+  html.amv-touch .pkg {
+    --safe-card-bg: #0b1020;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background:
+      linear-gradient(var(--safe-card-bg), var(--safe-card-bg)) padding-box,
+      var(--grad-main) border-box;
+    border-color: transparent;
+  }
+
+  html.amv-touch .pkg {
+    transform-style: flat;
+  }
+
+  html[data-theme="light"].amv-touch .card,
+  html[data-theme="light"].amv-touch .pkg {
+    --safe-card-bg: #f7f9fd;
+  }
+
+  html.amv-touch .pkg--featured,
+  html[data-theme="light"].amv-touch .pkg--featured {
+    --safe-card-bg: var(--bg-2);
+  }
+
+  html.amv-touch .card::after,
+  html.amv-touch .pkg::after {
+    content: none;
+    display: none;
+  }
+
+  html.amv-touch .pkg__holo {
+    display: none;
+  }
+
+  html.amv-touch .pkg--featured::before {
+    display: none;
+  }
+
+  html.amv-touch .card.is-touching,
+  html.amv-touch .pkg.is-touching {
+    animation: none;
+    will-change: transform;
+  }
+}
+
 @keyframes holo-drift {
   0%, 100% { background-position: 0 0, 22% 28%; }
   50% { background-position: 0 0, 78% 72%; }
@@ -2989,53 +3039,44 @@ html.amv-touch .gyro-btn { display: inline-flex; }
 }
 
 :root[data-performance-tier="low"] .card {
-  background: rgba(11, 16, 32, 0.94);
+  --safe-card-bg: #0b1020;
+  background:
+    linear-gradient(var(--safe-card-bg), var(--safe-card-bg)) padding-box,
+    var(--grad-main) border-box;
   border-color: transparent;
   will-change: auto;
 }
 
 :root[data-theme="light"][data-performance-tier="low"] .card {
-  background: rgba(247, 249, 253, 0.96);
+  --safe-card-bg: #f7f9fd;
 }
 
 :root[data-performance-tier="low"] .pkg {
-  background: rgba(11, 16, 32, 0.94);
+  --safe-card-bg: #0b1020;
+  background:
+    linear-gradient(var(--safe-card-bg), var(--safe-card-bg)) padding-box,
+    var(--grad-main) border-box;
   border-color: transparent;
   will-change: auto;
 }
 
 :root[data-performance-tier="low"] .pkg--featured {
-  background: var(--bg-2);
+  --safe-card-bg: var(--bg-2);
 }
 
 :root[data-theme="light"][data-performance-tier="low"] .pkg {
-  background: rgba(247, 249, 253, 0.96);
+  --safe-card-bg: #f7f9fd;
 }
 
 :root[data-theme="light"][data-performance-tier="low"] .pkg--featured {
-  background: var(--bg-2);
+  --safe-card-bg: var(--bg-2);
 }
 
-/* Lightweight strips avoid Android padding-box leaks into the card surface. */
+/* The parent paints the rounded border; no masked layer or straight strips. */
 :root[data-performance-tier="low"] .card::after,
 :root[data-performance-tier="low"] .pkg::after {
-  content: "";
-  display: block;
-  position: absolute;
-  inset: -1px;
-  z-index: 4;
-  border-radius: inherit;
-  padding: 0;
-  background:
-    linear-gradient(90deg, var(--purple), var(--cyan), var(--green)) top / 100% 1.5px no-repeat,
-    linear-gradient(270deg, var(--purple), var(--cyan), var(--green)) bottom / 100% 1.5px no-repeat,
-    linear-gradient(180deg, var(--purple), var(--cyan), var(--green)) left / 1.5px 100% no-repeat,
-    linear-gradient(0deg, var(--purple), var(--cyan), var(--green)) right / 1.5px 100% no-repeat;
-  opacity: 0.76;
-  animation: none;
-  -webkit-mask: none;
-  mask: none;
-  pointer-events: none;
+  content: none;
+  display: none;
 }
 
 :root[data-performance-tier="low"] .pkg--featured::before,

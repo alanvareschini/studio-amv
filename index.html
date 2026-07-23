@@ -43,13 +43,14 @@
           try {
             var runtimeSaved = JSON.parse(sessionStorage.getItem("amv-runtime-performance-tier") || "null");
             var runtimeTier = runtimeSaved && runtimeSaved.tier;
-            var runtimeFresh = runtimeSaved && typeof runtimeSaved.at === "number" && Date.now() - runtimeSaved.at < 1800000;
+            var runtimeFresh = runtimeSaved && typeof runtimeSaved.at === "number" && Date.now() - runtimeSaved.at < 900000;
             var rank = { low: 0, balanced: 1, high: 2 };
-            if (runtimeFresh && typeof runtimeTier === "string" && runtimeTier in rank && rank[runtimeTier] < rank[tier]) tier = runtimeTier;
+            var maxRuntimeRank = Math.min(2, rank[tier] + 1);
+            if (runtimeFresh && typeof runtimeTier === "string" && runtimeTier in rank && rank[runtimeTier] <= maxRuntimeRank) tier = runtimeTier;
           } catch (e) {}
         }
         document.documentElement.dataset.motionPreference = mode;
-        document.documentElement.dataset.motion = (mode === "auto" || mode === "reduced") && systemReduced
+        document.documentElement.dataset.motion = mode === "auto" && systemReduced
           ? "reduced"
           : "full";
         document.documentElement.dataset.performanceTier = tier;
@@ -136,11 +137,14 @@
         position: fixed;
         inset: 0;
         z-index: 9999;
-        background: transparent;
+        background: var(--grad-bg, none), var(--bg, #070a12);
         transition: background 0.28s ease;
       }
-      #clothintro.ci-boot { background: #070a12; }
-      :root[data-theme="light"] #clothintro.ci-boot { background: #eef1f8; }
+      #clothintro.ci-boot { background: var(--grad-bg, none), var(--bg, #070a12); }
+      :root[data-theme="light"] #clothintro,
+      :root[data-theme="light"] #clothintro.ci-boot {
+        background: var(--grad-bg, none), var(--bg, #eef1f8);
+      }
       #clothintro canvas {
         position: absolute;
         inset: 0;
@@ -298,10 +302,14 @@
         function makeCurtain(x0, x1, dir) {
           var width = x1 - x0;
           var gap = SP;
-          var cols = Math.max(12, Math.min(W < 640 ? 22 : 48, Math.floor(width / gap) + 1));
-          var rows = Math.max(22, Math.min(W < 640 ? 64 : 52, Math.ceil(H / gap) + 1));
-          var hrest = gap;
-          var vrest = gap;
+          var maxCols = W < 640 ? 30 : 56;
+          var maxRows = W < 640 ? 96 : 110;
+          var cols = Math.max(12, Math.min(maxCols, Math.ceil(width / gap) + 1));
+          var rows = Math.max(22, Math.min(maxRows, Math.ceil(H / gap) + 1));
+          // Distribute the capped grid over the exact viewport dimensions so
+          // tall tablets and wide screens never expose an uncovered strip.
+          var hrest = width / Math.max(1, cols - 1);
+          var vrest = H / Math.max(1, rows - 1);
           var P = [];
           var links = [];
 

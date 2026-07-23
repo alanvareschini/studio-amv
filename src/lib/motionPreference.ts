@@ -29,13 +29,14 @@ export type PerformanceBudget = {
 
 const STORAGE_KEY = "amv-motion-mode";
 const RUNTIME_STORAGE_KEY = "amv-runtime-performance-tier";
-const RUNTIME_TTL_MS = 30 * 60 * 1000;
+const RUNTIME_TTL_MS = 15 * 60 * 1000;
 const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 const TIER_RANK: Record<PerformanceTier, number> = {
   low: 0,
   balanced: 1,
   high: 2,
 };
+const TIER_BY_RANK: PerformanceTier[] = ["low", "balanced", "high"];
 let detectedHardwareTier: PerformanceTier | null = null;
 
 const BUDGETS: Record<PerformanceTier, PerformanceBudget> = {
@@ -191,8 +192,9 @@ function detectHardwareTier(): PerformanceTier {
   return detectedHardwareTier;
 }
 
-function lowerTier(first: PerformanceTier, second: PerformanceTier): PerformanceTier {
-  return TIER_RANK[first] <= TIER_RANK[second] ? first : second;
+function capRuntimeTier(hardwareTier: PerformanceTier, runtimeTier: PerformanceTier): PerformanceTier {
+  const maximumRank = Math.min(TIER_BY_RANK.length - 1, TIER_RANK[hardwareTier] + 1);
+  return TIER_BY_RANK[Math.min(TIER_RANK[runtimeTier], maximumRank)];
 }
 
 function getRuntimeTier(): PerformanceTier | null {
@@ -218,7 +220,7 @@ function resolveAutoTier(): PerformanceTier {
   if (matchMedia(REDUCED_QUERY).matches) return "low";
   const hardwareTier = detectHardwareTier();
   const runtimeTier = getRuntimeTier();
-  return runtimeTier ? lowerTier(hardwareTier, runtimeTier) : hardwareTier;
+  return runtimeTier ? capRuntimeTier(hardwareTier, runtimeTier) : hardwareTier;
 }
 
 export function getMotionMode(): MotionMode {
@@ -236,10 +238,9 @@ export function getMotionMode(): MotionMode {
 }
 
 function resolveMotion(mode: MotionMode): "full" | "reduced" {
-  // "Leve" lowers rendering quality but keeps the interactive experience.
-  // Motion is removed only for the operating-system accessibility preference.
-  const followsSystemPreference = mode === "auto" || mode === "reduced";
-  if (followsSystemPreference && matchMedia(REDUCED_QUERY).matches) return "reduced";
+  // Manual quality choices are explicit overrides. Auto keeps respecting the
+  // operating-system accessibility preference.
+  if (mode === "auto" && matchMedia(REDUCED_QUERY).matches) return "reduced";
   return "full";
 }
 
@@ -315,7 +316,7 @@ export function getHardwarePerformanceTier(): PerformanceTier {
 
 export function setRuntimePerformanceTier(tier: PerformanceTier): PerformanceTier {
   if (getMotionMode() !== "auto") return getPerformanceTier();
-  const nextTier = lowerTier(getHardwarePerformanceTier(), tier);
+  const nextTier = capRuntimeTier(getHardwarePerformanceTier(), tier);
   try {
     sessionStorage.setItem(RUNTIME_STORAGE_KEY, JSON.stringify({
       tier: nextTier,

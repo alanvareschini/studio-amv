@@ -45,7 +45,7 @@ export function initHeroBlob(): void {
 
     const isCompactMenu = () =>
       wrap.classList.contains("hero-blob--menu") &&
-      window.matchMedia("(max-width: 720px)").matches;
+      window.matchMedia("(max-width: 1024px), (pointer: coarse)").matches;
     let theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
     let targetAngle = theme === "light" ? 0 : Math.PI;
     let angle = targetAngle;
