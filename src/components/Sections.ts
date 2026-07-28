@@ -29,8 +29,11 @@ const trustMotions = ["unlock", "spark", "access", "puzzle"] as const;
 const portfolioMotions = ["barber", "sparkle", "serve", "flex", "shop", "chart"] as const;
 const portfolioDemos: Record<string, { scene: string; action: string }> = {
   Barbearia: { scene: "barber-gallery", action: "Explorar cortes" },
+  "Clínica de estética": { scene: "aesthetic-lab", action: "Ver evolução" },
   Restaurante: { scene: "restaurant-menu", action: "Abrir cardápio" },
+  "Personal trainer": { scene: "training-lab", action: "Montar treino" },
   "Loja local": { scene: "storefront-demo", action: "Abrir vitrine" },
+  Consultor: { scene: "strategy-lab", action: "Fazer diagnóstico" },
 };
 
 // Prova de valor rápida (faixa logo abaixo da hero)

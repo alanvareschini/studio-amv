@@ -28,6 +28,7 @@ class LetterScene {
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
   private composer: EffectComposer | null = null;
+  private bloomPass: UnrealBloomPass | null = null;
   private group = new THREE.Group();
   private spinner = new THREE.Group();
   private mesh: THREE.Mesh | null = null;
@@ -93,18 +94,38 @@ class LetterScene {
     this.scene.background = this.bgTex;
     if (prev) prev.dispose();
 
+    if (theme === "light") {
+      this.renderer.toneMappingExposure = 1.02;
+      if (this.bloomPass) {
+        this.bloomPass.strength = this.isMobile ? 0.2 : 0.28;
+        this.bloomPass.radius = 0.5;
+        this.bloomPass.threshold = 1;
+      }
+    } else {
+      this.renderer.toneMappingExposure = 1.05;
+      if (this.bloomPass) {
+        this.bloomPass.strength = this.isMobile ? 0.38 : 0.55;
+        this.bloomPass.radius = 0.6;
+        this.bloomPass.threshold = 0.8;
+      }
+    }
+
     if (!this.mat) return;
     if (theme === "light") {
       // no fundo claro o "A" fica azul-marinho (visível/contrastado)
       this.mat.color.setHex(0x24356b);
       this.mat.emissive.setHex(0x2a4a8c);
       this.mat.emissiveIntensity = 0.5;
-      this.mat.envMapIntensity = 0.85;
+      this.mat.envMapIntensity = 1.15;
+      this.mat.metalness = 0.66;
+      this.mat.roughness = 0.22;
     } else {
       this.mat.color.setHex(0x1d2c4d);
       this.mat.emissive.setHex(0x12384a);
       this.mat.emissiveIntensity = 0.9;
       this.mat.envMapIntensity = 1.1;
+      this.mat.metalness = 0.62;
+      this.mat.roughness = 0.26;
     }
   }
 
@@ -116,6 +137,7 @@ class LetterScene {
   private frostU = {
     tMouseFrost: { value: null as THREE.Texture | null },
     uResolution: { value: new THREE.Vector2(1, 1) },
+    uFrostTexel: { value: new THREE.Vector2(1 / SIM, 1 / SIM) },
   };
   private ptr = { x: 0.5, y: 0.5, px: 0.5, py: 0.5, inside: false };
   private overA = false;
@@ -177,9 +199,13 @@ class LetterScene {
       this.composer.addPass(new RenderPass(this.scene, this.camera));
     // threshold alto (0.8): só os brilhos mais fortes (reflexos + rastro) fazem
     // bloom → o fundo claro NÃO é "lavado".
-      this.composer.addPass(
-        new UnrealBloomPass(new THREE.Vector2(w, h), this.isMobile ? 0.38 : 0.55, 0.6, 0.8),
+      this.bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(w, h),
+        this.isMobile ? 0.38 : 0.55,
+        0.6,
+        0.8,
       );
+      this.composer.addPass(this.bloomPass);
     }
 
     window.addEventListener("pointermove", this.onPointer, { passive: true });
@@ -270,18 +296,42 @@ class LetterScene {
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.tMouseFrost = this.frostU.tMouseFrost;
       shader.uniforms.uResolution = this.frostU.uResolution;
+      shader.uniforms.uFrostTexel = this.frostU.uFrostTexel;
       shader.vertexShader = shader.vertexShader
         .replace("#include <common>", "#include <common>\nvarying vec3 vLpos;")
         .replace("#include <begin_vertex>", "#include <begin_vertex>\nvLpos = transformed;");
       shader.fragmentShader = shader.fragmentShader
         .replace(
           "#include <common>",
-          "#include <common>\nvarying vec3 vLpos;\nuniform sampler2D tMouseFrost;\nuniform vec2 uResolution;"
+          `#include <common>
+           varying vec3 vLpos;
+           uniform sampler2D tMouseFrost;
+           uniform vec2 uResolution;
+           uniform vec2 uFrostTexel;
+           vec2 frostData;
+
+           vec2 sampleSmoothFrost(vec2 uv) {
+             vec2 offset = uFrostTexel * 1.25;
+             vec2 value = texture2D(tMouseFrost, uv).rg * 0.4;
+             value += texture2D(tMouseFrost, uv + vec2(offset.x, 0.0)).rg * 0.15;
+             value += texture2D(tMouseFrost, uv - vec2(offset.x, 0.0)).rg * 0.15;
+             value += texture2D(tMouseFrost, uv + vec2(0.0, offset.y)).rg * 0.15;
+             value += texture2D(tMouseFrost, uv - vec2(0.0, offset.y)).rg * 0.15;
+             return value;
+           }`
+        )
+        .replace(
+          "#include <clipping_planes_fragment>",
+          `#include <clipping_planes_fragment>
+           frostData = sampleSmoothFrost(
+             clamp(gl_FragCoord.xy / uResolution, vec2(0.001), vec2(0.999))
+           );`
         )
         .replace(
           "#include <roughnessmap_fragment>",
           `#include <roughnessmap_fragment>
-           roughnessFactor *= 1.0 - texture2D(tMouseFrost, gl_FragCoord.xy / uResolution).r * 0.85;`
+           float frostSurface = smoothstep(0.025, 0.72, frostData.r);
+           roughnessFactor *= mix(1.0, 0.72, frostSurface);`
         )
         .replace(
           "#include <emissivemap_fragment>",
@@ -292,13 +342,16 @@ class LetterScene {
             vec3 c3 = vec3(0.10, 1.0, 0.40);     // verde neon
             float gy = clamp(vLpos.y / 3.6 + 0.5, 0.0, 1.0);
             vec3 gradCol = gy < 0.5 ? mix(c1, c2, gy * 2.0) : mix(c2, c3, (gy - 0.5) * 2.0);
-            vec2 fd = texture2D(tMouseFrost, gl_FragCoord.xy / uResolution).rg;
-            totalEmissiveRadiance += gradCol * fd.g * 2.4;          // crista do rastro (brilho)
-            totalEmissiveRadiance += gradCol * pow(fd.r, 2.0) * 0.5; // brilho suave na trilha
+            float trail = smoothstep(0.025, 0.72, frostData.r);
+            float movingCore = smoothstep(0.008, 0.2, frostData.g);
+            float wave = smoothstep(0.08, 0.3, trail)
+              * (1.0 - smoothstep(0.5, 0.92, trail));
+            float glow = movingCore * 0.3 + wave * 0.2 + pow(trail, 1.2) * 0.16;
+            totalEmissiveRadiance += gradCol * glow;
           }`
         );
     };
-    mat.customProgramCacheKey = () => "a-frost-v1";
+    mat.customProgramCacheKey = () => "a-frost-v2";
     this.mat = mat;
     this.applyTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
     window.addEventListener("themechange", (e) =>
@@ -469,15 +522,32 @@ class LetterScene {
     for (let y = 1; y < SIM - 1; y++) {
       for (let x = 1; x < SIM - 1; x++) {
         const i = y * SIM + x;
-        const drift = Math.sin(x * 0.093 + y * 0.071 + elapsed * 0.72) > 0 ? 1 : -1;
-        const sx = Math.max(1, Math.min(SIM - 2, x + drift));
-        const prev = this.field[y * SIM + sx];
-        let nv = Math.max(this.field[i - 1], this.field[i + 1], this.field[i - SIM], this.field[i + SIM]);
+        const center = this.field[i];
+        const left = this.field[i - 1];
+        const right = this.field[i + 1];
+        const bottom = this.field[i - SIM];
+        const top = this.field[i + SIM];
+        const diagonal =
+          this.field[i - SIM - 1]
+          + this.field[i - SIM + 1]
+          + this.field[i + SIM - 1]
+          + this.field[i + SIM + 1];
+        const blurred =
+          center * 0.24
+          + (left + right + bottom + top) * 0.145
+          + diagonal * 0.045;
+        const neighborPeak = Math.max(left, right, bottom, top);
+        let nv = Math.max(center * 0.982, blurred * 0.994, neighborPeak * 0.91);
         if (this.overA && radius > 0.1) {
           const ld = LetterScene.segDist(x, y, this.ptr.px * SIM, this.ptr.py * SIM, this.ptr.x * SIM, this.ptr.y * SIM);
-          nv += Math.pow(Math.max(0, 1 - ld / radius), 3);
+          const splat = LetterScene.smoothstep(
+            1,
+            0,
+            Math.min(1, ld / Math.max(radius, 0.001)),
+          );
+          nv = Math.max(nv, splat * splat);
         }
-        nv = Math.min(1, Math.max(prev * 0.12, nv) * 0.985);
+        nv = Math.min(1, nv * 0.986);
         this.nextField[i] = nv;
         const o = i * 4;
         this.frostPixels[o] = Math.round(nv * 255);

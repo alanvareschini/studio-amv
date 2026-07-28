@@ -123,6 +123,33 @@ if (app) {
       init: module.initBarberGallery,
     })),
   }));
+  safe("aestheticLabLoader", () => initLazyDemo({
+    scene: "aesthetic-lab",
+    sceneElementId: "aestheticLabScene",
+    label: "Abrir análise demonstrativa de clínica de estética",
+    load: () => import("./components/CreativeDemos").then((module) => ({
+      render: module.AestheticLab,
+      init: module.initAestheticLab,
+    })),
+  }));
+  safe("trainingLabLoader", () => initLazyDemo({
+    scene: "training-lab",
+    sceneElementId: "trainingLabScene",
+    label: "Abrir experiência demonstrativa de personal trainer",
+    load: () => import("./components/CreativeDemos").then((module) => ({
+      render: module.TrainingLab,
+      init: module.initTrainingLab,
+    })),
+  }));
+  safe("strategyLabLoader", () => initLazyDemo({
+    scene: "strategy-lab",
+    sceneElementId: "strategyLabScene",
+    label: "Abrir diagnóstico demonstrativo de consultoria",
+    load: () => import("./components/CreativeDemos").then((module) => ({
+      render: module.StrategyLab,
+      init: module.initStrategyLab,
+    })),
+  }));
   safe("packages", initPackages);
   safe("faq", initFAQ);
   safe("contact", initContact);

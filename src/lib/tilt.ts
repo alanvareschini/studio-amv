@@ -30,13 +30,25 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
     const r = card.getBoundingClientRect();
     const px = ((clientX - r.left) / r.width) * 2 - 1; // -1 a 1
     const py = ((clientY - r.top) / r.height) * 2 - 1;
+    const narrowTouch = isTouch && window.matchMedia("(max-width: 430px)").matches;
+
+    card.classList.toggle("is-touching", isTouch);
+    card.style.transitionDelay = "0s";
+    if (narrowTouch) {
+      const lightX = Math.max(0, Math.min(100, (px + 1) * 50));
+      const lightY = Math.max(0, Math.min(100, (py + 1) * 50));
+      card.style.setProperty("--touch-light-x", `${lightX.toFixed(1)}%`);
+      card.style.setProperty("--touch-light-y", `${lightY.toFixed(1)}%`);
+      card.style.transition = "box-shadow 0.14s ease-out";
+      card.style.transform = "none";
+      return;
+    }
+
     const touchSoftener = isTouch ? 0.72 : 1;
     const ry = (px * maxAngle * touchSoftener).toFixed(2);
     const rx = (-py * maxAngle * touchSoftener).toFixed(2);
 
-    card.classList.toggle("is-touching", isTouch);
     card.style.transition = isTouch ? "transform 0.14s ease-out" : "transform 0.12s ease-out";
-    card.style.transitionDelay = "0s";
     card.style.transform = `perspective(${persp}px) rotateY(${ry}deg) rotateX(${rx}deg) translateY(-${lift}px)`;
   };
 
@@ -67,6 +79,8 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
       pendingCard = null;
     }
     card.classList.remove("is-touching");
+    card.style.removeProperty("--touch-light-x");
+    card.style.removeProperty("--touch-light-y");
     card.style.transition = "transform 0.35s ease";
     card.style.transform = "";
   };

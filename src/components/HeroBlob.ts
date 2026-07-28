@@ -1,24 +1,45 @@
-// Blob dia/noite interativo: sol e lua orbitam dentro do blob; o mar muda de
-// cor; clicar alterna tema com a mesma coreografia.
+// Compact day/night control. The complete orbit lives inside one SVG viewBox,
+// so neither celestial body can be clipped by narrow mobile compositors.
 export function HeroBlob(extraClass = ""): string {
   return /* html */ `
-    <div class="hero-blob ${extraClass}" role="button" tabindex="0" aria-label="Alternar dia e noite">
-      <div class="blobOuter">
-        <div class="blobClip">
-          <div class="blobFill"></div>
-          <svg class="wave" viewBox="0 0 264 132" preserveAspectRatio="none" aria-hidden="true">
-            <path class="waveOne" d="M0 58 Q 66 40 132 58 T 264 58 V132 H0 Z" fill="#1e3a5f"/>
-            <path class="waveTwo" d="M0 74 Q 66 58 132 74 T 264 74 V132 H0 Z" fill="#2a4f78"/>
-            <path class="waveThree" d="M0 90 Q 66 74 132 90 T 264 90 V132 H0 Z" fill="#3a6490"/>
-          </svg>
-        </div>
-        <div class="cel sun"></div>
-        <div class="cel moon"></div>
-      </div>
-      <div class="label-wrap">
-        <span class="lbl labelNight">NOITE</span>
-        <span class="lbl labelDay">DIA</span>
-      </div>
+    <div class="hero-blob ${extraClass}" role="button" tabindex="0" aria-label="Alternar modo claro e escuro">
+      <svg class="theme-orbit" viewBox="0 0 64 64" aria-hidden="true">
+        <defs>
+          <clipPath id="themeOrbitClip">
+            <circle cx="32" cy="32" r="28"></circle>
+          </clipPath>
+          <linearGradient id="themeOrbitRim" x1="8" y1="8" x2="56" y2="56">
+            <stop offset="0" stop-color="#a855f7"></stop>
+            <stop offset="0.52" stop-color="#22d3ee"></stop>
+            <stop offset="1" stop-color="#00ff88"></stop>
+          </linearGradient>
+        </defs>
+
+        <g clip-path="url(#themeOrbitClip)">
+          <circle class="theme-orbit__sky" cx="32" cy="32" r="28" fill="#17213d"></circle>
+
+          <g class="theme-orbit__celestials">
+            <g class="theme-orbit__sun" transform="translate(32 14)">
+              <g class="theme-orbit__sun-rays">
+                <path d="M0-10V-8M0 8V10M-10 0H-8M8 0H10M-7-7-5.6-5.6M7 7 5.6 5.6M7-7 5.6-5.6M-7 7-5.6 5.6"></path>
+              </g>
+              <circle r="6.2" fill="#ffe45e"></circle>
+              <circle cx="-2" cy="-2" r="2.2" fill="#fff8bf" opacity="0.9"></circle>
+            </g>
+
+            <g class="theme-orbit__moon" transform="translate(32 50)">
+              <path d="M2.2-7A7.3 7.3 0 1 0 6.8 4.7 6.1 6.1 0 0 1 2.2-7Z" fill="#eef4ff"></path>
+              <circle cx="-2.1" cy="1.5" r="1.1" fill="#b9c5dd" opacity="0.58"></circle>
+            </g>
+          </g>
+
+          <path class="theme-orbit__wave theme-orbit__wave--back" d="M-6 39Q9 33 24 39T54 39T84 39V70H-6Z"></path>
+          <path class="theme-orbit__wave theme-orbit__wave--mid" d="M-12 46Q3 40 18 46T48 46T78 46V70H-12Z"></path>
+          <path class="theme-orbit__wave theme-orbit__wave--front" d="M-4 52Q11 47 26 52T56 52T86 52V70H-4Z"></path>
+        </g>
+
+        <circle class="theme-orbit__rim" cx="32" cy="32" r="28.5" fill="none" stroke="url(#themeOrbitRim)"></circle>
+      </svg>
     </div>`;
 }
 
@@ -27,25 +48,20 @@ export function initHeroBlob(): void {
     if (wrap.dataset.ready === "1") return;
     wrap.dataset.ready = "1";
 
-    const blobFill = wrap.querySelector<HTMLElement>(".blobFill");
-    const sun = wrap.querySelector<HTMLElement>(".sun");
-    const moon = wrap.querySelector<HTMLElement>(".moon");
-    const lN = wrap.querySelector<HTMLElement>(".labelNight");
-    const lD = wrap.querySelector<HTMLElement>(".labelDay");
-    const w1 = wrap.querySelector<SVGPathElement>(".waveOne");
-    const w2 = wrap.querySelector<SVGPathElement>(".waveTwo");
-    const w3 = wrap.querySelector<SVGPathElement>(".waveThree");
-    if (!blobFill || !sun || !moon || !lN || !lD || !w1 || !w2 || !w3) return;
+    const sky = wrap.querySelector<SVGCircleElement>(".theme-orbit__sky");
+    const celestials = wrap.querySelector<SVGGElement>(".theme-orbit__celestials");
+    const sun = wrap.querySelector<SVGGElement>(".theme-orbit__sun");
+    const moon = wrap.querySelector<SVGGElement>(".theme-orbit__moon");
+    const waveBack = wrap.querySelector<SVGPathElement>(".theme-orbit__wave--back");
+    const waveMid = wrap.querySelector<SVGPathElement>(".theme-orbit__wave--mid");
+    const waveFront = wrap.querySelector<SVGPathElement>(".theme-orbit__wave--front");
+    if (!sky || !celestials || !sun || !moon || !waveBack || !waveMid || !waveFront) return;
 
-    const wave = [
-      { night: "#1e3a5f", day: "#3aa0c4" },
-      { night: "#2a4f78", day: "#6dc0d8" },
-      { night: "#3a6490", day: "#a8dde8" },
+    const waves = [
+      { element: waveBack, night: "#1e3a5f", day: "#3aa0c4" },
+      { element: waveMid, night: "#2a4f78", day: "#6dc0d8" },
+      { element: waveFront, night: "#3a6490", day: "#a8dde8" },
     ];
-
-    const isCompactMenu = () =>
-      wrap.classList.contains("hero-blob--menu") &&
-      window.matchMedia("(max-width: 1024px), (pointer: coarse)").matches;
     let theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
     let targetAngle = theme === "light" ? 0 : Math.PI;
     let angle = targetAngle;
@@ -54,48 +70,36 @@ export function initHeroBlob(): void {
     let raf = 0;
 
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-    const hexRgb = (h: string): [number, number, number] => [
-      parseInt(h.slice(1, 3), 16),
-      parseInt(h.slice(3, 5), 16),
-      parseInt(h.slice(5, 7), 16),
+    const hexRgb = (hex: string): [number, number, number] => [
+      parseInt(hex.slice(1, 3), 16),
+      parseInt(hex.slice(3, 5), 16),
+      parseInt(hex.slice(5, 7), 16),
     ];
-    const mixColor = (h1: string, h2: string, t: number) => {
-      const [r1, g1, b1] = hexRgb(h1);
-      const [r2, g2, b2] = hexRgb(h2);
-      return `rgb(${Math.round(lerp(r1, r2, t))},${Math.round(lerp(g1, g2, t))},${Math.round(lerp(b1, b2, t))})`;
+    const mixColor = (first: string, second: string, amount: number) => {
+      const [r1, g1, b1] = hexRgb(first);
+      const [r2, g2, b2] = hexRgb(second);
+      return `rgb(${Math.round(lerp(r1, r2, amount))},${Math.round(lerp(g1, g2, amount))},${Math.round(lerp(b1, b2, amount))})`;
     };
 
-    const apply = (a: number) => {
-      const cp = (1 + Math.cos(a)) / 2; // 1 = dia, 0 = noite
-      blobFill.style.background = mixColor("#7730ec", "#fcce18", cp);
+    const apply = (currentAngle: number) => {
+      const daytime = (1 + Math.cos(currentAngle)) / 2;
+      const degrees = (currentAngle * 180) / Math.PI;
 
-      const compact = isCompactMenu();
-      const radius = compact ? 19 : 68;
-      const sunOffset = compact ? 9 : 13;
-      const moonOffset = compact ? 9 : 12;
-      const horizon = compact ? 4 : 20;
-      const fade = compact ? 18 : 22;
-      const sx = radius * Math.sin(a);
-      const sy = -radius * Math.cos(a);
-      sun.style.transform = `translate(${sx - sunOffset}px, ${sy - sunOffset}px)`;
-      moon.style.transform = `translate(${-sx - moonOffset}px, ${-sy - moonOffset}px)`;
+      celestials.setAttribute("transform", `rotate(${degrees.toFixed(2)} 32 32)`);
+      sky.setAttribute("fill", mixColor("#111a34", "#73cde5", daytime));
+      sun.style.opacity = daytime.toFixed(3);
+      moon.style.opacity = (1 - daytime).toFixed(3);
+      waves.forEach(({ element, night, day }) => {
+        element.setAttribute("fill", mixColor(night, day, daytime));
+      });
 
-      sun.style.opacity = String(Math.max(0, Math.min(1, (horizon + fade - sy) / fade)));
-      moon.style.opacity = String(Math.max(0, Math.min(1, (horizon + fade + sy) / fade)));
-
-      lN.style.opacity = String(1 - cp);
-      lD.style.opacity = String(cp);
-
-      w1.setAttribute("fill", mixColor(wave[0].night, wave[0].day, cp));
-      w2.setAttribute("fill", mixColor(wave[1].night, wave[1].day, cp));
-      w3.setAttribute("fill", mixColor(wave[2].night, wave[2].day, cp));
-
-      const isDaytime = cp > 0.5;
+      const isDaytime = daytime > 0.5;
       if (isDaytime !== lastShadowIsDaytime) {
         lastShadowIsDaytime = isDaytime;
-        wrap.style.filter = isDaytime
-          ? "drop-shadow(0 6px 28px rgba(252,206,24,0.42))"
-          : "drop-shadow(0 6px 28px rgba(119,48,236,0.38))";
+        wrap.style.setProperty(
+          "--theme-orbit-glow",
+          isDaytime ? "rgba(252, 206, 24, 0.34)" : "rgba(119, 48, 236, 0.34)",
+        );
       }
     };
 
@@ -104,17 +108,17 @@ export function initHeroBlob(): void {
       targetAngle = theme === "light" ? 0 : Math.PI;
     };
 
-    const loop = (ts: number) => {
+    const loop = (timestamp: number) => {
       raf = 0;
-      // aba oculta: não anima (economiza CPU/bateria); ao voltar não dá salto
       if (document.hidden) {
         lastTs = null;
         return;
       }
-      if (lastTs === null) lastTs = ts;
-      const dt = Math.min(ts - lastTs, 50);
-      lastTs = ts;
-      angle += (targetAngle - angle) * (1 - Math.pow(0.986, dt));
+      if (lastTs === null) lastTs = timestamp;
+      const delta = Math.min(timestamp - lastTs, 50);
+      lastTs = timestamp;
+      angle += (targetAngle - angle) * (1 - Math.pow(0.986, delta));
+
       if (Math.abs(targetAngle - angle) < 0.0005) {
         angle = targetAngle;
         apply(angle);
@@ -136,8 +140,8 @@ export function initHeroBlob(): void {
       document.documentElement.dataset.theme = nextTheme;
       try {
         localStorage.setItem("theme", nextTheme);
-      } catch (e) {
-        /* ignora */
+      } catch {
+        // Theme still changes when storage is unavailable.
       }
       syncTheme(nextTheme);
       startLoop();
@@ -145,21 +149,24 @@ export function initHeroBlob(): void {
     };
 
     wrap.addEventListener("click", toggle);
-    wrap.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
+    wrap.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
         toggle();
       }
     });
-    window.addEventListener("themechange", ((e: CustomEvent<"light" | "dark">) => {
-      syncTheme(e.detail === "light" ? "light" : "dark");
+    window.addEventListener("themechange", ((event: CustomEvent<"light" | "dark">) => {
+      syncTheme(event.detail === "light" ? "light" : "dark");
       startLoop();
     }) as EventListener);
-    window.addEventListener("resize", () => apply(angle), { passive: true });
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden && Math.abs(targetAngle - angle) >= 0.0005) startLoop();
     });
 
+    wrap.style.setProperty(
+      "--theme-orbit-glow",
+      theme === "light" ? "rgba(252, 206, 24, 0.34)" : "rgba(119, 48, 236, 0.34)",
+    );
     apply(angle);
   });
 }

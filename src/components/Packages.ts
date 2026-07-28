@@ -801,12 +801,15 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".pkg"));
   if (!cards.length) return;
   const btn = document.getElementById("gyroBtn");
+  const tiltLimit = window.matchMedia("(max-width: 430px)").matches
+    ? Math.min(MAX_ANGLE, 4.5)
+    : MAX_ANGLE;
 
   const SENS = 0.58;
   const SMOOTH = 0.16;
   const DEAD = 0.85;
   const BASE_SAMPLES = 10;
-  const clamp = (v: number) => Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, v));
+  const clamp = (v: number) => Math.max(-tiltLimit, Math.min(tiltLimit, v));
   const deadzone = (v: number) => (Math.abs(v) < DEAD ? 0 : v);
   let base: { beta: number; gamma: number } | null = null;
   let raf = 0;
@@ -866,12 +869,12 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
       card.classList.add("is-touching");
       card.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
       card.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
-      card.style.setProperty("--hx", `${(50 + (ry / MAX_ANGLE) * 45).toFixed(1)}%`);
-      card.style.setProperty("--hy", `${(50 - (rx / MAX_ANGLE) * 45).toFixed(1)}%`);
+      card.style.setProperty("--hx", `${(50 + (ry / tiltLimit) * 45).toFixed(1)}%`);
+      card.style.setProperty("--hy", `${(50 - (rx / tiltLimit) * 45).toFixed(1)}%`);
     });
     window.dispatchEvent(
       new CustomEvent("amv:gyrotilt", {
-        detail: { rx, ry, max: MAX_ANGLE },
+        detail: { rx, ry, max: tiltLimit },
       })
     );
     raf = requestAnimationFrame(apply);

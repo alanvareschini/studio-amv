@@ -824,103 +824,58 @@ ol {
   filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.5));
 }
 
-/* ------------------------------------------------- Blob dia/noite (hero) */
+/* ------------------------------------------------- Compact day/night control */
 .hero-blob {
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  width: 220px;
-  height: 220px;
-  transform: scale(0.26); /* ~57px visível */
-  transform-origin: top right;
+  --theme-orbit-glow: rgba(119, 48, 236, 0.34);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
   cursor: pointer;
-  filter: drop-shadow(0 6px 28px rgba(119, 48, 236, 0.38));
-  transition: filter 1s var(--ease);
-  z-index: 300;
+  filter: drop-shadow(0 7px 16px var(--theme-orbit-glow));
+  transition: filter 0.8s var(--ease), transform 0.25s var(--ease);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-.hero-blob .label-wrap {
-  display: none; /* toggle pequeno não mostra rótulo */
+.hero-blob:hover {
+  transform: scale(1.04);
 }
-.hero-blob .blobOuter {
-  position: absolute;
-  inset: 0;
+.theme-orbit {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-/* só o MAR e o preenchimento seguem a forma de blob; o sol e a lua ficam
-   fora deste recorte pra não serem cortados quando orbitam pela borda */
-.hero-blob .blobClip {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  clip-path: path('M 112 6 C 158 2 208 36 214 80 C 220 124 198 172 162 192 C 126 212 76 216 44 194 C 12 172 -4 128 6 88 C 16 48 52 14 88 8 C 96 6 104 6 112 6 Z');
-  animation: blob-breathe 4.5s ease-in-out infinite;
-  transform: scale(0.91);
-  transform-origin: center;
+.theme-orbit__rim {
+  stroke-width: 1.5;
 }
-.hero-blob .blobFill {
-  position: absolute;
-  inset: 0;
-  background: #7730ec;
-}
-@keyframes blob-breathe {
-  0%, 100% {
-    clip-path: path('M 112 6 C 158 2 208 36 214 80 C 220 124 198 172 162 192 C 126 212 76 216 44 194 C 12 172 -4 128 6 88 C 16 48 52 14 88 8 C 96 6 104 6 112 6 Z');
-  }
-  50% {
-    clip-path: path('M 108 8 C 154 4 204 40 210 84 C 216 128 200 168 168 188 C 136 208 82 218 50 198 C 18 178 -2 132 8 92 C 18 52 54 16 90 10 C 98 8 108 8 108 8 Z');
-  }
-}
-.hero-blob .cel {
-  position: absolute;
-  top: 100px;
-  left: 100px;
+.theme-orbit__celestials {
   will-change: transform;
 }
-.hero-blob .sun {
-  width: 26px;
-  height: 26px;
-  background: #fff;
-  border-radius: 50%;
-  box-shadow: 0 0 10px 4px rgba(255, 255, 255, 0.35);
+.theme-orbit__sun,
+.theme-orbit__moon {
+  transition: opacity 0.24s linear;
 }
-.hero-blob .moon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #e8ecf7;
-  box-shadow: inset -7px -3px 0 -1px rgba(30, 40, 70, 0.28);
+.theme-orbit__sun-rays {
+  fill: none;
+  stroke: #ffe45e;
+  stroke-width: 1.7;
+  stroke-linecap: round;
 }
-.hero-blob .wave {
-  position: absolute;
-  bottom: -4px;
-  left: -22px;
-  width: 244px;
-  height: 122px;
-  animation: blob-wave 3.6s ease-in-out infinite;
+.theme-orbit__wave {
+  animation: theme-orbit-wave 3.8s ease-in-out infinite;
 }
-@keyframes blob-wave {
-  0% { transform: translateX(0); }
-  28% { transform: translateX(-11px); }
-  60% { transform: translateX(9px); }
-  100% { transform: translateX(0); }
+.theme-orbit__wave--mid {
+  animation-delay: -1.25s;
 }
-.hero-blob .label-wrap {
-  position: absolute;
-  bottom: -26px;
-  left: 50%;
-  transform: translateX(-50%);
-  height: 16px;
-  width: 90px;
-  pointer-events: none;
+.theme-orbit__wave--front {
+  animation-delay: -2.4s;
 }
-.hero-blob .lbl {
-  position: absolute;
-  inset: 0;
-  text-align: center;
-  font-family: "Courier New", monospace;
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  font-weight: 700;
-  color: var(--text);
+@keyframes theme-orbit-wave {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-6px); }
 }
 
 /* ------------------------------------------------- Menu (estilo Lusion) */
@@ -1006,8 +961,7 @@ ol {
   visibility: visible;
   transform: none;
 }
-.menu-overlay:not(.open) .hero-blob .blobClip,
-.menu-overlay:not(.open) .hero-blob .wave {
+.menu-overlay:not(.open) .theme-orbit__wave {
   animation-play-state: paused;
 }
 .menu-nav {
@@ -1054,45 +1008,17 @@ ol {
 }
 .menu-theme__blob {
   position: relative;
-  width: 64px;
-  height: 64px;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
   flex: none;
   overflow: visible;
 }
 .menu-theme__blob .hero-blob {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 64px;
-  height: 64px;
+  width: 62px;
+  height: 62px;
   transform: none;
-  transform-origin: center;
-  overflow: visible;
-  touch-action: manipulation;
-}
-.menu-theme__blob .blobOuter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 220px;
-  height: 220px;
-  transform: translate(-50%, -50%) scale(0.27);
-  transform-origin: center;
-  overflow: visible;
-}
-.menu-theme__blob .blobClip {
-  transform: scale(0.88);
-}
-.menu-theme__blob .cel {
-  z-index: 2;
-}
-.menu-theme__blob .sun {
-  width: 25px;
-  height: 25px;
-}
-.menu-theme__blob .moon {
-  width: 25px;
-  height: 25px;
 }
 .menu-motion {
   display: grid;
@@ -1160,60 +1086,12 @@ ol {
     gap: 0.7rem;
   }
   .menu-theme__blob {
-    width: 74px;
-    height: 74px;
+    width: 66px;
+    height: 66px;
   }
   .menu-theme__blob .hero-blob {
-    width: 74px;
-    height: 74px;
-  }
-  .menu-theme__blob .blobOuter {
-    top: 0;
-    left: 0;
-    width: 74px;
-    height: 74px;
-    transform: none;
-  }
-  .menu-theme__blob .blobClip {
-    inset: 8px;
-    border-radius: 23px;
-    clip-path: none;
-    transform: none;
-    animation: menu-toggle-breathe 4.5s ease-in-out infinite;
-  }
-  .menu-theme__blob .blobFill {
-    border-radius: inherit;
-  }
-  .menu-theme__blob .wave {
-    left: -18px;
-    bottom: -10px;
-    width: 112px;
-    height: 56px;
-  }
-  .menu-theme__blob .cel {
-    top: 37px;
-    left: 37px;
-  }
-  .menu-theme__blob .sun,
-  .menu-theme__blob .moon {
-    width: 18px;
-    height: 18px;
-  }
-  .menu-theme__blob .sun {
-    box-shadow: 0 0 8px 3px rgba(255, 255, 255, 0.34);
-  }
-  .menu-theme__blob .moon {
-    box-shadow: inset -5px -2px 0 -1px rgba(30, 40, 70, 0.28);
-  }
-}
-@keyframes menu-toggle-breathe {
-  0%, 100% {
-    border-radius: 23px 26px 22px 25px;
-    transform: scale(0.98);
-  }
-  50% {
-    border-radius: 27px 22px 26px 23px;
-    transform: scale(1.03);
+    width: 60px;
+    height: 60px;
   }
 }
 
@@ -2406,6 +2284,28 @@ html.amv-touch .wa-fab * {
   }
 }
 
+/* Very narrow mobile compositors can place a rotated card behind the fixed
+   WebGL canvas. Keep the interaction under the finger without creating a
+   3D stacking context that can erase part of the card. */
+@media (max-width: 430px) {
+  html.amv-touch .card.is-touching {
+    transform: none !important;
+    background:
+      radial-gradient(
+        circle 150px at var(--touch-light-x, 50%) var(--touch-light-y, 50%),
+        rgba(34, 211, 238, 0.16),
+        rgba(168, 85, 247, 0.08) 38%,
+        transparent 68%
+      ) padding-box,
+      linear-gradient(var(--safe-card-bg), var(--safe-card-bg)) padding-box,
+      var(--grad-main) border-box;
+    box-shadow:
+      0 12px 30px rgba(0, 0, 0, 0.24),
+      0 0 24px rgba(34, 211, 238, 0.1);
+    will-change: background-position;
+  }
+}
+
 @keyframes holo-drift {
   0%, 100% { background-position: 0 0, 22% 28%; }
   50% { background-position: 0 0, 78% 72%; }
@@ -3027,8 +2927,7 @@ html.amv-touch .gyro-btn { display: inline-flex; }
   transition: opacity 0.22s ease-out;
   transition-delay: 0s !important;
 }
-:root[data-motion="reduced"] .hero-blob .blobClip,
-:root[data-motion="reduced"] .hero-blob .wave,
+:root[data-motion="reduced"] .theme-orbit__wave,
 :root[data-motion="reduced"] .hero__scrollhint,
 :root[data-motion="reduced"] .hero__bg,
 :root[data-motion="reduced"] .mockup,
