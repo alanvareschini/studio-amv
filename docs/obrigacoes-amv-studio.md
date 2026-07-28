@@ -1,6 +1,6 @@
 # Guia de obrigações da AMV Web Studio
 
-Versão operacional: 1.0  
+Versão operacional: 1.0
 Data: 28/07/2026
 
 > Este arquivo é um guia de organização do serviço, não substitui orientação
@@ -185,4 +185,3 @@ CLIENTE - NOME DO NEGÓCIO/
 9. Pagamento final.
 10. Publicação e entrega.
 11. Manutenção, caso contratada.
-
