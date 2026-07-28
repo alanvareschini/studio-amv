@@ -1,6 +1,6 @@
 // Rastreamento ANÔNIMO e leve do site de vendas (LGPD-friendly):
 // - Sem cookies de rastreamento e sem identificar a pessoa.
-// - Usa um id aleatório anônimo no localStorage (amv_vid) só para não contar o
+// - Usa um id aleatório pseudônimo no localStorage (amv_vid) só para não contar o
 //   mesmo aparelho várias vezes; e amv_notrack para o dono se excluir.
 // - Mede tempo ENGAJADO (só quando a aba está visível), rolagem e cliques.
 //   Envia via sendBeacon (não trava a página).

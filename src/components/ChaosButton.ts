@@ -337,7 +337,12 @@ class ChaosButtonGL {
       attributes: true,
       attributeFilter: ["class"],
     });
-    window.addEventListener("pagehide", () => this.bodyStateObserver?.disconnect(), { once: true });
+    window.addEventListener("pagehide", (event) => {
+      if (!(event as PageTransitionEvent).persisted) this.bodyStateObserver?.disconnect();
+    });
+    window.addEventListener("pageshow", (event) => {
+      if ((event as PageTransitionEvent).persisted) sync();
+    });
   }
 
   private renderShouldPause(): boolean {

@@ -68,10 +68,3 @@ export const trustPoints: Service[] = [
   { icon: "♿", title: "Fácil para todos", description: "Textos claros, bom contraste e navegação simples." },
   { icon: "🧩", title: "Pronto para crescer", description: "O site pode receber novas páginas e recursos quando você precisar." },
 ];
-
-export const proofPoints: string[] = [
-  "Visual premium",
-  "Foco no celular",
-  "Carregamento rápido",
-  "Direto no WhatsApp",
-];

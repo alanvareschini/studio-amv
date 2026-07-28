@@ -33,8 +33,8 @@
         var cores = navigator.hardwareConcurrency;
         var saveData = navigator.connection && navigator.connection.saveData;
         var detectedTier = "balanced";
-        if (memory <= 2 || (coarsePointer && cores <= 4 && memory <= 4)) detectedTier = "minimal";
-        else if (saveData || cores <= 4 || (coarsePointer && memory <= 4)) detectedTier = "low";
+        if (memory <= 2 || (coarsePointer && memory <= 4)) detectedTier = "minimal";
+        else if (saveData || cores <= 4) detectedTier = "low";
         else if (!coarsePointer && memory >= 8 && cores >= 8) detectedTier = "high";
         var tier = detectedTier;
         if (mode === "full") tier = "high";
@@ -53,9 +53,10 @@
           } catch (e) {}
         }
         document.documentElement.dataset.motionPreference = mode;
-        document.documentElement.dataset.motion = mode === "auto" && systemReduced
-          ? "limited"
-          : "full";
+        document.documentElement.dataset.motion =
+          mode === "reduced" || (mode === "auto" && systemReduced)
+            ? "reduced"
+            : "full";
         document.documentElement.dataset.performanceTier = tier;
         document.documentElement.dataset.performanceClass = tier === "minimal" ? "low" : tier;
         document.documentElement.dataset.hardwareTier = hardwareTier;
@@ -66,14 +67,6 @@
           ? "runtime"
           : mode === "auto" ? "detected" : "manual";
       })();
-    </script>
-
-    <!-- Recarrega se a página voltar do cache (bfcache), pra o WebGL (fluido,
-         "A" 3D, botões) não ficar "morto" ao usar o botão voltar. -->
-    <script>
-      window.addEventListener("pageshow", function (e) {
-        if (e.persisted) window.location.reload();
-      });
     </script>
 
     <!-- RNF07 — SEO básico -->
@@ -177,6 +170,7 @@
         var host = document.getElementById("clothintro");
         var canvas = document.getElementById("ci-canvas");
         var raf = 0;
+        var idleTimer = 0;
         var resizeTimer = 0;
         var bootMinTimer = 0;
         var bootFallbackTimer = 0;
@@ -188,12 +182,13 @@
           if (finished) return;
           finished = true;
           if (raf) cancelAnimationFrame(raf);
+          if (idleTimer) clearTimeout(idleTimer);
           if (bootMinTimer) clearTimeout(bootMinTimer);
           if (bootFallbackTimer) clearTimeout(bootFallbackTimer);
           window.removeEventListener("pointermove", onMove);
           window.removeEventListener("pointerup", onUp);
           window.removeEventListener("pointercancel", onUp);
-          window.removeEventListener("visibilitychange", onVisibility);
+          document.removeEventListener("visibilitychange", onVisibility);
           window.removeEventListener("amv:visuals-ready", onVisualsReady);
           if (host) {
             host.removeEventListener("lostpointercapture", onUp);
@@ -228,6 +223,7 @@
         var curtains = [], cord = [], handle = null, bandImg = [];
         var glyphAtlas = null, glyphSize = 0, handleColor = "";
         var opening = false, openT = 0, started = performance.now(), lastT = started, acc = 0;
+        var lastIdleDraw = 0;
         var siteRevealed = false;
         var ptr = {
           x: -9999,
@@ -439,7 +435,13 @@
         }
 
         function recoverStuckCurtains(now, dt) {
-          if (opening || ptr.active || ptr.lastReleaseAt < 0 || now - ptr.lastReleaseAt < 2400) return;
+          if (
+            opening
+            || ptr.cordGrab
+            || ptr.particle
+            || now - ptr.lastMoveAt < 1200
+            || (ptr.lastReleaseAt >= 0 && now - ptr.lastReleaseAt < 2400)
+          ) return;
           var blend = 1 - Math.pow(0.982, dt);
           for (var k = 0; k < curtains.length; k++) {
             var points = curtains[k].P;
@@ -514,6 +516,7 @@
         }
         function repel() {
           if (!ptr.active || ptr.x < -1000) return;
+          if (!ptr.cordGrab && !ptr.particle && performance.now() - ptr.lastMoveAt > 180) return;
           var radius = W < 640 ? 108 : 142;
           var radius2 = radius * radius;
           var speed = Math.min(22, Math.hypot(ptr.vx, ptr.vy));
@@ -642,6 +645,7 @@
           opening = true;
           openT = performance.now();
           host.style.background = "transparent";
+          window.dispatchEvent(new CustomEvent("amv:intro-opening"));
           revealSite();
         }
 
@@ -752,6 +756,7 @@
           ptr.active = true;
           ptr.lastMoveAt = performance.now();
           armCordIfPulled();
+          startLoop();
         }
         function onUp(e) {
           if (ptr.pointerId !== null && e && typeof e.pointerId === "number" && e.pointerId !== ptr.pointerId) return;
@@ -818,6 +823,10 @@
         }
         function startLoop() {
           if (finished || raf || document.hidden) return;
+          if (idleTimer) {
+            clearTimeout(idleTimer);
+            idleTimer = 0;
+          }
           acc = 0;
           lastT = performance.now();
           raf = requestAnimationFrame(loop);
@@ -826,7 +835,9 @@
           if (document.hidden) {
             cancelInteraction();
             if (raf) cancelAnimationFrame(raf);
+            if (idleTimer) clearTimeout(idleTimer);
             raf = 0;
+            idleTimer = 0;
             return;
           }
           startLoop();
@@ -868,6 +879,7 @@
         host.addEventListener("keydown", function (e) {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
+            open();
           }
         });
         window.addEventListener("pointermove", onMove, { passive: true });
@@ -877,12 +889,25 @@
         host.addEventListener("pointerleave", onLeave);
         window.addEventListener("resize", onResize, { passive: true });
         window.addEventListener("blur", cancelInteraction);
-        window.addEventListener("visibilitychange", onVisibility);
+        document.addEventListener("visibilitychange", onVisibility);
         window.addEventListener("amv:visuals-ready", onVisualsReady, { once: true });
 
         function loop(now) {
           raf = 0;
           if (finished || document.hidden) return;
+          var interacting =
+            opening
+            || ptr.cordGrab
+            || ptr.cordWaitingReturn
+            || ptr.particle
+            || now - ptr.lastMoveAt < 4000
+            || (ptr.lastReleaseAt >= 0 && now - ptr.lastReleaseAt < 7000)
+            || now - started < 2200;
+          if (!interacting && now - lastIdleDraw < 240) {
+            idleTimer = window.setTimeout(startLoop, Math.max(32, 240 - (now - lastIdleDraw)));
+            return;
+          }
+          if (!interacting) lastIdleDraw = now;
           if (FRAME_MS && now - lastT < FRAME_MS - 1) {
             raf = requestAnimationFrame(loop);
             return;
@@ -891,16 +916,24 @@
           lastT = now;
           acc += elapsed;
           var steps = 0;
-          while (acc >= STEP_MS && steps < MAX_STEPS) {
-            step(1);
-            acc -= STEP_MS;
-            steps++;
+          if (interacting) {
+            while (acc >= STEP_MS && steps < MAX_STEPS) {
+              step(1);
+              acc -= STEP_MS;
+              steps++;
+            }
+            if (steps === 0) step(Math.max(0.5, elapsed / STEP_MS));
+            else if (acc >= STEP_MS) acc = 0;
+          } else {
+            acc = 0;
           }
-          if (steps === 0) step(Math.max(0.5, elapsed / STEP_MS));
-          else if (acc >= STEP_MS) acc = 0;
           draw();
           if (opening && performance.now() - openT > 1200) {
             finishNow();
+            return;
+          }
+          if (!interacting) {
+            idleTimer = window.setTimeout(startLoop, 240);
             return;
           }
           raf = requestAnimationFrame(loop);

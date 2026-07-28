@@ -7,7 +7,6 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
     return;
   }
 
-  const hasHover = window.matchMedia("(hover: hover)").matches;
   const cards = Array.from(document.querySelectorAll<HTMLElement>(selector));
   const cardSet = new Set(cards);
   let activeTouchCard: HTMLElement | null = null;
@@ -101,7 +100,7 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
     card.addEventListener(
       "pointermove",
       (e) => {
-        if (e.pointerType !== "mouse" && !hasHover) return;
+        if (e.pointerType !== "mouse") return;
         applyTilt(card, e.clientX, e.clientY, false);
       },
       { passive: true }

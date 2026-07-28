@@ -74,13 +74,13 @@ export function Contact(): string {
 
           <p class="form__error" id="formError" role="alert" hidden></p>
 
-          <button class="state-btn" type="submit" id="briefingSubmit" data-state="idle">
-            <span class="state-btn__c state-btn__c--idle">Enviar e abrir o WhatsApp 💬</span>
-            <span class="state-btn__c state-btn__c--sending"><span class="state-btn__spin" aria-hidden="true"></span>Enviando…</span>
-            <span class="state-btn__c state-btn__c--done">✓ Abrindo o WhatsApp</span>
+          <button class="state-btn" type="submit" id="briefingSubmit" data-state="idle" aria-label="Enviar e abrir o WhatsApp">
+            <span class="state-btn__c state-btn__c--idle" aria-hidden="true">Enviar e abrir o WhatsApp 💬</span>
+            <span class="state-btn__c state-btn__c--sending" aria-hidden="true"><span class="state-btn__spin" aria-hidden="true"></span>Enviando…</span>
+            <span class="state-btn__c state-btn__c--done" aria-hidden="true">✓ Abrindo o WhatsApp</span>
           </button>
           <p class="form__hint">Ao enviar, o WhatsApp abre com a sua mensagem já escrita.</p>
-          <p class="form__lgpd">🔒 Seus dados são usados apenas para entrar em contato sobre o seu orçamento. Não compartilhamos com terceiros.</p>
+          <p class="form__lgpd">🔒 Seus dados são usados para responder ao orçamento pelo WhatsApp. Veja o <a href="/privacidade.html" target="_blank" rel="noopener">aviso de privacidade</a>.</p>
         </form>
       </div>
     </section>
@@ -149,10 +149,13 @@ function setFieldError(el: HTMLElement, msg: string): void {
   if (!m) {
     m = document.createElement("small");
     m.className = "field__err";
+    m.id = `${el.id || el.getAttribute("name") || "field"}-error`;
     field.appendChild(m);
   }
   m.textContent = msg;
   m.hidden = false;
+  el.setAttribute("aria-describedby", m.id);
+  el.setAttribute("aria-errormessage", m.id);
 }
 
 function clearFieldError(el: HTMLElement): void {
@@ -160,6 +163,8 @@ function clearFieldError(el: HTMLElement): void {
   if (!field) return;
   field.classList.remove("field--error");
   el.removeAttribute("aria-invalid");
+  el.removeAttribute("aria-describedby");
+  el.removeAttribute("aria-errormessage");
   const m = field.querySelector<HTMLElement>(".field__err");
   if (m) m.hidden = true;
 }
@@ -219,20 +224,24 @@ export function initContact(): void {
     const submit = document.getElementById("briefingSubmit") as HTMLButtonElement | null;
     const message = buildWhatsappMessage(data);
     const url = whatsappLink(message);
+    const popup = window.open("about:blank", "_blank");
+    if (!popup) {
+      window.location.href = url;
+      return;
+    }
+    popup.opener = null;
+    popup.location.replace(url);
 
     if (submit) {
-      // Deixa a animação aparecer: "Enviando…" → "✓ Abrindo" → só então abre o WhatsApp.
       submit.disabled = true;
       submit.dataset.state = "sending";
-      window.setTimeout(() => (submit.dataset.state = "done"), 900);
+      submit.setAttribute("aria-label", "Abrindo o WhatsApp");
+      window.setTimeout(() => (submit.dataset.state = "done"), 500);
       window.setTimeout(() => {
-        const win = window.open(url, "_blank", "noopener");
-        if (!win) window.location.href = url; // fallback se o popup for bloqueado
         submit.dataset.state = "idle";
         submit.disabled = false;
-      }, 1500);
-    } else {
-      window.open(url, "_blank", "noopener");
+        submit.setAttribute("aria-label", "Enviar e abrir o WhatsApp");
+      }, 1100);
     }
   });
 }

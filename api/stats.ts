@@ -19,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // "quem" = COALESCE(vid, visit): usa o id fixo do aparelho e cai para o id
     // de sessão nos registros antigos sem vid.
 
-    const summary = await sql`
+    const summaryPromise = sql`
       SELECT
         COUNT(DISTINCT COALESCE(vid, visit))                          AS visitors,
         COUNT(DISTINCT visit)                                         AS sessions,
@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // período ANTERIOR (mesma duração, logo antes) — para as setas de variação
     const prevWin = `${days * 2} days`;
-    const prev = await sql`
+    const prevPromise = sql`
       SELECT
         COUNT(DISTINCT COALESCE(vid, visit))                          AS visitors,
         COALESCE(ROUND(AVG(duration_ms) FILTER (WHERE type='leave')),0) AS avg_ms,
@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // taxa de rejeição: visitantes que quase não ficaram (< 10s ou sem tempo)
-    const bounce = await sql`
+    const bouncePromise = sql`
       WITH per AS (
         SELECT COALESCE(vid, visit) AS who, MAX(duration_ms) AS dur
         FROM events WHERE created_at >= now() - ${since}::interval
@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // tempo real: pessoas nos últimos 5 min e hoje
-    const realtime = await sql`
+    const realtimePromise = sql`
       SELECT
         COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE created_at >= now() - interval '5 minutes') AS online,
         COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE (created_at AT TIME ZONE 'America/Sao_Paulo')::date = (now() AT TIME ZONE 'America/Sao_Paulo')::date) AS today
@@ -66,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // novos x recorrentes: compara a 1ª visita de cada aparelho com o período
-    const newReturning = await sql`
+    const newReturningPromise = sql`
       WITH firsts AS (
         SELECT COALESCE(vid, visit) AS who, MIN(created_at) AS first_at
         FROM events GROUP BY COALESCE(vid, visit)
@@ -82,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // funil de conversão (por aparelho)
-    const conv = await sql`
+    const convPromise = sql`
       SELECT
         COUNT(DISTINCT COALESCE(vid, visit))                                          AS visitors,
         COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE type='conv' AND label='whatsapp') AS whatsapp,
@@ -92,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // funil por etapa (por aparelho): visitante → rolou 50% → clicou → converteu
-    const funnel = await sql`
+    const funnelPromise = sql`
       WITH per AS (
         SELECT COALESCE(vid, visit) AS who,
           MAX(scroll_pct)      AS scr,
@@ -111,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // conversões por dia (para o gráfico) + visitantes do dia (para a taxa)
-    const convSeries = await sql`
+    const convSeriesPromise = sql`
       SELECT to_char(day,'YYYY-MM-DD') AS day,
              COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE type='conv') AS conversions,
              COUNT(DISTINCT COALESCE(vid, visit))                            AS visitors
@@ -121,7 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // conversão por tipo de aparelho (quem converte mais)
-    const convByDevice = await sql`
+    const convByDevicePromise = sql`
       SELECT COALESCE(device,'desconhecido') AS device,
              COUNT(DISTINCT COALESCE(vid, visit))                            AS visitors,
              COUNT(DISTINCT COALESCE(vid, visit)) FILTER (WHERE type='conv') AS conversions
@@ -131,32 +131,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // localização (país e cidade), por aparelho
-    const countries = await sql`
+    const countriesPromise = sql`
       SELECT COALESCE(NULLIF(country,''),'—') AS country, COUNT(DISTINCT COALESCE(vid, visit)) AS visitors
       FROM events WHERE created_at >= now() - ${since}::interval
       GROUP BY country ORDER BY visitors DESC LIMIT 12;
     `;
-    const cities = await sql`
+    const citiesPromise = sql`
       SELECT COALESCE(NULLIF(city,''),'—') AS city, COUNT(DISTINCT COALESCE(vid, visit)) AS visitors
       FROM events WHERE created_at >= now() - ${since}::interval
       GROUP BY city ORDER BY visitors DESC LIMIT 12;
     `;
 
     // horários de pico (fuso de São Paulo)
-    const peakHours = await sql`
+    const peakHoursPromise = sql`
       SELECT EXTRACT(HOUR FROM created_at AT TIME ZONE 'America/Sao_Paulo')::int AS hour,
              COUNT(DISTINCT visit) AS sessions
       FROM events WHERE type='pageview' AND created_at >= now() - ${since}::interval
       GROUP BY hour ORDER BY hour;
     `;
-    const peakDays = await sql`
+    const peakDaysPromise = sql`
       SELECT EXTRACT(DOW FROM created_at AT TIME ZONE 'America/Sao_Paulo')::int AS dow,
              COUNT(DISTINCT visit) AS sessions
       FROM events WHERE type='pageview' AND created_at >= now() - ${since}::interval
       GROUP BY dow ORDER BY dow;
     `;
 
-    const series = await sql`
+    const seriesPromise = sql`
       SELECT to_char(day,'YYYY-MM-DD') AS day,
              COUNT(DISTINCT COALESCE(vid, visit)) AS visitors
       FROM events
@@ -164,7 +164,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       GROUP BY day ORDER BY day;
     `;
 
-    const topPages = await sql`
+    const topPagesPromise = sql`
       SELECT path,
              COUNT(DISTINCT COALESCE(vid, visit))                             AS visitors,
              COALESCE(ROUND(AVG(duration_ms) FILTER (WHERE type='leave')),0)  AS avg_ms
@@ -173,7 +173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       GROUP BY path ORDER BY visitors DESC LIMIT 12;
     `;
 
-    const leastEngaged = await sql`
+    const leastEngagedPromise = sql`
       SELECT path, ROUND(AVG(duration_ms)) AS avg_ms, COUNT(*) AS samples
       FROM events
       WHERE type='leave' AND duration_ms IS NOT NULL
@@ -182,35 +182,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ORDER BY avg_ms ASC LIMIT 8;
     `;
 
-    const clicks = await sql`
+    const clicksPromise = sql`
       SELECT COALESCE(label,'(sem rótulo)') AS label, COUNT(*) AS n
       FROM events
       WHERE type='click' AND created_at >= now() - ${since}::interval
       GROUP BY label ORDER BY n DESC LIMIT 15;
     `;
 
-    const devices = await sql`
+    const devicesPromise = sql`
       SELECT COALESCE(device,'desconhecido') AS device, COUNT(DISTINCT COALESCE(vid, visit)) AS visitors
       FROM events
       WHERE created_at >= now() - ${since}::interval
       GROUP BY device ORDER BY visitors DESC;
     `;
 
-    const browsers = await sql`
+    const browsersPromise = sql`
       SELECT COALESCE(browser,'Outro') AS browser, COUNT(DISTINCT COALESCE(vid, visit)) AS visitors
       FROM events
-      WHERE created_at >= now() - ${since}::interval
+      WHERE type='pageview' AND created_at >= now() - ${since}::interval
       GROUP BY browser ORDER BY visitors DESC LIMIT 10;
     `;
 
-    const systems = await sql`
+    const systemsPromise = sql`
       SELECT COALESCE(os,'Outro') AS os, COUNT(DISTINCT COALESCE(vid, visit)) AS visitors
       FROM events
-      WHERE created_at >= now() - ${since}::interval
+      WHERE type='pageview' AND created_at >= now() - ${since}::interval
       GROUP BY os ORDER BY visitors DESC LIMIT 10;
     `;
 
-    const referrers = await sql`
+    const referrersPromise = sql`
       SELECT COALESCE(NULLIF(ref,''),'direto') AS ref, COUNT(DISTINCT COALESCE(vid, visit)) AS visitors
       FROM events
       WHERE created_at >= now() - ${since}::interval
@@ -218,7 +218,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // Quem está ONLINE agora (últimos 5 min): aparelho, navegador, local.
-    const online = await sql`
+    const onlinePromise = sql`
       SELECT
         MAX(device)  AS device,
         MAX(browser) AS browser,
@@ -234,7 +234,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // Cada visitante (anônimo): aparelho, navegador, SO, local, tempo e quando.
-    const recentVisits = await sql`
+    const recentVisitsPromise = sql`
       SELECT
         MAX(device)  AS device,
         MAX(browser) AS browser,
@@ -250,6 +250,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ORDER BY MIN(created_at) DESC
       LIMIT 40;
     `;
+
+    const [
+      summary,
+      prev,
+      bounce,
+      realtime,
+      newReturning,
+      conv,
+      funnel,
+      convSeries,
+      convByDevice,
+      countries,
+      cities,
+      peakHours,
+      peakDays,
+      series,
+      topPages,
+      leastEngaged,
+      clicks,
+      devices,
+      browsers,
+      systems,
+      referrers,
+      online,
+      recentVisits,
+    ] = await Promise.all([
+      summaryPromise,
+      prevPromise,
+      bouncePromise,
+      realtimePromise,
+      newReturningPromise,
+      convPromise,
+      funnelPromise,
+      convSeriesPromise,
+      convByDevicePromise,
+      countriesPromise,
+      citiesPromise,
+      peakHoursPromise,
+      peakDaysPromise,
+      seriesPromise,
+      topPagesPromise,
+      leastEngagedPromise,
+      clicksPromise,
+      devicesPromise,
+      browsersPromise,
+      systemsPromise,
+      referrersPromise,
+      onlinePromise,
+      recentVisitsPromise,
+    ]);
 
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json({
@@ -280,26 +330,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (e) {
     console.error("[stats] erro", e);
-    res.status(500).json({ error: "server", detail: describeError(e) });
+    res.status(500).json({ error: "server" });
   }
-}
-
-function describeError(e: unknown): string {
-  if (e instanceof Error) {
-    const anyE = e as { code?: string; detail?: string };
-    return [e.message, anyE.code, anyE.detail].filter(Boolean).join(" | ");
-  }
-  if (e && typeof e === "object") {
-    const o = e as Record<string, unknown>;
-    const parts = ["message", "code", "detail", "name", "severity", "hint"]
-      .map((k) => (o[k] != null ? `${k}=${String(o[k])}` : ""))
-      .filter(Boolean);
-    if (parts.length) return parts.join(" | ");
-    try {
-      return JSON.stringify(e);
-    } catch {
-      return String(e);
-    }
-  }
-  return String(e);
 }

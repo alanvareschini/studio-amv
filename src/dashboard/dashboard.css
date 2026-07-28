@@ -31,6 +31,7 @@ body {
   display: flex; flex-direction: column; gap: 14px;
 }
 .gate__brand { font-weight: 800; font-size: 1.4rem; letter-spacing: 0.02em; }
+.gate__card label { font-size: 0.78rem; font-weight: 700; color: var(--dim); }
 .gate__brand span { color: var(--cyan); margin: 0 4px; }
 .gate__hint { color: var(--dim); font-size: 0.9rem; }
 .gate__card input {

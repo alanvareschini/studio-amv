@@ -114,9 +114,9 @@ export function RestaurantMenu(): string {
         </header>
 
         <div class="rm-tabs" role="tablist" aria-label="Seções do cardápio">
-          <button type="button" role="tab" data-rm-tab="brand" aria-selected="false">A casa</button>
-          <button type="button" role="tab" data-rm-tab="menu" aria-selected="true">Cardápio</button>
-          <button type="button" role="tab" data-rm-tab="bar" aria-selected="false">Bebidas</button>
+          <button id="rm-tab-brand" type="button" role="tab" data-rm-tab="brand" aria-controls="rm-panel-brand" aria-selected="false" tabindex="-1">A casa</button>
+          <button id="rm-tab-menu" type="button" role="tab" data-rm-tab="menu" aria-controls="rm-panel-menu" aria-selected="true">Cardápio</button>
+          <button id="rm-tab-bar" type="button" role="tab" data-rm-tab="bar" aria-controls="rm-panel-bar" aria-selected="false" tabindex="-1">Bebidas</button>
         </div>
 
         <button class="rm-cover" type="button" data-rm-unfold aria-label="Abrir o cardápio demonstrativo">
@@ -276,8 +276,19 @@ export function initRestaurantMenu(): void {
       tab.setAttribute("aria-selected", String(active));
       tab.tabIndex = active ? 0 : -1;
     });
-    panels.forEach((panel) => panel.classList.toggle("is-active", panel.dataset.rmPanel === name));
+    panels.forEach((panel) => {
+      const active = panel.dataset.rmPanel === name;
+      panel.classList.toggle("is-active", active);
+      panel.setAttribute("aria-hidden", String(!active));
+    });
   };
+
+  panels.forEach((panel) => {
+    const name = panel.dataset.rmPanel ?? "menu";
+    panel.id = `rm-panel-${name}`;
+    panel.setAttribute("role", "tabpanel");
+    panel.setAttribute("aria-labelledby", `rm-tab-${name}`);
+  });
 
   const finishClose = () => {
     timeline?.kill();
@@ -490,6 +501,19 @@ export function initRestaurantMenu(): void {
     button.addEventListener("click", () => closeScene());
   });
   tabs.forEach((tab) => tab.addEventListener("click", () => setActiveTab(tab.dataset.rmTab ?? "menu")));
+  scene.querySelector<HTMLElement>(".rm-tabs")?.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const current = Math.max(0, tabs.indexOf(document.activeElement as HTMLButtonElement));
+    const next = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? tabs.length - 1
+        : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    const target = tabs[next];
+    setActiveTab(target.dataset.rmTab ?? "menu");
+    target.focus();
+  });
   scene.querySelector<HTMLElement>("[data-rm-cta]")?.addEventListener("click", () => {
     closeScene(false, () => document.getElementById("orcamento")?.scrollIntoView({ behavior: "smooth" }));
   });

@@ -54,6 +54,13 @@ body.demo-scene-open {
   cursor: default;
 }
 
+@media (pointer: coarse) {
+  .rm-scene__backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 :root[data-theme="light"] .rm-scene__backdrop {
   background:
     radial-gradient(circle at 20% 16%, rgba(34, 211, 238, 0.13), transparent 30%),
@@ -88,6 +95,7 @@ body.demo-scene-open {
 }
 
 .rm-close {
+  position: relative;
   width: 36px;
   height: 36px;
   display: grid;
@@ -97,6 +105,12 @@ body.demo-scene-open {
   background: rgba(8, 15, 26, 0.5);
   color: #f8fafc;
   transition: transform 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+.rm-close::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
 }
 
 .rm-close:hover {

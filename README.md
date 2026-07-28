@@ -13,7 +13,7 @@ npm run build    # gera a versão de produção em /dist
 npm run preview  # visualiza o build de produção
 ```
 
-> Precisa do [Node.js](https://nodejs.org) 18+ instalado.
+> Precisa do [Node.js](https://nodejs.org) 20 ou 22 instalado.
 
 ## ✏️ O que editar (sem mexer no layout)
 
@@ -53,5 +53,12 @@ src/
 
 ## 🌐 Deploy
 
-Gere o build (`npm run build`) e publique a pasta `/dist` em qualquer host estático
-(Vercel, Netlify, GitHub Pages, etc.). É um site 100% estático — não precisa de backend.
+O frontend é estático, mas analytics e dashboard usam funções serverless e Postgres.
+O deploy completo deve ser feito na Vercel:
+
+1. Copie os nomes de variáveis de `.env.example` para as variáveis do projeto.
+2. Conecte um banco Postgres/Neon e configure `POSTGRES_URL`.
+3. Configure `DASHBOARD_PASSWORD` e um `SESSION_SECRET` longo e aleatório.
+4. Execute `npm run check` e `npm run build` antes do push.
+
+Sem as variáveis de banco, a landing continua abrindo, mas analytics e dashboard não funcionam.

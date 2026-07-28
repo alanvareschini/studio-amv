@@ -8,6 +8,7 @@ import {
   setMotionMode,
   type MotionMode,
 } from "../lib/motionPreference";
+import { acquireScrollLock, releaseScrollLock } from "../lib/scrollLock";
 
 const LINKS: [string, string][] = [
   ["#servicos", "Servi&ccedil;os"],
@@ -29,7 +30,7 @@ export function Menu(): string {
       <span class="menu-btn__label">Menu</span>
       <span class="menu-btn__ic" aria-hidden="true"><i></i><i></i></span>
     </button>
-    <div class="menu-overlay" id="menuOverlay" aria-hidden="true">
+    <div class="menu-overlay" id="menuOverlay" role="dialog" aria-modal="true" aria-label="Menu principal" aria-hidden="true" inert>
       <nav class="menu-nav" aria-label="Navega&ccedil;&atilde;o">${links}</nav>
       <div class="menu-theme">
         <span class="menu-theme__label">Modo claro / escuro</span>
@@ -54,6 +55,9 @@ export function initMenu(): void {
   const btn = document.getElementById("menuBtn");
   const overlay = document.getElementById("menuOverlay");
   if (!btn || !overlay) return;
+  let previousFocus: HTMLElement | null = null;
+  const focusableSelector =
+    "a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
   const motionButtons = Array.from(
     overlay.querySelectorAll<HTMLButtonElement>("[data-motion-mode]"),
@@ -107,18 +111,28 @@ export function initMenu(): void {
   syncMotionControl();
 
   const open = () => {
+    previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : btn;
+    overlay.removeAttribute("inert");
     overlay.classList.add("open");
     overlay.setAttribute("aria-hidden", "false");
     btn.classList.add("is-open");
     btn.setAttribute("aria-expanded", "true");
-    document.body.style.overflow = "hidden";
+    acquireScrollLock("main-menu");
+    requestAnimationFrame(() => {
+      overlay.querySelector<HTMLElement>(".menu-link")?.focus({ preventScroll: true });
+    });
   };
   const close = () => {
     overlay.classList.remove("open");
     overlay.setAttribute("aria-hidden", "true");
     btn.classList.remove("is-open");
     btn.setAttribute("aria-expanded", "false");
-    document.body.style.overflow = "";
+    overlay.setAttribute("inert", "");
+    releaseScrollLock("main-menu");
+    previousFocus?.focus({ preventScroll: true });
+    previousFocus = null;
   };
 
   btn.addEventListener("click", () =>
@@ -128,7 +142,25 @@ export function initMenu(): void {
     link.addEventListener("click", close)
   );
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && overlay.classList.contains("open")) close();
+    if (!overlay.classList.contains("open")) return;
+    if (e.key === "Escape") {
+      close();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const focusable = [
+      ...overlay.querySelectorAll<HTMLElement>(focusableSelector),
+      btn,
+    ];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   });
   document.addEventListener("click", (e) => {
     if (!overlay.classList.contains("open")) return;

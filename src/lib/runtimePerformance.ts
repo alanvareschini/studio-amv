@@ -119,7 +119,17 @@ export function initRuntimePerformanceMonitor(): void {
   const tick = (time: number) => {
     raf = 0;
     if (stopped) return;
-    if (document.hidden || document.body.classList.contains("ci-site-hidden")) {
+    const overlayOpen =
+      document.body.classList.contains("demo-scene-open")
+      || document.querySelector(".modal-overlay.open") !== null;
+    const experienceActive =
+      document.querySelector('[data-render-state="running"], [data-render-active="true"]') !== null;
+    if (
+      document.hidden
+      || document.body.classList.contains("ci-site-hidden")
+      || overlayOpen
+      || !experienceActive
+    ) {
       resetWindow(time);
       raf = window.requestAnimationFrame(tick);
       return;

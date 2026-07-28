@@ -103,10 +103,13 @@ function isTouchDevice(): boolean {
 // pré-seleciona o pacote no formulário e rola até ele
 function goToForm(pacote: string): void {
   const select = document.getElementById("f-pacote") as HTMLSelectElement | null;
+  const maintenance = document.getElementById("f-manutencao") as HTMLInputElement | null;
+  const isMaintenance = pacote.toLocaleLowerCase("pt-BR").includes("manuten");
   if (select) {
     const match = Array.from(select.options).find((o) => o.value === pacote);
-    if (match) select.value = pacote;
+    select.value = match ? pacote : "";
   }
+  if (maintenance) maintenance.checked = isMaintenance;
   document.getElementById("orcamento")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -710,93 +713,6 @@ function initTilt(): void {
   });
 }
 
-// Inclinação dos cards pelo giroscópio (mobile). A primeira posição do aparelho
-// vira o "neutro"; girar o telefone inclina todos os cards juntos, como se
-// reagissem à gravidade. No iOS 13+ é preciso pedir permissão num gesto.
-function initGyroTilt(MAX_ANGLE: number): void {
-  const cards = Array.from(document.querySelectorAll<HTMLElement>(".pkg"));
-  if (!cards.length) return;
-  const btn = document.getElementById("gyroBtn");
-
-  const SENS = 0.6; // graus de inclinação do card por grau de giro
-  const clamp = (v: number) => Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, v));
-  let base: { beta: number; gamma: number } | null = null;
-  let raf = 0;
-  let ry = 0;
-  let rx = 0;
-  let gotEvent = false;
-
-  const setBtn = (txt: string, cls?: "ok" | "err") => {
-    if (!btn) return;
-    btn.textContent = txt;
-    btn.classList.remove("is-ok", "is-err");
-    if (cls === "ok") btn.classList.add("is-ok");
-    if (cls === "err") btn.classList.add("is-err");
-  };
-
-  const apply = () => {
-    raf = 0;
-    cards.forEach((card) => {
-      // classe is-touching: usa o transform pelas variáveis e pausa o balanço
-      card.classList.add("is-touching");
-      card.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
-      card.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
-      // brilho holo acompanha a inclinação (mapeia -MAX..MAX → 0..100%)
-      card.style.setProperty("--hx", `${(50 + (ry / MAX_ANGLE) * 45).toFixed(1)}%`);
-      card.style.setProperty("--hy", `${(50 - (rx / MAX_ANGLE) * 45).toFixed(1)}%`);
-    });
-  };
-
-  const onOrient = (e: DeviceOrientationEvent) => {
-    if (e.beta == null || e.gamma == null) return;
-    if (!gotEvent) {
-      gotEvent = true;
-      setBtn("Movimento 3D ativo", "ok");
-      window.setTimeout(() => btn?.classList.add("is-gone"), 2500);
-    }
-    if (!base) base = { beta: e.beta, gamma: e.gamma };
-    ry = clamp((e.gamma - base.gamma) * SENS); // esquerda-direita
-    rx = clamp(-(e.beta - base.beta) * SENS); // frente-trás
-    if (!raf) raf = requestAnimationFrame(apply);
-  };
-
-  const start = () =>
-    window.addEventListener("deviceorientation", onOrient, { passive: true });
-
-  const DOE = window.DeviceOrientationEvent as unknown as
-    | { requestPermission?: () => Promise<"granted" | "denied"> }
-    | undefined;
-  const needsPermission = !!DOE && typeof DOE.requestPermission === "function";
-
-  const activate = () => {
-    if (gotEvent) return;
-    setBtn("Ativando…");
-    if (needsPermission) {
-      DOE!.requestPermission!()
-        .then((r) => {
-          if (r === "granted") start();
-          else setBtn("Permissão negada", "err");
-        })
-        .catch(() => setBtn("Não suportado neste aparelho", "err"));
-    } else if (typeof window.DeviceOrientationEvent !== "undefined") {
-      start();
-    } else {
-      setBtn("Aparelho sem sensor de movimento", "err");
-      return;
-    }
-    // se em 2,5s nenhum dado chegou, o sensor não está respondendo → avisa
-    window.setTimeout(() => {
-      if (!gotEvent) setBtn("Sensor não respondeu neste aparelho", "err");
-    }, 2500);
-  };
-
-  btn?.addEventListener("click", activate);
-  // Android e afins não exigem permissão: já tenta ligar sozinho no carregamento.
-  if (!needsPermission) activate();
-}
-
-void initGyroTilt;
-
 function initGyroTiltV2(MAX_ANGLE: number): void {
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".pkg"));
   if (!cards.length) return;
@@ -838,7 +754,12 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
     if (cls === "err") btn.classList.add("is-err");
   };
 
-  const shouldAnimate = () => started && gotEvent && packagesVisible && !document.hidden;
+  const shouldAnimate = () =>
+    started
+    && gotEvent
+    && packagesVisible
+    && !document.hidden
+    && !document.body.classList.contains("demo-scene-open");
   const stopLoop = () => {
     if (!raf) return;
     cancelAnimationFrame(raf);
@@ -898,17 +819,46 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
     else startLoop();
   });
 
+  const normalizedOrientation = (beta: number, gamma: number) => {
+    const legacyOrientation = (window as Window & { orientation?: number }).orientation;
+    const angle = screen.orientation?.angle ?? legacyOrientation ?? 0;
+    const normalizedAngle = ((angle % 360) + 360) % 360;
+    if (normalizedAngle === 90) return { beta: -gamma, gamma: beta };
+    if (normalizedAngle === 180) return { beta: -beta, gamma: -gamma };
+    if (normalizedAngle === 270) return { beta: gamma, gamma: -beta };
+    return { beta, gamma };
+  };
+
+  const recalibrate = () => {
+    base = null;
+    baseBetaSum = 0;
+    baseGammaSum = 0;
+    baseCount = 0;
+    lastGamma = null;
+    lastGammaTs = 0;
+    targetRy = 0;
+    targetRx = 0;
+    ry = 0;
+    rx = 0;
+    lastAppliedAt = 0;
+  };
+
   const onOrient = (e: DeviceOrientationEvent) => {
     if (e.beta == null || e.gamma == null) return;
+    if (
+      document.body.classList.contains("demo-scene-open")
+      || document.querySelector(".modal-overlay.open")
+    ) return;
+    const oriented = normalizedOrientation(e.beta, e.gamma);
     const now = performance.now();
     if (!base) {
-      baseBetaSum += e.beta;
-      baseGammaSum += e.gamma;
+      baseBetaSum += oriented.beta;
+      baseGammaSum += oriented.gamma;
       baseCount += 1;
       setBtn("Calibrando movimento...");
       if (baseCount < BASE_SAMPLES) return;
       base = { beta: baseBetaSum / baseCount, gamma: baseGammaSum / baseCount };
-      lastGamma = e.gamma;
+      lastGamma = oriented.gamma;
       lastGammaTs = now;
       if (!gotEvent) {
         gotEvent = true;
@@ -919,8 +869,8 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
       return;
     }
 
-    const rawGamma = e.gamma - base.gamma;
-    const rawBeta = e.beta - base.beta;
+    const rawGamma = oriented.gamma - base.gamma;
+    const rawBeta = oriented.beta - base.beta;
     const nearCenter = Math.abs(rawGamma) < 3.2 && Math.abs(rawBeta) < 3.2;
     if (nearCenter) {
       base.gamma += rawGamma * 0.012;
@@ -929,7 +879,7 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
 
     if (lastGamma !== null && lastGammaTs) {
       const dt = Math.max(16, now - lastGammaTs) / 1000;
-      const velocity = (e.gamma - lastGamma) / dt;
+      const velocity = (oriented.gamma - lastGamma) / dt;
       const sign = Math.sign(velocity);
       const strongLateralSnap = Math.abs(velocity) > 360 && Math.abs(rawGamma) > 12;
 
@@ -946,7 +896,7 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
         }
       }
     }
-    lastGamma = e.gamma;
+    lastGamma = oriented.gamma;
     lastGammaTs = now;
     targetRy = clamp(deadzone(rawGamma * SENS));
     targetRx = clamp(deadzone(-rawBeta * SENS));
@@ -986,5 +936,7 @@ function initGyroTiltV2(MAX_ANGLE: number): void {
   };
 
   btn?.addEventListener("click", activate);
+  screen.orientation?.addEventListener("change", recalibrate);
+  window.addEventListener("orientationchange", recalibrate, { passive: true });
   if (!needsPermission) activate();
 }

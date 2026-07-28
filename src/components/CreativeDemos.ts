@@ -228,7 +228,7 @@ export function AestheticLab(): string {
   const images = AESTHETIC_STAGES.map(
     (stage, index) => /* html */ `
       <img class="ae-portrait__image${index === 0 ? " is-active" : ""}" data-ae-image="${index}"
-        src="${stage.image}" alt="" width="1254" height="1254" decoding="async">`,
+        src="${stage.image}" alt="${stage.title}: ${stage.note}" width="1254" height="1254" decoding="async" loading="${index === 0 ? "eager" : "lazy"}">`,
   ).join("");
   const stages = AESTHETIC_STAGES.map(
     (stage, index) => /* html */ `
@@ -242,9 +242,9 @@ export function AestheticLab(): string {
       <button class="creative-backdrop" type="button" data-demo-close tabindex="-1" aria-label="Fechar experiência"></button>
       <section class="ae-shell creative-shell" role="dialog" aria-modal="true" aria-labelledby="aestheticLabTitle" tabindex="-1">
         <header class="creative-topbar ae-topbar">
-          <a class="ae-brand" href="#" tabindex="-1" aria-label="Lúmina clínica demonstrativa">
+          <span class="ae-brand" aria-label="Lúmina clínica demonstrativa">
             <span></span><b>LÚMINA</b><small>derma studio</small>
-          </a>
+          </span>
           <span class="creative-topbar__edition">PROTOCOLO DIGITAL · 01</span>
           <button class="creative-close" type="button" data-demo-close aria-label="Fechar análise">${closeIcon}</button>
         </header>

@@ -59,8 +59,13 @@ function isGradientRun(node: HTMLElement, heading: HTMLElement): boolean {
 
 function wrapHeadingSource(element: HTMLElement): void {
   if (element.querySelector(":scope > .heading-fluid-local-source")) return;
+  const accessibleName = element.textContent?.trim();
+  if (accessibleName && !element.hasAttribute("aria-label")) {
+    element.setAttribute("aria-label", accessibleName);
+  }
   const source = document.createElement("span");
   source.className = "heading-fluid-local-source";
+  source.setAttribute("aria-hidden", "true");
   while (element.firstChild) source.appendChild(element.firstChild);
   element.appendChild(source);
 }
@@ -564,7 +569,12 @@ export function initHeadingFluid(): void {
     attributes: true,
     attributeFilter: ["class"],
   });
-  window.addEventListener("pagehide", () => bodyStateObserver.disconnect(), { once: true });
+  window.addEventListener("pagehide", (event) => {
+    if (!(event as PageTransitionEvent).persisted) bodyStateObserver.disconnect();
+  });
+  window.addEventListener("pageshow", (event) => {
+    if ((event as PageTransitionEvent).persisted) startRender();
+  });
   window.addEventListener("amv:performance-tier-change", () => {
     performanceBudget = getPerformanceBudget();
     layers.forEach(rebuildLayer);
@@ -598,8 +608,9 @@ export function initHeadingFluid(): void {
     startRender();
   });
 
-  addEventListener("pagehide", () => {
+  addEventListener("pagehide", (event) => {
     stopRender();
+    if ((event as PageTransitionEvent).persisted) return;
     intersectionObserver.disconnect();
     resizeObserver.disconnect();
     mutationObserver.disconnect();
@@ -608,5 +619,5 @@ export function initHeadingFluid(): void {
     material.dispose();
     maskTexture.dispose();
     layers.forEach((layer) => layer.texture.dispose());
-  }, { once: true });
+  });
 }

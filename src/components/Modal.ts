@@ -1,8 +1,9 @@
 // Modal reutilizável: zoom+fade no desktop, slide de baixo (bottom sheet) no mobile.
+import { acquireScrollLock, releaseScrollLock } from "../lib/scrollLock";
+
 let overlay: HTMLElement | null = null;
 let contentEl: HTMLElement | null = null;
 let previousFocus: HTMLElement | null = null;
-let previousOverflow = "";
 
 const FOCUSABLE_SELECTOR =
   "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
@@ -59,7 +60,6 @@ export function openModal(html: string, afterOpen?: (content: HTMLElement) => vo
   previousFocus = document.activeElement instanceof HTMLElement
     ? document.activeElement
     : null;
-  previousOverflow = document.body.style.overflow;
   contentEl.innerHTML = html;
   const dialog = overlay.querySelector<HTMLElement>(".modal");
   const title = contentEl.querySelector<HTMLElement>(".pkg-modal__name");
@@ -67,11 +67,13 @@ export function openModal(html: string, afterOpen?: (content: HTMLElement) => vo
   overlay.removeAttribute("inert");
   overlay.classList.add("open");
   overlay.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
+  acquireScrollLock("package-modal");
   afterOpen?.(contentEl);
-  requestAnimationFrame(() => {
-    overlay?.querySelector<HTMLElement>("#modalClose")?.focus();
-  });
+  window.setTimeout(() => {
+    const closeButton = overlay?.querySelector<HTMLElement>("#modalClose");
+    const target = closeButton ?? overlay?.querySelector<HTMLElement>(".modal");
+    target?.focus({ preventScroll: true });
+  }, 50);
 }
 
 export function closeModal(): void {
@@ -79,7 +81,7 @@ export function closeModal(): void {
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
   overlay.setAttribute("inert", "");
-  document.body.style.overflow = previousOverflow;
+  releaseScrollLock("package-modal");
   previousFocus?.focus();
   previousFocus = null;
 }

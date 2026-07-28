@@ -34,7 +34,6 @@ import { initHeroIntro } from "./lib/heroIntro";
 import { initLazyDemo } from "./lib/lazyDemo";
 import { initSecretAccess } from "./lib/secretAccess";
 import {
-  getPerformanceTier,
   initMotionPreference,
   isReducedMotion,
 } from "./lib/motionPreference";
@@ -86,7 +85,7 @@ if (app) {
     }
   };
 
-  // Analytics anônimo (invisível ao usuário) — nunca deve quebrar o site.
+  // Analytics pseudônimo e sem IP persistido — nunca deve quebrar o site.
   safe("analytics", initAnalytics);
   // Acesso secreto ao painel (palavra no teclado ou 5 toques na marca).
   safe("secret", initSecretAccess);
@@ -199,13 +198,20 @@ if (app) {
         console.error("[init] Hero3D não carregou", e);
       });
 
-  if (getPerformanceTier() === "minimal") {
-    // No Essencial, a cortina ganha a thread principal sozinha. O placeholder
-    // do A cobre a hero até o WebGL carregar após a abertura.
-    requestAnimationFrame(signalVisualsReady);
-    afterIntro(() => whenIdle(() => void loadHero3D()));
+  // A cortina recebe a thread principal sozinha. O A estático preserva a hero
+  // enquanto renderer, PMREM e bloom são preparados somente durante a abertura.
+  requestAnimationFrame(signalVisualsReady);
+  const queueHero3D = () => {
+    if (isReducedMotion()) {
+      document.querySelector<HTMLElement>(".hero3d")?.classList.add("is-static", "is-ready");
+      return;
+    }
+    whenIdle(() => void loadHero3D());
+  };
+  if (document.body.classList.contains("ci-site-hidden")) {
+    window.addEventListener("amv:intro-opening", queueHero3D, { once: true });
   } else {
-    void loadHero3D().finally(signalVisualsReady);
+    queueHero3D();
   }
 
   // Fluido dos títulos — decorativo; carrega ocioso e pula em reduced-motion.

@@ -49,33 +49,53 @@ export function sql(
 }
 
 let schemaReady = false;
+let schemaPromise: Promise<void> | null = null;
 
 export async function ensureSchema(): Promise<void> {
   if (schemaReady) return;
-  await sql`
-    CREATE TABLE IF NOT EXISTS events (
-      id          BIGSERIAL PRIMARY KEY,
-      type        TEXT NOT NULL,
-      path        TEXT NOT NULL DEFAULT '/',
-      ref         TEXT,
-      device      TEXT,
-      label       TEXT,
-      duration_ms INTEGER,
-      scroll_pct  SMALLINT,
-      visit       TEXT,
-      day         DATE NOT NULL DEFAULT (now() AT TIME ZONE 'utc')::date,
-      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `;
-  // colunas adicionais (tabelas já existentes recebem via ALTER)
-  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS browser TEXT;`;
-  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS os TEXT;`;
-  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS vid TEXT;`;
-  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS country TEXT;`;
-  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS city TEXT;`;
-  await sql`CREATE INDEX IF NOT EXISTS events_created_idx ON events (created_at);`;
-  await sql`CREATE INDEX IF NOT EXISTS events_type_idx ON events (type);`;
-  await sql`CREATE INDEX IF NOT EXISTS events_visit_idx ON events (visit);`;
-  await sql`CREATE INDEX IF NOT EXISTS events_vid_idx ON events (vid);`;
-  schemaReady = true;
+  if (schemaPromise) return schemaPromise;
+
+  schemaPromise = (async () => {
+    const client = await getPool().connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('amv_events_schema_v1'))");
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS events (
+          id          BIGSERIAL PRIMARY KEY,
+          type        TEXT NOT NULL,
+          path        TEXT NOT NULL DEFAULT '/',
+          ref         TEXT,
+          device      TEXT,
+          label       TEXT,
+          duration_ms INTEGER,
+          scroll_pct  SMALLINT,
+          visit       TEXT,
+          day         DATE NOT NULL DEFAULT (now() AT TIME ZONE 'utc')::date,
+          created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        ALTER TABLE events ADD COLUMN IF NOT EXISTS browser TEXT;
+        ALTER TABLE events ADD COLUMN IF NOT EXISTS os TEXT;
+        ALTER TABLE events ADD COLUMN IF NOT EXISTS vid TEXT;
+        ALTER TABLE events ADD COLUMN IF NOT EXISTS country TEXT;
+        ALTER TABLE events ADD COLUMN IF NOT EXISTS city TEXT;
+        CREATE INDEX IF NOT EXISTS events_created_idx ON events (created_at);
+        CREATE INDEX IF NOT EXISTS events_type_idx ON events (type);
+        CREATE INDEX IF NOT EXISTS events_visit_idx ON events (visit);
+        CREATE INDEX IF NOT EXISTS events_vid_idx ON events (vid);
+        DELETE FROM events WHERE created_at < now() - interval '180 days';
+      `);
+      await client.query("COMMIT");
+      schemaReady = true;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  })().finally(() => {
+    schemaPromise = null;
+  });
+
+  return schemaPromise;
 }

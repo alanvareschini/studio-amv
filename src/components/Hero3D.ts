@@ -58,6 +58,8 @@ class LetterScene {
   private composerPixelRatio = 1;
   private drawingBufferSize = new THREE.Vector2();
   private readonly renderStateObserver: MutationObserver;
+  private renderVisibilityObserver: IntersectionObserver | null = null;
+  private heroInViewport = true;
 
   // Faz o "A" acompanhar o zoom da página (Ctrl +/-): sem isso, o A fica
   // gigante ao dar zoom-out porque o resto do conteúdo encolhe e ele não.
@@ -232,10 +234,26 @@ class LetterScene {
     document.addEventListener("visibilitychange", this.syncRenderState, { passive: true });
     this.renderStateObserver = new MutationObserver(this.syncRenderState);
     this.renderStateObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-    window.addEventListener("pagehide", () => {
+    const heroHost = canvas.closest<HTMLElement>(".hero3d");
+    if (heroHost && "IntersectionObserver" in window) {
+      this.renderVisibilityObserver = new IntersectionObserver(
+        ([entry]) => {
+          this.heroInViewport = entry?.isIntersecting ?? true;
+          this.syncRenderState();
+        },
+        { rootMargin: "20% 0px", threshold: 0 },
+      );
+      this.renderVisibilityObserver.observe(heroHost);
+    }
+    window.addEventListener("pagehide", (event) => {
       this.stopRenderLoop();
+      if ((event as PageTransitionEvent).persisted) return;
       this.renderStateObserver.disconnect();
-    }, { once: true });
+      this.renderVisibilityObserver?.disconnect();
+    });
+    window.addEventListener("pageshow", (event) => {
+      if ((event as PageTransitionEvent).persisted) this.syncRenderState();
+    });
 
     this.updateResolution();
 
@@ -567,6 +585,7 @@ class LetterScene {
     return (
       document.hidden
       || this.contextLost
+      || !this.heroInViewport
       || document.body.classList.contains("ci-site-hidden")
       || document.body.classList.contains("demo-scene-open")
     );

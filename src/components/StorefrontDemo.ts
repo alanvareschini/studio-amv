@@ -195,13 +195,19 @@ export function initStorefrontDemo(): void {
       scene.classList.remove("is-images-loading");
       scene.classList.add("is-images-ready");
 
-      const states: StoreState[] = [
-        { theme: "light", lights: "off" },
-        { theme: "light", lights: "on" },
-        { theme: "dark", lights: "off" },
-        { theme: "dark", lights: "on" },
-      ];
-      void Promise.allSettled(states.map(preloadState));
+      const alternateState: StoreState = {
+        theme: initialState.theme,
+        lights: initialState.lights === "off" ? "on" : "off",
+      };
+      const preloadAlternate = () => void preloadState(alternateState);
+      const idleWindow = window as unknown as {
+        requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      };
+      if (idleWindow.requestIdleCallback) {
+        idleWindow.requestIdleCallback(preloadAlternate, { timeout: 1800 });
+      } else {
+        window.setTimeout(preloadAlternate, 500);
+      }
     });
     return imageLoadPromise;
   };

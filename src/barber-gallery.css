@@ -42,6 +42,13 @@ body.demo-scene-open {
   cursor: default;
 }
 
+@media (pointer: coarse) {
+  .bk-scene__backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 .bk-shell {
   --bk-shell: #070b12;
   --bk-panel: rgba(17, 24, 36, 0.78);
@@ -154,6 +161,7 @@ body.demo-scene-open {
 }
 
 .bk-close {
+  position: relative;
   width: 40px;
   height: 40px;
   justify-self: end;
@@ -164,6 +172,12 @@ body.demo-scene-open {
   background: var(--bk-panel);
   color: var(--bk-ink);
   transition: border-color 0.3s ease, transform 0.3s var(--ease), background 0.3s ease;
+}
+
+.bk-close::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
 }
 
 .bk-close:hover,

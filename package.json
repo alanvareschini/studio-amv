@@ -4,10 +4,16 @@
   "private": true,
   "description": "Landing page premium para venda de criação de sites para negócios locais — Alan Web Studio",
   "type": "module",
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "typecheck:api": "tsc -p api/tsconfig.json --noEmit",
+    "check": "npm run typecheck && npm run typecheck:api"
   },
   "dependencies": {
     "gsap": "^3.13.0",

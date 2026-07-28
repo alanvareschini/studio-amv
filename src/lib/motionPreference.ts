@@ -69,7 +69,7 @@ const BUDGETS: Record<PerformanceTier, PerformanceBudget> = {
   },
   high: {
     tier: "high",
-    heroPixelRatioMobile: 1.75,
+    heroPixelRatioMobile: 1.5,
     heroPixelRatioDesktop: 2,
     heroSimulationSize: 128,
     heroSimulationStrideMobile: 2,
@@ -270,9 +270,11 @@ export function getMotionMode(): MotionMode {
 }
 
 function resolveMotion(mode: MotionMode): MotionLevel {
-  // A preferência do sistema reduz a carga e a amplitude, mas não desmonta a
-  // identidade do site. O usuário ainda recebe feedback visual essencial.
-  if (mode === "auto" && matchMedia(REDUCED_QUERY).matches) return "limited";
+  // Preferência de acessibilidade e qualidade gráfica são estados independentes.
+  if (mode === "reduced" || (mode === "auto" && matchMedia(REDUCED_QUERY).matches)) {
+    return "reduced";
+  }
+  if (mode === "balanced") return "limited";
   return "full";
 }
 

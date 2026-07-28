@@ -198,10 +198,10 @@ export function BarberGallery(): string {
       <button class="bk-scene__backdrop" type="button" data-bk-close tabindex="-1" aria-label="Fechar catálogo de cortes"></button>
       <section class="bk-shell" role="dialog" aria-modal="true" aria-labelledby="barberGalleryTitle" tabindex="-1">
         <header class="bk-topbar">
-          <a class="bk-brand" href="#" tabindex="-1" aria-label="Brava Barber">
+          <span class="bk-brand" aria-label="Brava Barber">
             <span class="bk-brand__mark">B</span>
             <span>BRAVA <b>BARBER</b></span>
-          </a>
+          </span>
           <span class="bk-topbar__edition">Coleção de cortes · 2026</span>
           <button class="bk-close" type="button" data-bk-close aria-label="Fechar catálogo de cortes">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>

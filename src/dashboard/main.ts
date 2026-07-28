@@ -11,19 +11,6 @@ const loginErr = $("loginErr");
 const pwd = $<HTMLInputElement>("pwd");
 const rangeSel = $<HTMLSelectElement>("range");
 
-// Sessão salva: quem loga com a senha certa fica conectado (token no
-// localStorage, válido por 12h). Nas próximas visitas entra automático.
-const TOK_KEY = "amv_dash_token";
-const authHeaders = (): Record<string, string> => {
-  let t = "";
-  try {
-    t = localStorage.getItem(TOK_KEY) || "";
-  } catch {
-    /* ignora */
-  }
-  return t ? { Authorization: `Bearer ${t}` } : {};
-};
-
 const fmtInt = (n: unknown) => Number(n || 0).toLocaleString("pt-BR");
 function fmtDuration(ms: unknown): string {
   const s = Math.round(Number(ms || 0) / 1000);
@@ -65,7 +52,7 @@ async function showDashboard(): Promise<void> {
 // login automático se já houver uma sessão válida (logou antes com a senha)
 async function checkSession(): Promise<void> {
   try {
-    const r = await fetch("/api/auth", { method: "GET", credentials: "same-origin", headers: authHeaders() });
+    const r = await fetch("/api/auth", { method: "GET", credentials: "same-origin" });
     const j = await r.json();
     if (j.authed) await showDashboard();
   } catch {
@@ -92,8 +79,7 @@ loginForm.addEventListener("submit", async (e) => {
   if (r.ok) {
     pwd.value = "";
     try {
-      const j = await r.json();
-      if (j.token) localStorage.setItem(TOK_KEY, j.token);
+      await r.json();
       // dono do painel: não contar os próprios acessos ao site (dados limpos)
       localStorage.setItem("amv_notrack", "1");
     } catch {
@@ -111,12 +97,7 @@ loginForm.addEventListener("submit", async (e) => {
 });
 
 $("logout").addEventListener("click", async () => {
-  await fetch("/api/auth", { method: "DELETE", credentials: "same-origin", headers: authHeaders() });
-  try {
-    localStorage.removeItem(TOK_KEY);
-  } catch {
-    /* ignora */
-  }
+  await fetch("/api/auth", { method: "DELETE", credentials: "same-origin" });
   location.reload();
 });
 
@@ -180,10 +161,20 @@ $("export").addEventListener("click", () => {
 
 // ---- carregamento dos dados ----
 async function load(): Promise<void> {
+  try {
+    await loadData();
+  } catch (error) {
+    console.error("[dashboard] falha ao carregar", error);
+    $("kpis").innerHTML = `<div class="card" style="grid-column:1/-1">
+      <div class="card__l" style="color:#ff8590">Falha de conexão</div>
+      <div class="card__h" style="margin-top:6px">Não foi possível atualizar os dados. Tentaremos novamente automaticamente.</div></div>`;
+  }
+}
+
+async function loadData(): Promise<void> {
   const r = await fetch(`/api/stats?days=${rangeSel.value}`, {
     cache: "no-store",
     credentials: "same-origin",
-    headers: authHeaders(),
   });
   if (r.status === 401) {
     app.hidden = true;

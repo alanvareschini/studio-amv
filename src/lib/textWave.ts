@@ -513,7 +513,21 @@ export function initTextWave(selector: string): void {
   });
 
   if (!items.length) return;
-  initIglooWave(items.filter((element) => element.classList.contains("txt-wave--igloo")));
+  const iglooItems = items.filter((element) => element.classList.contains("txt-wave--igloo"));
+  const iglooHost = iglooItems[0]?.closest<HTMLElement>("#faq");
+  if (iglooItems.length && iglooHost && "IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        initIglooWave(iglooItems);
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(iglooHost);
+  } else {
+    initIglooWave(iglooItems);
+  }
 
   const findTouchItem = (clientX: number, clientY: number) => {
     const hit = document.elementFromPoint(clientX, clientY) as HTMLElement | null;

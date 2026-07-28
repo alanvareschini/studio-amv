@@ -22,6 +22,7 @@ export function Footer(): string {
           <a href="#processo">Processo</a>
           <a href="#faq">FAQ</a>
           <a href="#orcamento">Orçamento</a>
+          <a href="/privacidade.html">Privacidade</a>
         </nav>
 
         <div class="footer__contact">

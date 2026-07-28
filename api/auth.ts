@@ -6,6 +6,7 @@ import { clientIp, rateLimit } from "./_ratelimit.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    res.setHeader("Cache-Control", "no-store");
     if (req.method === "GET") {
       res.status(200).json({ authed: isAuthed(req), configured: !!process.env.DASHBOARD_PASSWORD });
       return;
@@ -41,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const token = makeToken();
       res.setHeader("Set-Cookie", setCookie(token));
-      res.status(200).json({ ok: true, token }); // token = fallback se cookie for bloqueado
+      res.status(200).json({ ok: true });
       return;
     }
 

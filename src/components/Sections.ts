@@ -8,7 +8,6 @@ import {
   processSteps,
   processMessage,
   trustPoints,
-  proofPoints,
 } from "../data/content";
 import { portfolio } from "../data/portfolio";
 import { renderMotionIcon } from "../lib/motionIcons";
@@ -35,17 +34,6 @@ const portfolioDemos: Record<string, { scene: string; action: string }> = {
   "Loja local": { scene: "storefront-demo", action: "Abrir vitrine" },
   Consultor: { scene: "strategy-lab", action: "Fazer diagnóstico" },
 };
-
-// Prova de valor rápida (faixa logo abaixo da hero)
-export function Proof(): string {
-  return /* html */ `
-    <section class="proof" aria-label="Diferenciais">
-      <div class="container proof__inner" data-reveal>
-        ${proofPoints.map((p) => `<span class="proof__item">${p}</span>`).join("")}
-      </div>
-    </section>
-  `;
-}
 
 // RF02 — Serviços oferecidos
 export function Services(): string {

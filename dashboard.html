@@ -15,11 +15,12 @@
     <!-- Login -->
     <div id="gate" class="gate">
       <form id="loginForm" class="gate__card">
-        <div class="gate__brand">AMV<span>·</span>Analytics</div>
+        <h1 class="gate__brand">AMV<span>·</span>Analytics</h1>
         <p class="gate__hint">Área restrita. Informe a senha para continuar.</p>
+        <label for="pwd">Senha</label>
         <input id="pwd" type="password" placeholder="Senha" autocomplete="current-password" required />
         <button type="submit">Entrar</button>
-        <p id="loginErr" class="gate__err" hidden></p>
+        <p id="loginErr" class="gate__err" role="alert" hidden></p>
       </form>
     </div>
 

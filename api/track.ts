@@ -35,7 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
     } catch {
-      /* origin malformado → deixa passar pro resto das checagens */
+      res.status(204).end();
+      return;
     }
   }
 

@@ -18,6 +18,7 @@
   --cyan: #22d3ee;
   --blue: #3b82f6;
   --gold: #facc15;
+  --focus-ring: #22d3ee;
 
   /* Gradientes (item 9) */
   --grad-main: linear-gradient(135deg, #a855f7 0%, #22d3ee 50%, #00ff88 100%);
@@ -51,6 +52,7 @@
   --footer-bg: rgba(7, 10, 18, 0.6);
   --scrim: rgba(7, 10, 18, 0.78);
   --hero3d-opacity: 1;
+  --focus-ring: #0b5fcc;
 }
 
 /* ---- Modo claro (alternado pelo blob no canto) ---- */
@@ -132,7 +134,7 @@ ol {
   padding: 0;
 }
 :focus-visible {
-  outline: 2px solid var(--cyan);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
   border-radius: 6px;
 }
@@ -881,8 +883,8 @@ ol {
 /* ------------------------------------------------- Menu (estilo Lusion) */
 .menu-btn {
   position: fixed;
-  top: 16px;
-  right: 16px;
+  top: calc(16px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
   z-index: 400;
   display: inline-flex;
   align-items: center;
@@ -934,11 +936,11 @@ ol {
 /* painel compacto que abre a partir do botão (não é tela cheia) */
 .menu-overlay {
   position: fixed;
-  top: 70px;
-  right: 16px;
+  top: calc(70px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
   z-index: 390;
   width: min(300px, calc(100vw - 32px));
-  max-height: calc(100dvh - 86px);
+  max-height: calc(100dvh - 86px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-x: hidden;
   overflow-y: auto;
   display: flex;
@@ -2711,8 +2713,8 @@ html.amv-touch .gyro-btn { display: inline-flex; }
 /* ---------------------------------------- botão flutuante de WhatsApp */
 .wa-fab {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  right: calc(20px + env(safe-area-inset-right));
+  bottom: calc(20px + env(safe-area-inset-bottom));
   z-index: 350;
   display: grid;
   place-items: center;
@@ -2884,6 +2886,12 @@ html.amv-touch .gyro-btn { display: inline-flex; }
   }
 }
 @media (max-width: 560px) {
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 16px;
+  }
+
   .hero--a .hero__brand {
     width: 100%;
     max-width: 100%;
@@ -2915,6 +2923,12 @@ html.amv-touch .gyro-btn { display: inline-flex; }
 :root[data-page-active="false"] *,
 :root[data-page-active="false"] *::before,
 :root[data-page-active="false"] *::after {
+  animation-play-state: paused !important;
+}
+
+body.demo-scene-open #app *,
+body.demo-scene-open #app *::before,
+body.demo-scene-open #app *::after {
   animation-play-state: paused !important;
 }
 
