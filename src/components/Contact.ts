@@ -13,9 +13,9 @@ export function Contact(): string {
     <section class="section" id="orcamento">
       <div class="container container--narrow">
         <header class="section__head" data-reveal>
-          <span class="eyebrow">Briefing rápido</span>
+          <span class="eyebrow">Conte o que você precisa</span>
           <h2 class="section__title">Peça seu <span class="text-gradient">orçamento</span></h2>
-          <p class="section__lead">Preencha o essencial e eu te respondo direto no WhatsApp com a proposta.</p>
+          <p class="section__lead">Preencha o essencial e eu te respondo no WhatsApp. Você recebe a proposta e o contrato antes de qualquer cobrança.</p>
         </header>
 
         <form class="form" id="briefingForm" novalidate data-reveal>
@@ -63,7 +63,7 @@ export function Contact(): string {
           <div class="field field--check">
             <label class="check" for="f-manutencao">
               <input type="checkbox" id="f-manutencao" name="manutencao" value="sim" />
-              <span>Também quero <strong>manutenção mensal</strong> (R$ 149/mês): atualizações, backups e suporte por WhatsApp.</span>
+              <span>Também quero <strong>manutenção mensal</strong> (R$ 149/mês): cuidados com a hospedagem e até 2 solicitações simples por mês. A cobrança no cartão só é ativada após a assinatura do contrato.</span>
             </label>
           </div>
 

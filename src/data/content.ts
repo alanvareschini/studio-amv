@@ -8,14 +8,14 @@ export interface Service {
 }
 
 export const services: Service[] = [
-  { icon: "🚀", title: "Landing pages", description: "Páginas de alta conversão focadas em transformar visitantes em clientes." },
-  { icon: "🏢", title: "Sites institucionais", description: "Presença profissional completa para o seu negócio aparecer com seriedade." },
+  { icon: "🚀", title: "Página para vender mais", description: "Uma página direta que apresenta sua oferta e transforma visitas em contatos." },
+  { icon: "🏢", title: "Site completo para sua empresa", description: "Tudo sobre o seu negócio organizado para transmitir confiança e profissionalismo." },
   { icon: "💬", title: "Botão de WhatsApp", description: "Contato a um toque, com mensagem pronta para acelerar o atendimento." },
-  { icon: "📝", title: "Formulário de contato", description: "Captação de orçamentos simples, sem fricção para o cliente." },
+  { icon: "📝", title: "Pedido de orçamento", description: "Seu cliente informa o que precisa de forma simples e organizada." },
   { icon: "📍", title: "Google Maps", description: "Localização integrada para quem precisa ser encontrado na região." },
-  { icon: "🔍", title: "SEO básico", description: "Title, description e estrutura para o Google entender o seu site." },
+  { icon: "🔍", title: "Mais fácil de achar no Google", description: "Configuro as informações que ajudam o Google a entender e mostrar seu negócio." },
   { icon: "🛠️", title: "Manutenção mensal", description: "Seu site sempre atualizado, no ar e funcionando sem dor de cabeça." },
-  { icon: "📱", title: "100% responsivo", description: "Perfeito no celular, tablet e desktop — prioridade total no mobile." },
+  { icon: "📱", title: "Perfeito em qualquer tela", description: "Seu site funciona bem no celular, tablet e computador." },
 ];
 
 export interface Problem {
@@ -39,7 +39,7 @@ export const solutions: Service[] = [
   { icon: "🖼️", title: "Fotos e identidade", description: "Seu visual aplicado para o negócio se destacar." },
   { icon: "📍", title: "Localização", description: "Mapa integrado para clientes te encontrarem." },
   { icon: "💬", title: "Botão de WhatsApp", description: "Contato direto, sem formulários complicados." },
-  { icon: "📱", title: "Responsividade", description: "Perfeito em qualquer tela, com foco no celular." },
+  { icon: "📱", title: "Feito para o celular", description: "Fácil de ler, navegar e entrar em contato em qualquer tela." },
 ];
 
 export interface ProcessStep {
@@ -49,12 +49,12 @@ export interface ProcessStep {
 
 export const processSteps: ProcessStep[] = [
   { title: "Conversa rápida", description: "Um papo no WhatsApp para entender o seu negócio e objetivo." },
-  { title: "Escolha do pacote", description: "Você escolhe o pacote ideal e alinhamos o escopo." },
+  { title: "Escolha do pacote", description: "Você escolhe a melhor opção e combinamos exatamente o que será entregue." },
   { title: "Proposta e contrato", description: "Tudo combinado de forma clara antes de começar." },
   { title: "Envio dos materiais", description: "Você manda o essencial: textos, fotos e informações." },
-  { title: "Desenvolvimento", description: "Eu crio o site com foco em performance e conversão." },
+  { title: "Criação do site", description: "Eu monto tudo para carregar rápido, transmitir confiança e gerar contatos." },
   { title: "Revisão", description: "Você revisa e a gente ajusta os detalhes juntos." },
-  { title: "Publicação", description: "Seu site vai ao ar, rápido e responsivo." },
+  { title: "Publicação", description: "Seu site vai ao ar pronto para funcionar no celular e no computador." },
   { title: "Manutenção opcional", description: "Mantenho tudo atualizado e funcionando." },
 ];
 
@@ -63,10 +63,10 @@ export const processMessage =
 
 // "Organização e segurança" (seção de confiança)
 export const trustPoints: Service[] = [
-  { icon: "🔐", title: "Seu domínio, no seu nome", description: "Você fica com o controle total do site e do domínio." },
-  { icon: "⚡", title: "Carregamento rápido", description: "Sites leves e otimizados, sem peso desnecessário." },
-  { icon: "♿", title: "Acessibilidade básica", description: "Bom contraste, textos claros e navegação por teclado." },
-  { icon: "🧩", title: "Fácil de manter", description: "Estrutura organizada para evoluir quando você quiser." },
+  { icon: "🔐", title: "Tudo fica no seu nome", description: "Eu configuro a publicação, mas o site e o domínio continuam sob o seu controle." },
+  { icon: "⚡", title: "Abre rápido", description: "Seu cliente não precisa esperar para conhecer o seu negócio." },
+  { icon: "♿", title: "Fácil para todos", description: "Textos claros, bom contraste e navegação simples." },
+  { icon: "🧩", title: "Pronto para crescer", description: "O site pode receber novas páginas e recursos quando você precisar." },
 ];
 
 export const proofPoints: string[] = [

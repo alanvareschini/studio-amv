@@ -41,7 +41,7 @@ export function Packages(): string {
         <header class="section__head" data-reveal>
           <span class="eyebrow">Pacotes</span>
           <h2 class="section__title">Escolha o plano <span class="text-gradient">ideal pro seu negócio</span></h2>
-          <p class="section__lead">Preços aproximados. O valor final depende do escopo combinado no WhatsApp.</p>
+          <p class="section__lead">Todos os pacotes começam com proposta e contrato eletrônico. O valor final depende do que for combinado no WhatsApp.</p>
           <button class="gyro-btn" id="gyroBtn" type="button">Ativar movimento 3D</button>
         </header>
 
