@@ -37,10 +37,14 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
     if (narrowTouch) {
       const lightX = Math.max(0, Math.min(100, (px + 1) * 50));
       const lightY = Math.max(0, Math.min(100, (py + 1) * 50));
+      const shiftX = px * 6;
+      const shiftY = py * 4.5 - Math.min(lift, 2);
       card.style.setProperty("--touch-light-x", `${lightX.toFixed(1)}%`);
       card.style.setProperty("--touch-light-y", `${lightY.toFixed(1)}%`);
-      card.style.transition = "box-shadow 0.14s ease-out";
-      card.style.transform = "none";
+      card.style.setProperty("--touch-shift-x", `${shiftX.toFixed(2)}px`);
+      card.style.setProperty("--touch-shift-y", `${shiftY.toFixed(2)}px`);
+      card.style.transition = "transform 80ms linear, box-shadow 0.14s ease-out";
+      card.style.transform = "translate3d(var(--touch-shift-x), var(--touch-shift-y), 0)";
       return;
     }
 
@@ -81,6 +85,8 @@ export function initCardTilt(selector: string, maxAngle = 6, lift = 3, persp = 8
     card.classList.remove("is-touching");
     card.style.removeProperty("--touch-light-x");
     card.style.removeProperty("--touch-light-y");
+    card.style.removeProperty("--touch-shift-x");
+    card.style.removeProperty("--touch-shift-y");
     card.style.transition = "transform 0.35s ease";
     card.style.transform = "";
   };

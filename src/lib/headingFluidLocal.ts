@@ -482,7 +482,11 @@ export function initHeadingFluid(): void {
 
   function render(time: number) {
     animationFrame = 0;
-    if (document.hidden || visibleElements.size === 0) {
+    if (
+      document.hidden
+      || document.body.classList.contains("demo-scene-open")
+      || visibleElements.size === 0
+    ) {
       lastTime = time;
       return;
     }
@@ -517,6 +521,7 @@ export function initHeadingFluid(): void {
       animationFrame
       || !fontsReady
       || document.hidden
+      || document.body.classList.contains("demo-scene-open")
       || visibleElements.size === 0
     ) return;
     layers.forEach((layer) => {
@@ -551,6 +556,15 @@ export function initHeadingFluid(): void {
     else startRender();
   };
   document.addEventListener("visibilitychange", visibilityChanged, { passive: true });
+  const bodyStateObserver = new MutationObserver(() => {
+    if (document.body.classList.contains("demo-scene-open")) stopRender();
+    else startRender();
+  });
+  bodyStateObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+  window.addEventListener("pagehide", () => bodyStateObserver.disconnect(), { once: true });
   window.addEventListener("amv:performance-tier-change", () => {
     performanceBudget = getPerformanceBudget();
     layers.forEach(rebuildLayer);

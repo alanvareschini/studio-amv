@@ -29,6 +29,8 @@ function bindScene(options: SceneControllerOptions): SceneController | null {
   let previousFocus: HTMLElement | null = null;
   let timeline: gsap.core.Timeline | null = null;
   let closeCallback: (() => void) | null = null;
+  const usesCompactTransition = () =>
+    window.matchMedia("(max-width: 700px), (pointer: coarse)").matches;
 
   const cardTransform = () => {
     const card = trigger.getBoundingClientRect();
@@ -75,11 +77,20 @@ function bindScene(options: SceneControllerOptions): SceneController | null {
     }
     closing = true;
     scene.classList.add("is-closing");
-    const target = cardTransform();
+    const compactTransition = usesCompactTransition();
+    const target = compactTransition
+      ? { y: 18, scale: 0.985 }
+      : cardTransform();
     timeline = gsap
       .timeline({ defaults: { overwrite: "auto" }, onComplete: finishClose })
-      .to(shell, { ...target, autoAlpha: 0, duration: 0.52, ease: "power3.inOut" }, 0)
-      .to(scene, { autoAlpha: 0, duration: 0.28 }, 0.2);
+      .to(shell, {
+        ...target,
+        autoAlpha: 0,
+        duration: compactTransition ? 0.3 : 0.52,
+        ease: compactTransition ? "power3.in" : "power3.inOut",
+        force3D: true,
+      }, 0)
+      .to(scene, { autoAlpha: 0, duration: compactTransition ? 0.24 : 0.28 }, compactTransition ? 0.06 : 0.2);
   };
 
   const openScene = () => {
@@ -102,19 +113,33 @@ function bindScene(options: SceneControllerOptions): SceneController | null {
       return;
     }
 
-    const origin = cardTransform();
+    const compactTransition = usesCompactTransition();
+    const origin = compactTransition
+      ? { y: 22, scale: 0.985 }
+      : cardTransform();
     gsap.set(scene, { autoAlpha: 0 });
     gsap.set(shell, { ...origin, autoAlpha: 0, transformOrigin: "center center" });
     timeline = gsap.timeline({
       defaults: { overwrite: "auto" },
       onComplete: () => {
         timeline = null;
+        gsap.set(shell, { clearProps: "transform,transformOrigin" });
         shell.focus({ preventScroll: true });
       },
     });
     timeline
-      .to(scene, { autoAlpha: 1, duration: 0.3 }, 0)
-      .to(shell, { x: 0, y: 0, scaleX: 1, scaleY: 1, autoAlpha: 1, duration: 0.78, ease: "expo.out" }, 0.03);
+      .to(scene, { autoAlpha: 1, duration: compactTransition ? 0.24 : 0.3 }, 0)
+      .to(shell, {
+        x: 0,
+        y: 0,
+        scale: 1,
+        scaleX: 1,
+        scaleY: 1,
+        autoAlpha: 1,
+        duration: compactTransition ? 0.42 : 0.78,
+        ease: compactTransition ? "power3.out" : "expo.out",
+        force3D: true,
+      }, compactTransition ? 0 : 0.03);
   };
 
   trigger.setAttribute("aria-controls", options.elementId);
@@ -240,11 +265,16 @@ export function AestheticLab(): string {
             </button>
           </aside>
 
-          <figure class="ae-portrait" data-ae-portrait role="button" tabindex="0" aria-label="Mover o scanner e clicar para capturar uma leitura da pele">
-            ${images}
-            <span class="ae-scanline" aria-hidden="true"></span>
-            <span class="ae-lens" aria-hidden="true"><i></i></span>
-            <span class="ae-scan-hint" aria-hidden="true">CLIQUE PARA ANALISAR</span>
+          <div class="ae-visual">
+            <figure class="ae-portrait" data-ae-portrait role="button" tabindex="0" aria-label="Mover o scanner e clicar para capturar uma leitura da pele">
+              ${images}
+              <span class="ae-scanline" aria-hidden="true"></span>
+              <span class="ae-lens" aria-hidden="true"><i></i></span>
+              <span class="ae-scan-hint" aria-hidden="true">CLIQUE PARA ANALISAR</span>
+              <span class="ae-coordinate ae-coordinate--a">DERMA · 24.7</span>
+              <span class="ae-coordinate ae-coordinate--b">ANÁLISE 01—05</span>
+              <figcaption>Imagens demonstrativas geradas para esta experiência.</figcaption>
+            </figure>
             <div class="ae-scan-card" data-ae-scan-card hidden aria-live="polite">
               <span>LEITURA CAPTURADA</span>
               <strong data-ae-region>Zona T</strong>
@@ -255,10 +285,7 @@ export function AestheticLab(): string {
               </dl>
               <small>Leitura ilustrativa da imagem · não é avaliação clínica.</small>
             </div>
-            <span class="ae-coordinate ae-coordinate--a">DERMA · 24.7</span>
-            <span class="ae-coordinate ae-coordinate--b">ANÁLISE 01—05</span>
-            <figcaption>Imagens demonstrativas geradas para esta experiência.</figcaption>
-          </figure>
+          </div>
 
           <div class="ae-control">
             <div class="ae-control__head">

@@ -2289,7 +2289,7 @@ html.amv-touch .wa-fab * {
    3D stacking context that can erase part of the card. */
 @media (max-width: 430px) {
   html.amv-touch .card.is-touching {
-    transform: none !important;
+    transform: translate3d(var(--touch-shift-x, 0px), var(--touch-shift-y, 0px), 0) !important;
     background:
       radial-gradient(
         circle 150px at var(--touch-light-x, 50%) var(--touch-light-y, 50%),
@@ -2302,7 +2302,7 @@ html.amv-touch .wa-fab * {
     box-shadow:
       0 12px 30px rgba(0, 0, 0, 0.24),
       0 0 24px rgba(34, 211, 238, 0.1);
-    will-change: background-position;
+    will-change: transform, background-position;
   }
 }
 

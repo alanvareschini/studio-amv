@@ -5,6 +5,12 @@
   backdrop-filter: blur(12px);
 }
 
+body.demo-scene-open #app *,
+body.demo-scene-open #app *::before,
+body.demo-scene-open #app *::after {
+  animation-play-state: paused !important;
+}
+
 .creative-shell {
   position: relative;
   z-index: 1;
@@ -14,6 +20,7 @@
   border-radius: 28px;
   box-shadow: 0 34px 100px rgba(0, 0, 0, 0.34);
   contain: layout paint;
+  isolation: isolate;
 }
 
 .creative-shell:focus {
@@ -265,6 +272,13 @@
   cursor: crosshair;
 }
 
+.ae-visual {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
 .ae-portrait:focus {
   outline: none;
 }
@@ -379,11 +393,9 @@
 }
 
 .ae-scan-card {
-  position: absolute;
-  z-index: 12;
-  left: 22px;
-  bottom: 22px;
-  width: min(288px, calc(100% - 44px));
+  position: relative;
+  z-index: 2;
+  width: 100%;
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 14px;
@@ -1944,6 +1956,10 @@
 }
 
 @media (max-width: 700px) {
+  body.demo-scene-open #app {
+    visibility: hidden;
+  }
+
   .ae-scene,
   .pt-scene,
   .st-scene { padding: 0; }
@@ -1953,6 +1969,11 @@
     height: 100dvh;
     border: 0;
     border-radius: 0;
+  }
+
+  .creative-backdrop {
+    background: rgba(2, 7, 18, 0.88);
+    backdrop-filter: none;
   }
 
   .creative-topbar {
@@ -2003,11 +2024,20 @@
     margin-top: 18px;
   }
 
+  .ae-visual {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    gap: 12px;
+    order: 2;
+  }
+
   .ae-portrait {
     width: 100%;
     min-height: min(72vh, 490px);
+    flex: 0 0 min(72vh, 490px);
     border-radius: 140px 140px 16px 16px;
-    order: 2;
   }
 
   .ae-control { width: 100%; order: 3; }
@@ -2072,12 +2102,18 @@
   }
 
   .ae-scan-card {
-    left: 12px;
-    bottom: 12px;
-    width: calc(100% - 24px);
+    width: 100%;
     padding: 18px;
     background: rgba(25, 47, 50, 0.96);
     box-sizing: border-box;
+  }
+
+  .ae-scan-hint,
+  .ae-scan-card,
+  .ae-control,
+  .pt-session,
+  .pt-reaction-stats {
+    backdrop-filter: none;
   }
 
   .ae-scan-card dl {
