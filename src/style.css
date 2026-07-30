@@ -57,6 +57,7 @@
 
 /* ---- Modo claro (alternado pelo blob no canto) ---- */
 :root[data-theme="light"] {
+  color-scheme: only light;
   --bg: #eef1f8;
   --bg-2: #ffffff;
   --text: #0b1020;
@@ -81,7 +82,9 @@
   text-shadow: none;
 }
 :root {
-  color-scheme: dark;
+  /* Both visual themes are fully authored below. Keeping the UA scheme light
+     prevents Samsung Internet from applying a second automatic recoloring. */
+  color-scheme: only light;
   transition: none;
 }
 body {

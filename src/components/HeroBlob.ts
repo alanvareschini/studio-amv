@@ -138,6 +138,9 @@ export function initHeroBlob(): void {
     const toggle = () => {
       const nextTheme = theme === "dark" ? "light" : "dark";
       document.documentElement.dataset.theme = nextTheme;
+      document
+        .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+        ?.setAttribute("content", nextTheme === "light" ? "#eef1f8" : "#070a12");
       try {
         localStorage.setItem("theme", nextTheme);
       } catch {
