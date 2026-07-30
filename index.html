@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#070A12" />
-    <meta name="color-scheme" content="only light" />
+    <meta name="color-scheme" content="dark" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://studio-amv.vercel.app/" />
 
@@ -37,9 +37,15 @@
     <!-- aplica o tema salvo antes de renderizar (evita flash) -->
     <script>
       try {
+        if (/SamsungBrowser/i.test(navigator.userAgent)) {
+          document.documentElement.dataset.browser = "samsung-internet";
+        }
         var t = localStorage.getItem("theme");
         var activeTheme = t === "light" ? "light" : "dark";
         document.documentElement.dataset.theme = activeTheme;
+        document
+          .querySelector('meta[name="color-scheme"]')
+          .setAttribute("content", activeTheme === "light" ? "only light" : "dark");
         document
           .querySelector('meta[name="theme-color"]')
           .setAttribute("content", activeTheme === "light" ? "#eef1f8" : "#070a12");

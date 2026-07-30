@@ -82,10 +82,16 @@
   text-shadow: none;
 }
 :root {
-  /* Both visual themes are fully authored below. Keeping the UA scheme light
-     prevents Samsung Internet from applying a second automatic recoloring. */
-  color-scheme: only light;
+  /* O valor muda para "only light" quando o tema claro está ativo. Isso impede
+     o Force Dark de recalcular cards e botões isoladamente. */
+  color-scheme: dark;
   transition: none;
+}
+:root[data-browser="samsung-internet"],
+:root[data-browser="samsung-internet"] body {
+  /* O alto contraste do Samsung Internet força amarelo/verde durante a pintura.
+     A propriedade é herdada e devolve o controle das cores ao CSS do site. */
+  forced-color-adjust: none;
 }
 body {
   transition: background 0.5s var(--ease), color 0.5s var(--ease);

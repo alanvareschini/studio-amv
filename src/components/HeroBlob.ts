@@ -141,6 +141,9 @@ export function initHeroBlob(): void {
       document
         .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
         ?.setAttribute("content", nextTheme === "light" ? "#eef1f8" : "#070a12");
+      document
+        .querySelector<HTMLMetaElement>('meta[name="color-scheme"]')
+        ?.setAttribute("content", nextTheme === "light" ? "only light" : "dark");
       try {
         localStorage.setItem("theme", nextTheme);
       } catch {
