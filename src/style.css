@@ -88,10 +88,13 @@
   transition: none;
 }
 :root[data-browser="samsung-internet"],
-:root[data-browser="samsung-internet"] body {
-  /* O alto contraste do Samsung Internet força amarelo/verde durante a pintura.
-     A propriedade é herdada e devolve o controle das cores ao CSS do site. */
-  forced-color-adjust: none;
+:root[data-browser="samsung-internet"] *,
+:root[data-browser="samsung-internet"] *::before,
+:root[data-browser="samsung-internet"] *::after {
+  /* Algumas versões do Samsung não propagam corretamente esta propriedade a
+     partir da raiz. Aplicá-la em cada camada evita a repintura isolada de links,
+     labels, cards e pseudo-elementos pelo Alto contraste. */
+  forced-color-adjust: none !important;
 }
 body {
   transition: background 0.5s var(--ease), color 0.5s var(--ease);
