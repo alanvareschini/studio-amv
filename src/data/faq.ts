@@ -24,12 +24,17 @@ export const faq: FaqItem[] = [
   {
     question: "Tem manutenção mensal?",
     answer:
-      "Tem, mas é opcional. No plano mensal eu acompanho a hospedagem, o funcionamento do site, cópias de segurança e renovações. Também estão incluídas até 2 solicitações simples por mês, como trocar textos, fotos ou contatos. Você não precisa se preocupar com a parte técnica.",
+      "Tem, mas é opcional. No plano mensal eu acompanho a hospedagem, o funcionamento do site, cópias de segurança e renovações. Também estão incluídas até 2 solicitações simples por mês. Se você não quiser o plano, pode contratar uma solicitação simples avulsa por R$ 50, com até 2 pequenas mudanças. Você não precisa se preocupar com a parte técnica.",
   },
   {
     question: "O que não entra na manutenção?",
     answer:
       "Páginas novas, mudança completa do visual, novas funções e trabalhos maiores não entram nas solicitações simples e recebem um orçamento separado. Solicitações não utilizadas não acumulam para o mês seguinte.",
+  },
+  {
+    question: "Qual é a diferença entre uma alteração simples e uma mais complexa?",
+    answer:
+      "Uma alteração simples é trocar texto, foto, telefone, horário ou contato em uma área que já existe, sem mudar o layout. A solicitação avulsa de R$ 50 inclui até 2 pequenas mudanças desse tipo. Uma alteração mais complexa envolve criar uma nova seção, mudar o layout ou adicionar formulário, integração, animação ou funcionalidade. Nesses casos, o valor começa em R$ 100 e é confirmado após análise, antes do serviço.",
   },
   {
     question: "O site sai do ar sem manutenção?",

@@ -80,6 +80,8 @@ export const packages: Package[] = [
       "Avisos sobre domínio e renovações",
       "Suporte por WhatsApp",
       "Relatório simples de visitas",
+      "Sem plano: R$ 50 por solicitação simples, com até 2 pequenas mudanças",
+      "Alterações mais complexas a partir de R$ 100, após análise",
     ],
     cta: "Quero Manutenção",
   },

@@ -236,6 +236,14 @@ const messages: Record<string, Translation> = {
   "Monitoramento e backups": { en: "Monitoring and backups", es: "Monitoreo y copias de seguridad" },
   "Suporte por WhatsApp": { en: "Support via WhatsApp", es: "Soporte por WhatsApp" },
   "Relatório simples de visitas": { en: "Simple traffic report", es: "Informe simple de visitas" },
+  "Sem plano: R$ 50 por solicitação simples, com até 2 pequenas mudanças": {
+    en: "Without a plan: BRL 50 per simple request, including up to 2 small changes",
+    es: "Sin plan: R$ 50 por solicitud simple, con hasta 2 pequeños cambios",
+  },
+  "Alterações mais complexas a partir de R$ 100, após análise": {
+    en: "More complex changes from BRL 100, subject to review",
+    es: "Cambios más complejos desde R$ 100, después de una revisión",
+  },
   "Quero o Essencial": { en: "Choose Essential", es: "Quiero Esencial" },
   "Quero o Profissional": { en: "Choose Professional", es: "Quiero Profesional" },
   "Quero o Premium": { en: "Choose Premium", es: "Quiero Premium" },
@@ -432,9 +440,9 @@ const messages: Record<string, Translation> = {
     en: "Yes. The maintenance plan costs BRL 149 per month and includes hosting, monitoring, backups, and up to 2 simple content requests per month. I handle the technical side so you do not have to worry about it.",
     es: "Sí. El plan de mantenimiento cuesta R$ 149 al mes e incluye alojamiento, monitoreo, copias de seguridad y hasta 2 solicitudes simples de contenido al mes. Yo me encargo de la parte técnica para que no tengas que preocuparte.",
   },
-  "Tem, mas é opcional. No plano mensal eu acompanho a hospedagem, o funcionamento do site, cópias de segurança e renovações. Também estão incluídas até 2 solicitações simples por mês, como trocar textos, fotos ou contatos. Você não precisa se preocupar com a parte técnica.": {
-    en: "Yes, but it is optional. With the monthly plan, I manage hosting, website operation, backups, and renewals. It also includes up to 2 simple requests per month, such as updating copy, photos, or contact details. You do not have to worry about the technical side.",
-    es: "Sí, pero es opcional. Con el plan mensual gestiono el alojamiento, el funcionamiento del sitio, las copias de seguridad y las renovaciones. También incluye hasta 2 solicitudes simples al mes, como cambiar textos, fotos o contactos. No tienes que preocuparte por la parte técnica.",
+  "Tem, mas é opcional. No plano mensal eu acompanho a hospedagem, o funcionamento do site, cópias de segurança e renovações. Também estão incluídas até 2 solicitações simples por mês. Se você não quiser o plano, pode contratar uma solicitação simples avulsa por R$ 50, com até 2 pequenas mudanças. Você não precisa se preocupar com a parte técnica.": {
+    en: "Yes, but it is optional. With the monthly plan, I manage hosting, website operation, backups, and renewals. It also includes up to 2 simple requests per month. If you do not want the plan, you can purchase a one-time simple request for BRL 50, including up to 2 small changes. You do not have to worry about the technical side.",
+    es: "Sí, pero es opcional. Con el plan mensual gestiono el alojamiento, el funcionamiento del sitio, las copias de seguridad y las renovaciones. También incluye hasta 2 solicitudes simples al mes. Si no quieres el plan, puedes contratar una solicitud simple por R$ 50, con hasta 2 pequeños cambios. No tienes que preocuparte por la parte técnica.",
   },
   "O que não entra na manutenção?": {
     en: "What is not included in maintenance?",
@@ -447,6 +455,14 @@ const messages: Record<string, Translation> = {
   "Páginas novas, mudança completa do visual, novas funções e trabalhos maiores não entram nas solicitações simples e recebem um orçamento separado. Solicitações não utilizadas não acumulam para o mês seguinte.": {
     en: "New pages, a complete redesign, new features, and larger jobs are not considered simple requests and are quoted separately. Unused requests do not roll over to the next month.",
     es: "Las páginas nuevas, un rediseño completo, nuevas funciones y trabajos mayores no se consideran solicitudes simples y se cotizan por separado. Las solicitudes no utilizadas no se acumulan para el mes siguiente.",
+  },
+  "Qual é a diferença entre uma alteração simples e uma mais complexa?": {
+    en: "What is the difference between a simple and a more complex change?",
+    es: "¿Cuál es la diferencia entre un cambio simple y uno más complejo?",
+  },
+  "Uma alteração simples é trocar texto, foto, telefone, horário ou contato em uma área que já existe, sem mudar o layout. A solicitação avulsa de R$ 50 inclui até 2 pequenas mudanças desse tipo. Uma alteração mais complexa envolve criar uma nova seção, mudar o layout ou adicionar formulário, integração, animação ou funcionalidade. Nesses casos, o valor começa em R$ 100 e é confirmado após análise, antes do serviço.": {
+    en: "A simple change means updating copy, a photo, phone number, opening hours, or contact details in an existing area without changing the layout. The BRL 50 one-time request includes up to 2 small changes of this kind. A more complex change involves creating a new section, changing the layout, or adding a form, integration, animation, or feature. In these cases, pricing starts at BRL 100 and is confirmed after review, before the work begins.",
+    es: "Un cambio simple consiste en actualizar un texto, una foto, un teléfono, un horario o un contacto en un área existente, sin cambiar el diseño. La solicitud puntual de R$ 50 incluye hasta 2 pequeños cambios de este tipo. Un cambio más complejo implica crear una nueva sección, cambiar el diseño o añadir un formulario, integración, animación o funcionalidad. En estos casos, el precio comienza en R$ 100 y se confirma después de la revisión, antes de realizar el servicio.",
   },
   "O site sai do ar sem manutenção?": {
     en: "Will my website go offline without maintenance?",
