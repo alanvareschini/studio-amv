@@ -109,7 +109,11 @@ function initIglooWave(elements: HTMLElement[]): void {
   const glyphs: IglooGlyph[] = [];
   const owners: IglooOwner[] = elements.map((el) => ({ el, visible: false }));
   const atlasHost = elements[0].closest<HTMLElement>("#faq") ?? elements[0].parentElement;
-  const atlas = atlasHost ? createIglooGlyphAtlas(atlasHost) : null;
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+  // Mobile compositors can place a section-sized canvas a few pixels away from
+  // its DOM text while scrolling. The existing per-glyph veil is equivalent
+  // visually and stays locked to the glyph on touch devices.
+  const atlas = !coarsePointer && atlasHost ? createIglooGlyphAtlas(atlasHost) : null;
   const simulation: IglooSimulation = {
     width: 2,
     height: 2,
@@ -198,9 +202,33 @@ function initIglooWave(elements: HTMLElement[]): void {
     element.dataset.iglooGlyphs = "1";
   });
 
+  const syncGradientGlyphs = () => {
+    elements.forEach((element) => {
+      element.querySelectorAll<HTMLElement>(".text-gradient").forEach((gradient) => {
+        const gradientBounds = gradient.getBoundingClientRect();
+        if (gradientBounds.width <= 0 || gradientBounds.height <= 0) return;
+
+        gradient.querySelectorAll<HTMLElement>(".igloo-glyph").forEach((glyph) => {
+          const bounds = glyph.getBoundingClientRect();
+          glyph.style.setProperty("--igloo-gradient-width", `${gradientBounds.width}px`);
+          glyph.style.setProperty("--igloo-gradient-height", `${gradientBounds.height}px`);
+          glyph.style.setProperty(
+            "--igloo-gradient-x",
+            `${gradientBounds.left - bounds.left}px`,
+          );
+          glyph.style.setProperty(
+            "--igloo-gradient-y",
+            `${gradientBounds.top - bounds.top}px`,
+          );
+        });
+      });
+    });
+  };
+
   const resize = () => {
     atlas?.resize();
     atlas?.measure(glyphs);
+    syncGradientGlyphs();
     const width = Math.max(2, Math.floor(window.innerWidth / fieldScale));
     const height = Math.max(2, Math.floor(window.innerHeight / fieldScale));
     if (width === simulation.width && height === simulation.height) return;
@@ -414,6 +442,7 @@ function initIglooWave(elements: HTMLElement[]): void {
   resize();
   document.fonts?.ready.then(() => {
     atlas?.measure(glyphs);
+    syncGradientGlyphs();
   });
   if (atlasHost && "IntersectionObserver" in window) {
     new IntersectionObserver(

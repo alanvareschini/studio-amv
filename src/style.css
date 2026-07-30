@@ -1698,6 +1698,8 @@ ol {
 }
 .igloo-word {
   display: inline-block;
+  line-height: inherit;
+  vertical-align: baseline;
   white-space: nowrap;
 }
 .igloo-glyph {
@@ -1706,7 +1708,22 @@ ol {
   --igloo-face-opacity: 1;
   position: relative;
   display: inline-block;
+  line-height: inherit;
   opacity: var(--igloo-face-opacity);
+  vertical-align: baseline;
+}
+.text-gradient .igloo-glyph {
+  background-image: var(--grad-main);
+  background-position:
+    var(--igloo-gradient-x, 0)
+    var(--igloo-gradient-y, 0);
+  background-repeat: no-repeat;
+  background-size:
+    var(--igloo-gradient-width, 100%)
+    var(--igloo-gradient-height, 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .igloo-glyph::before {
   content: attr(data-char);
