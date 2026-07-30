@@ -39,6 +39,7 @@ import {
 } from "./lib/motionPreference";
 import { initRuntimePerformanceMonitor } from "./lib/runtimePerformance";
 import { initRenderActivity } from "./lib/renderActivity";
+import { initI18n, translateTree } from "./i18n";
 
 initMotionPreference();
 
@@ -73,6 +74,10 @@ if (app) {
     Menu(),
     WhatsAppFab(),
   ].join("");
+
+  // Traduz antes de qualquer efeito dividir ou medir o texto.
+  translateTree(app);
+  initI18n();
 
   initHeroIntro();
 

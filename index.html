@@ -7,6 +7,32 @@
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://studio-amv.vercel.app/" />
 
+    <!-- Define o idioma antes da intro e do primeiro frame da página. -->
+    <script>
+      (function () {
+        var locale = null;
+        try {
+          locale = localStorage.getItem("amv-locale");
+        } catch (e) {}
+        var supported = { "pt-BR": true, en: true, es: true };
+        if (!supported[locale]) {
+          locale = null;
+          var languages = navigator.languages && navigator.languages.length
+            ? navigator.languages
+            : [navigator.language || "en"];
+          for (var i = 0; i < languages.length && !locale; i += 1) {
+            var language = String(languages[i]).toLowerCase();
+            if (language.indexOf("pt") === 0) locale = "pt-BR";
+            else if (language.indexOf("es") === 0) locale = "es";
+            else if (language.indexOf("en") === 0) locale = "en";
+          }
+          if (!supported[locale]) locale = "en";
+        }
+        window.__AMV_LOCALE__ = locale;
+        document.documentElement.lang = locale;
+      })();
+    </script>
+
     <!-- aplica o tema salvo antes de renderizar (evita flash) -->
     <script>
       try {
@@ -208,7 +234,14 @@
         var ctx = canvas.getContext("2d", { alpha: true });
         if (!ctx) { finishNow(); return true; }
 
-        var CHARS = " AMV WEB STUDIO SITES QUE VENDEM ";
+        var locale = window.__AMV_LOCALE__ || "pt-BR";
+        var introCopy = locale === "en"
+          ? { chars: " AMV WEB STUDIO WEBSITES THAT SELL ", pull: "pull v", label: "Pull the cord to enter" }
+          : locale === "es"
+            ? { chars: " AMV WEB STUDIO SITIOS QUE VENDEN ", pull: "tira v", label: "Tira de la cuerda para entrar" }
+            : { chars: " AMV WEB STUDIO SITES QUE VENDEM ", pull: "puxe v", label: "Puxe a corda para entrar" };
+        host.setAttribute("aria-label", introCopy.label);
+        var CHARS = introCopy.chars;
         var CODE_CHARS = " </>  {}  ()  =>  #01 ";
         var BANDS = 5;
         var PUR = [168, 85, 247], CYA = [34, 211, 238], GRN = [0, 255, 136];
@@ -732,7 +765,7 @@
             ctx.font = "700 14px 'Plus Jakarta Sans', sans-serif";
             ctx.fillStyle = "#f5f7ff";
             ctx.textAlign = "center";
-            ctx.fillText("puxe v", handle.x, handle.y + 34);
+            ctx.fillText(introCopy.pull, handle.x, handle.y + 34);
             ctx.globalAlpha = 1;
           }
         }

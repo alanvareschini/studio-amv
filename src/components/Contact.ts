@@ -1,8 +1,10 @@
 // RF06 / RF07 — Formulário de briefing que gera mensagem pronta para o WhatsApp.
 import { packages } from "../data/packages";
 import { buildWhatsappMessage, whatsappLink, type BriefingData } from "../lib/whatsapp";
+import { formatMessage, getLocale, translateText } from "../i18n";
 
 export function Contact(): string {
+  const internationalPhone = getLocale() !== "pt-BR";
   // O dropdown lista só os PLANOS de site; a Manutenção é um adicional separado.
   const options = packages
     .filter((p) => p.id !== "manutencao")
@@ -33,7 +35,7 @@ export function Contact(): string {
           <div class="form__row">
             <div class="field">
               <label for="f-whatsapp">WhatsApp *</label>
-              <input id="f-whatsapp" name="whatsapp" type="tel" required inputmode="tel" autocomplete="tel" maxlength="16" placeholder="(00) 90000-0000" />
+              <input id="f-whatsapp" name="whatsapp" type="tel" required inputmode="tel" autocomplete="tel" maxlength="${internationalPhone ? 20 : 16}" placeholder="${internationalPhone ? "+00 000 000 0000" : "(00) 90000-0000"}" />
             </div>
             <div class="field">
               <label for="f-segmento">Segmento do negócio *</label>
@@ -89,6 +91,11 @@ export function Contact(): string {
 
 // Formata o número enquanto o usuário digita: (00) 90000-0000
 function formatPhone(v: string): string {
+  if (getLocale() !== "pt-BR") {
+    const hasPlus = v.trimStart().startsWith("+");
+    const digits = v.replace(/\D/g, "").slice(0, 15);
+    return `${hasPlus ? "+" : ""}${digits}`;
+  }
   const d = v.replace(/\D/g, "").slice(0, 11);
   if (d.length <= 2) return d.length ? `(${d}` : "";
   if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
@@ -111,7 +118,12 @@ function validateField(name: string, raw: string): string {
     case "whatsapp": {
       const d = v.replace(/\D/g, "");
       if (!d) return "Informe seu WhatsApp.";
-      if (d.length < 10 || d.length > 11) return "WhatsApp inválido: use DDD + número.";
+      if (getLocale() === "pt-BR" && (d.length < 10 || d.length > 11)) {
+        return "WhatsApp inválido: use DDD + número.";
+      }
+      if (getLocale() !== "pt-BR" && (d.length < 8 || d.length > 15)) {
+        return "WhatsApp inválido: inclua o código do país e o número.";
+      }
       return "";
     }
     case "segmento":
@@ -152,7 +164,7 @@ function setFieldError(el: HTMLElement, msg: string): void {
     m.id = `${el.id || el.getAttribute("name") || "field"}-error`;
     field.appendChild(m);
   }
-  m.textContent = msg;
+  m.textContent = translateText(msg);
   m.hidden = false;
   el.setAttribute("aria-describedby", m.id);
   el.setAttribute("aria-errormessage", m.id);
@@ -209,8 +221,8 @@ export function initContact(): void {
       if (error) {
         error.textContent =
           count === 1
-            ? "Corrija o campo destacado para continuar."
-            : `Corrija os ${count} campos destacados para continuar.`;
+            ? translateText("Corrija o campo destacado para continuar.")
+            : formatMessage("Corrija os {count} campos destacados para continuar.", { count });
         error.hidden = false;
       }
       (firstInvalid as HTMLElement).focus();
@@ -235,12 +247,12 @@ export function initContact(): void {
     if (submit) {
       submit.disabled = true;
       submit.dataset.state = "sending";
-      submit.setAttribute("aria-label", "Abrindo o WhatsApp");
+      submit.setAttribute("aria-label", translateText("Abrindo o WhatsApp"));
       window.setTimeout(() => (submit.dataset.state = "done"), 500);
       window.setTimeout(() => {
         submit.dataset.state = "idle";
         submit.disabled = false;
-        submit.setAttribute("aria-label", "Enviar e abrir o WhatsApp");
+        submit.setAttribute("aria-label", translateText("Enviar e abrir o WhatsApp"));
       }, 1100);
     }
   });

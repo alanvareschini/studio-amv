@@ -2,12 +2,18 @@
 import { packages, type Package } from "../data/packages";
 import { openModal, closeModal } from "./Modal";
 import { quickWhatsappLink } from "../lib/whatsapp";
+import { getLocale, translateText } from "../i18n";
 import { getPerformanceBudget, isReducedMotion } from "../lib/motionPreference";
 import gsap from "gsap";
 
 // conteúdo do modal de detalhe do pacote
 function packageModal(pkg: Package): string {
-  const msg = `Olá! Tenho interesse no pacote ${pkg.name}. Pode me passar mais detalhes?`;
+  const packageName = translateText(pkg.name);
+  const msg = getLocale() === "en"
+    ? `Hello! I am interested in the ${packageName} package. Could you send me more details?`
+    : getLocale() === "es"
+      ? `¡Hola! Me interesa el paquete ${packageName}. ¿Podrías enviarme más detalles?`
+      : `Olá! Tenho interesse no pacote ${pkg.name}. Pode me passar mais detalhes?`;
   return /* html */ `
     <div class="pkg-modal ${pkg.featured ? "is-featured" : ""}">
       ${pkg.badge ? `<span class="pkg-modal__badge">${pkg.badge}</span>` : ""}

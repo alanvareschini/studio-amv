@@ -1022,6 +1022,70 @@ ol {
   height: 62px;
   transform: none;
 }
+.menu-language {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.2rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.menu-language__label {
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.menu-language__options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+.menu-language__options button {
+  display: grid;
+  place-items: center;
+  gap: 0.18rem;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0.4rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition:
+    border-color 0.2s var(--ease),
+    background 0.2s var(--ease),
+    color 0.2s var(--ease),
+    transform 0.2s var(--ease);
+}
+.menu-language__options button span {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.menu-language__options button b {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 0.61rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.menu-language__options button:hover,
+.menu-language__options button:focus-visible {
+  color: var(--text);
+  transform: translateY(-1px);
+}
+.menu-language__options button:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.menu-language__options button.is-active {
+  border-color: color-mix(in srgb, var(--cyan) 72%, var(--border));
+  background: color-mix(in srgb, var(--cyan) 13%, var(--card));
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(34, 211, 238, 0.1);
+}
 .menu-motion {
   display: grid;
   gap: 0.65rem;

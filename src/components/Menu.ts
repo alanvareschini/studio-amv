@@ -9,6 +9,7 @@ import {
   type MotionMode,
 } from "../lib/motionPreference";
 import { acquireScrollLock, releaseScrollLock } from "../lib/scrollLock";
+import { getLocale, setLocale, translateText, type Locale } from "../i18n";
 
 const LINKS: [string, string][] = [
   ["#servicos", "Servi&ccedil;os"],
@@ -20,6 +21,7 @@ const LINKS: [string, string][] = [
 ];
 
 export function Menu(): string {
+  const locale = getLocale();
   const links = LINKS.map(
     ([href, label], i) =>
       `<a class="menu-link" href="${href}" style="--i:${i}">${label}</a>`
@@ -35,6 +37,20 @@ export function Menu(): string {
       <div class="menu-theme">
         <span class="menu-theme__label">Modo claro / escuro</span>
         <div class="menu-theme__blob">${HeroBlob("hero-blob--menu")}</div>
+      </div>
+      <div class="menu-language">
+        <span class="menu-language__label">Idioma</span>
+        <div class="menu-language__options" role="group" aria-label="Selecionar idioma">
+          <button type="button" data-locale="pt-BR" aria-label="Português do Brasil" aria-pressed="${locale === "pt-BR"}" class="${locale === "pt-BR" ? "is-active" : ""}">
+            <span aria-hidden="true">🇧🇷</span><b>Português</b>
+          </button>
+          <button type="button" data-locale="en" aria-label="English" aria-pressed="${locale === "en"}" class="${locale === "en" ? "is-active" : ""}">
+            <span aria-hidden="true">🇺🇸</span><b>English</b>
+          </button>
+          <button type="button" data-locale="es" aria-label="Español" aria-pressed="${locale === "es"}" class="${locale === "es" ? "is-active" : ""}">
+            <span aria-hidden="true">🇪🇸</span><b>Español</b>
+          </button>
+        </div>
       </div>
       <div class="menu-motion" data-motion-control>
         <div class="menu-motion__head">
@@ -65,15 +81,15 @@ export function initMenu(): void {
   const motionStatus = overlay.querySelector<HTMLElement>("[data-motion-status]");
   const motionLabels: Record<MotionMode, string> = {
     auto: "",
-    full: "Qualidade máxima",
-    balanced: "Equilibrada",
-    reduced: "Experiência otimizada",
+    full: translateText("Qualidade máxima"),
+    balanced: translateText("Equilibrada"),
+    reduced: translateText("Experiência otimizada"),
   };
   const tierLabels = {
-    high: "máxima",
-    balanced: "equilibrada",
-    low: "leve",
-    minimal: "essencial",
+    high: translateText("máxima"),
+    balanced: translateText("equilibrada"),
+    low: translateText("leve"),
+    minimal: translateText("essencial"),
   } as const;
   const syncMotionControl = () => {
     const mode = getMotionMode();
@@ -86,8 +102,8 @@ export function initMenu(): void {
       const tierLabel = tierLabels[getPerformanceTier()];
       motionStatus.textContent = mode === "auto"
         ? isSystemMotionReduced()
-          ? `Sistema reduzido · ${tierLabel}`
-          : `Detectado: ${tierLabel}`
+          ? `${translateText("Sistema reduzido")} · ${tierLabel}`
+          : `${translateText("Detectado")}: ${tierLabel}`
         : motionLabels[mode];
     }
   };
@@ -98,7 +114,7 @@ export function initMenu(): void {
       if (!mode || mode === getMotionMode()) return;
       setMotionMode(mode);
       syncMotionControl();
-      if (motionStatus) motionStatus.textContent = "Aplicando...";
+      if (motionStatus) motionStatus.textContent = translateText("Aplicando...");
       try {
         sessionStorage.setItem("amv-skip-intro-once", "1");
       } catch {
@@ -109,6 +125,14 @@ export function initMenu(): void {
   });
   window.addEventListener("amv:performance-tier-change", syncMotionControl);
   syncMotionControl();
+
+  overlay.querySelectorAll<HTMLButtonElement>("[data-locale]").forEach((languageButton) => {
+    languageButton.addEventListener("click", () => {
+      const locale = languageButton.dataset.locale as Locale | undefined;
+      if (!locale || locale === getLocale()) return;
+      setLocale(locale);
+    });
+  });
 
   const open = () => {
     previousFocus = document.activeElement instanceof HTMLElement

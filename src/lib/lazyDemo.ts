@@ -1,3 +1,5 @@
+import { translateTree } from "../i18n";
+
 interface LazyDemoModule {
   render: () => string;
   init: () => void;
@@ -33,6 +35,8 @@ export function initLazyDemo(options: LazyDemoOptions): void {
         if (!document.getElementById(options.sceneElementId)) {
           document.body.insertAdjacentHTML("beforeend", demo.render());
         }
+        const scene = document.getElementById(options.sceneElementId);
+        if (scene) translateTree(scene);
         demo.init();
         ready = true;
         trigger.dataset.demoReady = "true";

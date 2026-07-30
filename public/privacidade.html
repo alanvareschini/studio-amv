@@ -40,5 +40,64 @@
       <h2>Contato</h2>
       <p>Para dúvidas sobre estes dados, fale com a AMV Web Studio pelo canal de WhatsApp informado no site.</p>
     </main>
+    <script>
+      (function () {
+        var locale = null;
+        try {
+          locale = localStorage.getItem("amv-locale");
+        } catch (e) {}
+        if (locale !== "pt-BR" && locale !== "en" && locale !== "es") {
+          var language = String(navigator.language || "en").toLowerCase();
+          locale = language.indexOf("pt") === 0 ? "pt-BR" : language.indexOf("es") === 0 ? "es" : "en";
+        }
+        document.documentElement.lang = locale;
+        if (locale === "pt-BR") return;
+
+        var translations = {
+          en: {
+            "Privacidade | AMV Web Studio": "Privacy | AMV Web Studio",
+            "← Voltar ao site": "← Back to the website",
+            "Aviso de privacidade": "Privacy notice",
+            "Este aviso explica de forma direta quais dados o site utiliza e por quê.": "This notice clearly explains what data the website uses and why.",
+            "Orçamentos": "Quote requests",
+            "Quando você envia o formulário, os dados preenchidos são usados para montar uma mensagem e abrir o WhatsApp. O atendimento continua no WhatsApp, sujeito também às regras de privacidade desse serviço.": "When you submit the form, the information you provide is used to prepare a message and open WhatsApp. The conversation continues on WhatsApp and is also subject to that service's privacy rules.",
+            "Métricas do site": "Website analytics",
+            "O site registra eventos técnicos e de uso, como página visitada, cliques, profundidade de rolagem, duração aproximada, tipo de aparelho, navegador, sistema e localização aproximada fornecida pela infraestrutura da Vercel. O endereço IP não é gravado na tabela de métricas.": "The website records technical and usage events, such as pages visited, clicks, scroll depth, approximate session duration, device type, browser, operating system, and approximate location provided by Vercel's infrastructure. IP addresses are not stored in the analytics table.",
+            "Finalidade e retenção": "Purpose and retention",
+            "Essas informações são usadas para entender o funcionamento do site, corrigir problemas e melhorar a experiência. Os eventos de métricas são removidos após 180 dias.": "This information is used to understand how the website performs, fix issues, and improve the experience. Analytics events are deleted after 180 days.",
+            "Seus controles": "Your controls",
+            "O rastreamento respeita a preferência “Do Not Track” do navegador. Você também pode limpar os dados locais do site nas configurações do navegador.": "Tracking respects your browser's “Do Not Track” preference. You can also clear the website's local data in your browser settings.",
+            "Contato": "Contact",
+            "Para dúvidas sobre estes dados, fale com a AMV Web Studio pelo canal de WhatsApp informado no site.": "If you have questions about this data, contact AMV Web Studio through the WhatsApp channel shown on the website."
+          },
+          es: {
+            "Privacidade | AMV Web Studio": "Privacidad | AMV Web Studio",
+            "← Voltar ao site": "← Volver al sitio",
+            "Aviso de privacidade": "Aviso de privacidad",
+            "Este aviso explica de forma direta quais dados o site utiliza e por quê.": "Este aviso explica claramente qué datos utiliza el sitio y por qué.",
+            "Orçamentos": "Solicitudes de presupuesto",
+            "Quando você envia o formulário, os dados preenchidos são usados para montar uma mensagem e abrir o WhatsApp. O atendimento continua no WhatsApp, sujeito também às regras de privacidade desse serviço.": "Cuando envías el formulario, los datos proporcionados se utilizan para preparar un mensaje y abrir WhatsApp. La conversación continúa en WhatsApp y también está sujeta a las reglas de privacidad de ese servicio.",
+            "Métricas do site": "Métricas del sitio",
+            "O site registra eventos técnicos e de uso, como página visitada, cliques, profundidade de rolagem, duração aproximada, tipo de aparelho, navegador, sistema e localização aproximada fornecida pela infraestrutura da Vercel. O endereço IP não é gravado na tabela de métricas.": "El sitio registra eventos técnicos y de uso, como páginas visitadas, clics, profundidad de desplazamiento, duración aproximada, tipo de dispositivo, navegador, sistema y ubicación aproximada proporcionada por la infraestructura de Vercel. La dirección IP no se guarda en la tabla de métricas.",
+            "Finalidade e retenção": "Finalidad y conservación",
+            "Essas informações são usadas para entender o funcionamento do site, corrigir problemas e melhorar a experiência. Os eventos de métricas são removidos após 180 dias.": "Esta información se utiliza para comprender el funcionamiento del sitio, corregir problemas y mejorar la experiencia. Los eventos de métricas se eliminan después de 180 días.",
+            "Seus controles": "Tus controles",
+            "O rastreamento respeita a preferência “Do Not Track” do navegador. Você também pode limpar os dados locais do site nas configurações do navegador.": "El seguimiento respeta la preferencia “Do Not Track” del navegador. También puedes borrar los datos locales del sitio desde la configuración del navegador.",
+            "Contato": "Contacto",
+            "Para dúvidas sobre estes dados, fale com a AMV Web Studio pelo canal de WhatsApp informado no site.": "Si tienes dudas sobre estos datos, contacta con AMV Web Studio a través del canal de WhatsApp indicado en el sitio."
+          }
+        };
+        var dictionary = translations[locale];
+        document.title = dictionary[document.title] || document.title;
+        var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        var node;
+        while ((node = walker.nextNode())) {
+          var value = node.data.trim();
+          if (dictionary[value]) {
+            node.data = node.data.replace(value, dictionary[value]);
+          }
+        }
+      })();
+    </script>
   </body>
 </html>
