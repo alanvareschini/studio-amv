@@ -630,11 +630,16 @@ class LetterScene {
       this.stopRenderLoop();
       return;
     }
-    const targetFps = document.getElementById("clothintro")
-      ? Math.min(30, this.performanceBudget.heroFps)
-      : this.isMobile && this.scrollT > 0.3
-        ? this.performanceBudget.heroBackgroundFps
-        : this.performanceBudget.heroFps;
+    const scrollActive = frameTime < this.scrollActiveUntil;
+    // Bloom and frost are disabled while scrolling, so the lighter direct
+    // render can follow the display cadence instead of jumping at 30/45 FPS.
+    const targetFps = scrollActive
+      ? 60
+      : document.getElementById("clothintro")
+        ? Math.min(30, this.performanceBudget.heroFps)
+        : this.isMobile && this.scrollT > 0.3
+          ? this.performanceBudget.heroBackgroundFps
+          : this.performanceBudget.heroFps;
     const frameInterval = 1000 / targetFps;
     if (this.lastRenderedAt && frameTime - this.lastRenderedAt < frameInterval - 1) {
       this.startRenderLoop();
@@ -646,7 +651,6 @@ class LetterScene {
     this.lastRenderedAt = frameTime;
     const elapsed = this.clock.getElapsedTime();
     const s = this.scrollT;
-    const scrollActive = frameTime < this.scrollActiveUntil;
 
     // No MOBILE não existe cursor: uma luz automática atravessa o A em curva,
     // acendendo a superfície no gradiente (substitui o rastro do cursor).

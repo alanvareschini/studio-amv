@@ -303,10 +303,10 @@
         }
         function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
-        function charAtGrid(row, x) {
+        function charAtGrid(row, column) {
           var phrase = row % 4 === 2 ? CODE_CHARS : CHARS;
           var offset = row % 3 === 0 ? 0 : row % 3 === 1 ? 4 : 8;
-          return phrase[(Math.round(x / Math.max(1, SP)) + offset) % phrase.length];
+          return phrase[(column + offset) % phrase.length];
         }
 
         function makeChars(fs) {
@@ -357,6 +357,7 @@
           // tall tablets and wide screens never expose an uncovered strip.
           var hrest = width / Math.max(1, cols - 1);
           var vrest = H / Math.max(1, rows - 1);
+          var charColumnOffset = Math.round(x0 / Math.max(1, gap));
           var P = [];
           var links = [];
 
@@ -365,7 +366,7 @@
               var x = x0 + c * hrest;
               var y = r * vrest;
               var band = Math.max(0, Math.min(BANDS - 1, Math.round((x / Math.max(1, W)) * (BANDS - 1))));
-              P.push({ x: x, y: y, ox: x, oy: y, ax: 0, ay: 0, hx: x, hy: y, pin: r === 0, homePin: r === 0, ch: charAtGrid(r, x), band: band });
+              P.push({ x: x, y: y, ox: x, oy: y, ax: 0, ay: 0, hx: x, hy: y, pin: r === 0, homePin: r === 0, ch: charAtGrid(r, charColumnOffset + c), band: band });
             }
           }
 
