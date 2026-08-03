@@ -158,6 +158,16 @@ class LetterScene {
       antialias: !lowTier,
       powerPreference: this.isMobile && lowTier ? "low-power" : "high-performance",
     });
+    const gl = this.renderer.getContext();
+    const rendererInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    const rendererName = String(
+      rendererInfo
+        ? gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL)
+        : gl.getParameter(gl.RENDERER),
+    ).slice(0, 180);
+    document.documentElement.dataset.heroGpuRenderer = rendererName;
+    document.documentElement.dataset.heroGpuPreference =
+      this.isMobile && lowTier ? "low-power" : "high-performance";
     this.composerPixelRatio = Math.min(
       this.baseDPR,
       this.isMobile

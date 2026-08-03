@@ -163,6 +163,7 @@ function detectGpuClass(): "high" | "balanced" | "low" | "software" | "none" {
   const contextOptions: WebGLContextAttributes = {
     powerPreference: "high-performance",
   };
+  document.documentElement.dataset.gpuPreference = "high-performance";
   const gl = canvas.getContext("webgl2", contextOptions)
     ?? canvas.getContext("webgl", contextOptions);
   if (!gl) return "none";
@@ -173,6 +174,7 @@ function detectGpuClass(): "high" | "balanced" | "low" | "software" | "none" {
       ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
       : gl.getParameter(gl.RENDERER),
   ).toLowerCase();
+  document.documentElement.dataset.gpuRenderer = renderer.slice(0, 180);
   gl.getExtension("WEBGL_lose_context")?.loseContext();
 
   const softwareGpu = /swiftshader|llvmpipe|software|microsoft basic render/;

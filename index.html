@@ -365,7 +365,7 @@
               var x = x0 + c * hrest;
               var y = r * vrest;
               var band = Math.max(0, Math.min(BANDS - 1, Math.round((x / Math.max(1, W)) * (BANDS - 1))));
-              P.push({ x: x, y: y, ox: x, oy: y, ax: 0, ay: 0, hx: x, hy: y, pin: r === 0, ch: charAtGrid(r, x), band: band });
+              P.push({ x: x, y: y, ox: x, oy: y, ax: 0, ay: 0, hx: x, hy: y, pin: r === 0, homePin: r === 0, ch: charAtGrid(r, x), band: band });
             }
           }
 
@@ -400,7 +400,7 @@
           var cx = W - Math.min(40, W * 0.09);
           var sl = Math.min(H * 0.3, 250) / (segs - 1);
           cord = [];
-          for (var i = 0; i < segs; i++) cord.push({ x: cx, y: i * sl, ox: cx, oy: i * sl, ax: 0, ay: 0, hx: cx, hy: i * sl, pin: i === 0, len: sl, cord: true });
+          for (var i = 0; i < segs; i++) cord.push({ x: cx, y: i * sl, ox: cx, oy: i * sl, ax: 0, ay: 0, hx: cx, hy: i * sl, pin: i === 0, homePin: i === 0, len: sl, cord: true });
           handle = cord[cord.length - 1];
           acc = 0;
           lastT = performance.now();
@@ -413,6 +413,35 @@
           p.oy = p.hy;
           p.ax = 0;
           p.ay = 0;
+        }
+
+        function restorePinState(p) {
+          if (!p) return;
+          p.pin = Boolean(p.homePin);
+          if (p.pin) resetPoint(p);
+        }
+
+        function releaseGrabbedParticles() {
+          restorePinState(ptr.cordParticle);
+          restorePinState(ptr.particle);
+          ptr.cordParticle = null;
+          ptr.particle = null;
+          ptr.cordParticleWasPinned = false;
+          ptr.particleWasPinned = false;
+        }
+
+        function repairOrphanedPins() {
+          for (var k = 0; k < curtains.length; k++) {
+            var points = curtains[k].P;
+            for (var i = 0; i < points.length; i++) {
+              var p = points[i];
+              if (p !== ptr.particle && p.pin !== Boolean(p.homePin)) restorePinState(p);
+            }
+          }
+          for (var j = 0; j < cord.length; j++) {
+            var cp = cord[j];
+            if (cp !== ptr.cordParticle && cp.pin !== Boolean(cp.homePin)) restorePinState(cp);
+          }
         }
 
         function verlet(points, gravity, dt) {
@@ -483,6 +512,7 @@
             || now - ptr.lastMoveAt < 1200
             || (ptr.lastReleaseAt >= 0 && now - ptr.lastReleaseAt < 2400)
           ) return;
+          repairOrphanedPins();
           var blend = 1 - Math.pow(0.982, dt);
           for (var k = 0; k < curtains.length; k++) {
             var points = curtains[k].P;
@@ -801,14 +831,12 @@
         }
         function onUp(e) {
           if (ptr.pointerId !== null && e && typeof e.pointerId === "number" && e.pointerId !== ptr.pointerId) return;
+          if (ptr.pointerId === null && !ptr.cordGrab && !ptr.cordParticle && !ptr.particle) return;
           var shouldOpenOnReturn = ptr.cordGrab && ptr.cordArmed;
           var returnParticle = ptr.cordParticle || handle;
           var releaseY = ptr.cordPeakY || ptr.y;
           ptr.cordGrab = false;
-          if (ptr.cordParticle) {
-            ptr.cordParticle.pin = ptr.cordParticleWasPinned;
-            ptr.cordParticle = null;
-          }
+          releaseGrabbedParticles();
           if (shouldOpenOnReturn) {
             ptr.cordWaitingReturn = true;
             ptr.cordReturnParticle = returnParticle;
@@ -817,19 +845,8 @@
           }
           ptr.cordArmed = false;
           ptr.cordPeakY = 0;
-          if (ptr.particle) {
-            if (ptr.particleWasPinned) {
-              ptr.particle.x = ptr.particle.hx;
-              ptr.particle.y = ptr.particle.hy;
-              ptr.particle.ox = ptr.particle.hx;
-              ptr.particle.oy = ptr.particle.hy;
-            }
-            ptr.particle.pin = ptr.particleWasPinned;
-            ptr.particle = null;
-          }
           ptr.pointerId = null;
-          ptr.cordParticleWasPinned = false;
-          ptr.particleWasPinned = false;
+          repairOrphanedPins();
           if (ptr.pointerType !== "mouse" || (e && e.type === "pointercancel")) {
             ptr.lastReleaseAt = performance.now();
             deactivatePointer();
@@ -839,7 +856,10 @@
           ptr.cordArmed = false;
           ptr.cordWaitingReturn = false;
           ptr.cordReturnParticle = null;
-          onUp();
+          ptr.cordGrab = false;
+          releaseGrabbedParticles();
+          ptr.pointerId = null;
+          repairOrphanedPins();
           deactivatePointer();
           ptr.lastReleaseAt = performance.now();
         }
@@ -885,6 +905,11 @@
         }
 
         host.addEventListener("pointerdown", function (e) {
+          if (ptr.pointerId !== null || ptr.cordGrab || ptr.cordParticle || ptr.particle) {
+            ptr.cordGrab = false;
+            releaseGrabbedParticles();
+            repairOrphanedPins();
+          }
           ptr.pointerId = e.pointerId;
           ptr.pointerType = e.pointerType || "mouse";
           onMove(e);
