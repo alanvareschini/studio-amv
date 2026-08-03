@@ -3,7 +3,6 @@ import {
   getMotionMode,
   getPerformanceTier,
   isReducedMotion,
-  isSystemMotionReduced,
   setRuntimePerformanceTier,
   type PerformanceTier,
 } from "./motionPreference";
@@ -96,9 +95,7 @@ export function initRuntimePerformanceMonitor(): void {
     const desktop = !matchMedia("(pointer: coarse), (max-width: 760px)").matches;
     const minimumRuntimeTier: PerformanceTier =
       desktop && hardwareTier !== "minimal" ? "low" : "minimal";
-    const maximumMeasuredTier = isSystemMotionReduced()
-      ? "low"
-      : adjacentTier(hardwareTier, 1);
+    const maximumMeasuredTier = adjacentTier(hardwareTier, 1);
     const nextLowerTier = adjacentTier(currentTier, -1);
     const canDowngrade =
       TIER_ORDER.indexOf(nextLowerTier) >= TIER_ORDER.indexOf(minimumRuntimeTier)

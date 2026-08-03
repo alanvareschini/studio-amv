@@ -4,7 +4,6 @@ import { HeroBlob } from "./HeroBlob";
 import {
   getPerformanceTier,
   getMotionMode,
-  isSystemMotionReduced,
   setMotionMode,
   type MotionMode,
 } from "../lib/motionPreference";
@@ -101,9 +100,7 @@ export function initMenu(): void {
     if (motionStatus) {
       const tierLabel = tierLabels[getPerformanceTier()];
       motionStatus.textContent = mode === "auto"
-        ? isSystemMotionReduced()
-          ? `${translateText("Sistema reduzido")} · ${tierLabel}`
-          : `${translateText("Detectado")}: ${tierLabel}`
+        ? `${translateText("Detectado")}: ${tierLabel}`
         : motionLabels[mode];
     }
   };

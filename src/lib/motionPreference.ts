@@ -31,7 +31,7 @@ export type PerformanceBudget = {
 const STORAGE_KEY = "amv-motion-mode";
 const RUNTIME_STORAGE_KEY = "amv-runtime-performance-tier";
 const RUNTIME_TTL_MS = 15 * 60 * 1000;
-const RUNTIME_PROFILE_VERSION = 2;
+const RUNTIME_PROFILE_VERSION = 3;
 const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 const TIER_RANK: Record<PerformanceTier, number> = {
   minimal: 0,
@@ -284,10 +284,10 @@ export function getMotionMode(): MotionMode {
 
 function resolveMotion(mode: MotionMode): MotionLevel {
   // Preferência de acessibilidade e qualidade gráfica são estados independentes.
-  if (mode === "reduced" || (mode === "auto" && matchMedia(REDUCED_QUERY).matches)) {
-    return "reduced";
+  if (mode === "reduced") return "reduced";
+  if (mode === "balanced" || (mode === "auto" && matchMedia(REDUCED_QUERY).matches)) {
+    return "limited";
   }
-  if (mode === "balanced") return "limited";
   return "full";
 }
 
@@ -308,9 +308,7 @@ function applyMotionMode(mode: MotionMode): void {
   root.dataset.systemMotion = matchMedia(REDUCED_QUERY).matches ? "reduced" : "full";
   if (mode === "auto") {
     root.dataset.hardwareTier = detectHardwareTier();
-    root.dataset.performanceSource = matchMedia(REDUCED_QUERY).matches
-      ? "system"
-      : getRuntimeTier() ? "runtime" : "detected";
+    root.dataset.performanceSource = getRuntimeTier() ? "runtime" : "detected";
   } else {
     root.dataset.performanceSource = "manual";
   }
