@@ -12,6 +12,7 @@ const SAMPLE_WINDOW_MS = 2000;
 const MAX_WINDOWS = 12;
 const BAD_WINDOWS_REQUIRED = 3;
 const GOOD_WINDOWS_REQUIRED = 4;
+const RECOVERY_WINDOWS_REQUIRED = 6;
 const START_DELAY_MS = 3200;
 const TIER_ORDER: PerformanceTier[] = ["minimal", "low", "balanced", "high"];
 
@@ -40,7 +41,7 @@ export function initRuntimePerformanceMonitor(): void {
   let badWindows = 0;
   let goodWindows = 0;
   let cooldownWindows = 0;
-  let downgradedThisRun = false;
+  let downgradesThisRun = 0;
   let started = false;
   let stopped = false;
   let longTaskObserver: PerformanceObserver | null = null;
@@ -92,18 +93,24 @@ export function initRuntimePerformanceMonitor(): void {
 
     const currentTier = getPerformanceTier();
     const hardwareTier = getHardwarePerformanceTier();
+    const desktop = !matchMedia("(pointer: coarse), (max-width: 760px)").matches;
+    const minimumRuntimeTier: PerformanceTier =
+      desktop && hardwareTier !== "minimal" ? "low" : "minimal";
     const maximumMeasuredTier = isSystemMotionReduced()
       ? "low"
       : adjacentTier(hardwareTier, 1);
-    if (badWindows >= BAD_WINDOWS_REQUIRED && currentTier !== "minimal") {
-      setRuntimePerformanceTier(adjacentTier(currentTier, -1));
-      downgradedThisRun = true;
+    const nextLowerTier = adjacentTier(currentTier, -1);
+    const canDowngrade =
+      TIER_ORDER.indexOf(nextLowerTier) >= TIER_ORDER.indexOf(minimumRuntimeTier)
+      && (!desktop || downgradesThisRun < 2);
+    if (badWindows >= BAD_WINDOWS_REQUIRED && canDowngrade) {
+      setRuntimePerformanceTier(nextLowerTier);
+      downgradesThisRun += 1;
       cooldownWindows = 1;
       badWindows = 0;
       goodWindows = 0;
     } else if (
-      goodWindows >= GOOD_WINDOWS_REQUIRED
-      && !downgradedThisRun
+      goodWindows >= (downgradesThisRun ? RECOVERY_WINDOWS_REQUIRED : GOOD_WINDOWS_REQUIRED)
       && TIER_ORDER.indexOf(currentTier) < TIER_ORDER.indexOf(maximumMeasuredTier)
     ) {
       setRuntimePerformanceTier(adjacentTier(currentTier, 1));

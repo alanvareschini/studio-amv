@@ -153,7 +153,11 @@ export function initHeadingFluid(): void {
       antialias: performanceBudget.tier !== "minimal",
       premultipliedAlpha: false, // evita fio nas bordas ao copiar p/ canvas 2D
       preserveDrawingBuffer: true,
-      powerPreference: performanceBudget.tier === "minimal" ? "low-power" : "high-performance",
+      powerPreference:
+        matchMedia("(pointer: coarse), (max-width: 760px)").matches
+        && performanceBudget.tier === "minimal"
+          ? "low-power"
+          : "high-performance",
     });
   } catch {
     return;

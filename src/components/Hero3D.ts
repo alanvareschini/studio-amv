@@ -60,6 +60,7 @@ class LetterScene {
   private readonly renderStateObserver: MutationObserver;
   private renderVisibilityObserver: IntersectionObserver | null = null;
   private heroInViewport = true;
+  private scrollActiveUntil = 0;
 
   // Faz o "A" acompanhar o zoom da página (Ctrl +/-): sem isso, o A fica
   // gigante ao dar zoom-out porque o resto do conteúdo encolhe e ele não.
@@ -155,7 +156,7 @@ class LetterScene {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: !lowTier,
-      powerPreference: lowTier ? "low-power" : "high-performance",
+      powerPreference: this.isMobile && lowTier ? "low-power" : "high-performance",
     });
     this.composerPixelRatio = Math.min(
       this.baseDPR,
@@ -385,7 +386,12 @@ class LetterScene {
       start: "top top",
       end: "bottom bottom",
       scrub: 1,
-      onUpdate: (self) => (this.scrollT = self.progress),
+      onUpdate: (self) => {
+        if (Math.abs(self.progress - this.scrollT) > 0.00001) {
+          this.scrollActiveUntil = performance.now() + 140;
+        }
+        this.scrollT = self.progress;
+      },
     });
     gsap.fromTo(
       ".hero3d",
@@ -630,6 +636,7 @@ class LetterScene {
     this.lastRenderedAt = frameTime;
     const elapsed = this.clock.getElapsedTime();
     const s = this.scrollT;
+    const scrollActive = frameTime < this.scrollActiveUntil;
 
     // No MOBILE não existe cursor: uma luz automática atravessa o A em curva,
     // acendendo a superfície no gradiente (substitui o rastro do cursor).
@@ -639,6 +646,8 @@ class LetterScene {
 
     // rastro só onde está sobre o A
     if (!surfaceEffectEnabled) {
+      this.overA = false;
+    } else if (scrollActive) {
       this.overA = false;
     } else if (autoSurface) {
       const t = elapsed * 0.5;
@@ -660,6 +669,7 @@ class LetterScene {
       ? this.performanceBudget.heroSimulationStrideMobile
       : this.performanceBudget.heroSimulationStrideDesktop;
     const doFrost = surfaceEffectEnabled
+      && !scrollActive
       && this.frostIdle < 100
       && this.autoFrame++ % frostStride === 0;
     if (doFrost) this.updateFrost(elapsed);
@@ -689,7 +699,11 @@ class LetterScene {
     this.group.rotation.y += (tiltY - this.group.rotation.y) * rotationEase;
     this.group.rotation.x += (tiltX - this.group.rotation.x) * rotationEase;
 
-    if (isLowPerformanceTier(this.performanceBudget.tier) || !this.composer) {
+    if (
+      scrollActive
+      || isLowPerformanceTier(this.performanceBudget.tier)
+      || !this.composer
+    ) {
       this.renderer.render(this.scene, this.camera);
     } else {
       this.composer.render();

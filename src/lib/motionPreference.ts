@@ -31,6 +31,7 @@ export type PerformanceBudget = {
 const STORAGE_KEY = "amv-motion-mode";
 const RUNTIME_STORAGE_KEY = "amv-runtime-performance-tier";
 const RUNTIME_TTL_MS = 15 * 60 * 1000;
+const RUNTIME_PROFILE_VERSION = 2;
 const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 const TIER_RANK: Record<PerformanceTier, number> = {
   minimal: 0,
@@ -157,10 +158,13 @@ const isMotionMode = (value: unknown): value is MotionMode =>
 const isPerformanceTier = (value: unknown): value is PerformanceTier =>
   value === "high" || value === "balanced" || value === "low" || value === "minimal";
 
-function detectGpuClass(): "high" | "balanced" | "low" | "none" {
+function detectGpuClass(): "high" | "balanced" | "low" | "software" | "none" {
   const canvas = document.createElement("canvas");
-  const gl = canvas.getContext("webgl2", { powerPreference: "low-power" })
-    ?? canvas.getContext("webgl", { powerPreference: "low-power" });
+  const contextOptions: WebGLContextAttributes = {
+    powerPreference: "high-performance",
+  };
+  const gl = canvas.getContext("webgl2", contextOptions)
+    ?? canvas.getContext("webgl", contextOptions);
   if (!gl) return "none";
 
   const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
@@ -171,9 +175,11 @@ function detectGpuClass(): "high" | "balanced" | "low" | "none" {
   ).toLowerCase();
   gl.getExtension("WEBGL_lose_context")?.loseContext();
 
+  const softwareGpu = /swiftshader|llvmpipe|software|microsoft basic render/;
   const lowGpu = /mali[-_\s]*(?:g31|g35|g51|g52|g57|t\d+)|powervr.*(?:ge8|rogue ge)|adreno.*(?:3\d\d|4\d\d|50\d|51[0-6]|610)/;
-  const highGpu = /adreno.*(?:7\d\d|8\d\d|6(?:4\d|5\d|6\d|7\d|8\d))|mali[-_\s]*(?:g7(?:1\d|2\d)|g710|g715|g720)|xclipse|apple gpu/;
+  const highGpu = /nvidia|geforce|quadro|(?:amd\s+)?radeon\s+(?:rx|pro)|intel.*arc|adreno.*(?:7\d\d|8\d\d|6(?:4\d|5\d|6\d|7\d|8\d))|mali[-_\s]*(?:g7(?:1\d|2\d)|g710|g715|g720)|xclipse|apple gpu/;
 
+  if (softwareGpu.test(renderer)) return "software";
   if (lowGpu.test(renderer)) return "low";
   if (highGpu.test(renderer)) return "high";
   return "balanced";
@@ -186,10 +192,15 @@ function detectHardwareTier(): PerformanceTier {
   const cores = navigator.hardwareConcurrency;
   const mobile = matchMedia("(pointer: coarse), (max-width: 760px)").matches;
   const gpu = detectGpuClass();
+  document.documentElement.dataset.gpuClass = gpu;
   let score = 0;
 
   if (gpu === "none") {
     detectedHardwareTier = "minimal";
+    return detectedHardwareTier;
+  }
+  if (gpu === "software") {
+    detectedHardwareTier = "low";
     return detectedHardwareTier;
   }
   if (gpu === "low") score -= 3;
@@ -222,20 +233,21 @@ function detectHardwareTier(): PerformanceTier {
 
 function capRuntimeTier(hardwareTier: PerformanceTier, runtimeTier: PerformanceTier): PerformanceTier {
   const hardwareMaximum = Math.min(TIER_BY_RANK.length - 1, TIER_RANK[hardwareTier] + 1);
-  const systemMaximum = matchMedia(REDUCED_QUERY).matches
-    ? TIER_RANK.low
-    : TIER_BY_RANK.length - 1;
-  const maximumRank = Math.min(hardwareMaximum, systemMaximum);
-  return TIER_BY_RANK[Math.min(TIER_RANK[runtimeTier], maximumRank)];
+  return TIER_BY_RANK[Math.min(TIER_RANK[runtimeTier], hardwareMaximum)];
 }
 
 function getRuntimeTier(): PerformanceTier | null {
   try {
     const raw = sessionStorage.getItem(RUNTIME_STORAGE_KEY);
     if (!raw) return null;
-    const saved = JSON.parse(raw) as { tier?: unknown; at?: unknown };
+    const saved = JSON.parse(raw) as {
+      tier?: unknown;
+      at?: unknown;
+      version?: unknown;
+    };
     if (
       !isPerformanceTier(saved.tier)
+      || saved.version !== RUNTIME_PROFILE_VERSION
       || typeof saved.at !== "number"
       || Date.now() - saved.at > RUNTIME_TTL_MS
     ) {
@@ -249,7 +261,6 @@ function getRuntimeTier(): PerformanceTier | null {
 }
 
 function resolveAutoTier(): PerformanceTier {
-  if (matchMedia(REDUCED_QUERY).matches) return "minimal";
   const hardwareTier = detectHardwareTier();
   const runtimeTier = getRuntimeTier();
   return runtimeTier ? capRuntimeTier(hardwareTier, runtimeTier) : hardwareTier;
@@ -360,6 +371,7 @@ export function setRuntimePerformanceTier(tier: PerformanceTier): PerformanceTie
     sessionStorage.setItem(RUNTIME_STORAGE_KEY, JSON.stringify({
       tier: nextTier,
       at: Date.now(),
+      version: RUNTIME_PROFILE_VERSION,
     }));
   } catch {
     // Runtime adaptation still applies to the current page without storage.

@@ -74,16 +74,16 @@
         if (mode === "full") tier = "high";
         else if (mode === "reduced") tier = "low";
         else if (mode === "balanced") tier = "balanced";
-        else if (systemReduced) tier = "minimal";
         var hardwareTier = detectedTier;
         if (mode === "auto" && !systemReduced) {
           try {
             var runtimeSaved = JSON.parse(sessionStorage.getItem("amv-runtime-performance-tier") || "null");
             var runtimeTier = runtimeSaved && runtimeSaved.tier;
             var runtimeFresh = runtimeSaved && typeof runtimeSaved.at === "number" && Date.now() - runtimeSaved.at < 900000;
+            var runtimeCompatible = runtimeSaved && runtimeSaved.version === 2;
             var rank = { minimal: 0, low: 1, balanced: 2, high: 3 };
             var maxRuntimeRank = Math.min(3, rank[tier] + 1);
-            if (runtimeFresh && typeof runtimeTier === "string" && runtimeTier in rank && rank[runtimeTier] <= maxRuntimeRank) tier = runtimeTier;
+            if (runtimeCompatible && runtimeFresh && typeof runtimeTier === "string" && runtimeTier in rank && rank[runtimeTier] <= maxRuntimeRank) tier = runtimeTier;
           } catch (e) {}
         }
         document.documentElement.dataset.motionPreference = mode;
